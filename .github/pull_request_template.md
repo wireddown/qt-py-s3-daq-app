@@ -18,7 +18,7 @@ _Describe how you tested the changes_
 
 _~~Strike~~ inapplicable items_
 
-- [ ] Issues linked / tags applied
+- [ ] Issues linked / labels applied
 - [ ] Documentation updated
 - [ ] Tests added / updated / removed
 - [ ] Tests passed
