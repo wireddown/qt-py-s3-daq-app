@@ -2,7 +2,7 @@
 name: Bug report
 about: Create a bug report and track in Issues
 title: ''
-labels: ''
+labels: 'inbox'
 assignees: wireddown
 
 ---
