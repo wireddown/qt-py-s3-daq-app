@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "qtpy-datalogger"
+version = "0.1.0"
+description = "Data acquisition application using Adafruit QT Py S3"
+authors = [
+    "Down to the Wire <8404598+wireddown@users.noreply.github.com>",
+]
+license = "Apache-2.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
