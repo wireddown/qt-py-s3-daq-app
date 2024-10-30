@@ -27,6 +27,9 @@ lint.ignore_fail = "return_zero"
 test.help = "Run the tests for the package."
 test.cmd = "pytest"
 
+[tool.pytest.ini_options]
+addopts = "--showlocals"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
