@@ -39,6 +39,12 @@ exclude = [
     "docs/legacy",
 ]
 
+[tool.ruff]
+line-length = 120
+extend-exclude = [
+    "docs/legacy",
+]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
