@@ -75,6 +75,9 @@ extend-select = [
     "UP",
     "W",
 ]
+ignore = [
+]
+
 
 [build-system]
 requires = ["poetry-core"]
