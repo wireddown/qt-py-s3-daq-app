@@ -30,6 +30,15 @@ test.cmd = "pytest"
 [tool.pytest.ini_options]
 addopts = "--showlocals"
 
+[tool.pyright]
+venvPath = ".venv"
+verboseOutput = true
+reportAttributeAccessIssue = false
+exclude = [
+    ".venv",
+    "docs/legacy",
+]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
