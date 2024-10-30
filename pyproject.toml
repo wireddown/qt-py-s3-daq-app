@@ -45,6 +45,37 @@ extend-exclude = [
     "docs/legacy",
 ]
 
+[tool.ruff.lint]
+extend-select = [
+    "A",
+    "ANN",
+    "B",
+    "BLE",
+    "C4",
+    "COM",
+    "D",
+    "EM",
+    "G",
+    "I",
+    "ICN",
+    "INP",
+    "ISC",
+    "LOG",
+    "N",
+    "PL",
+    "PIE",
+    "PT",
+    "PTH",
+    "Q",
+    "RET",
+    "RUF",
+    "S",
+    "SIM",
+    "T10",
+    "UP",
+    "W",
+]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
