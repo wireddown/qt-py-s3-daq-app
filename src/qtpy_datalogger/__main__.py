@@ -1,9 +1,11 @@
 """Entry point for qtpy_datalogger package."""
 
+from . import console
+
 
 def main() -> None:
-    """Entry point function for qtpy_datalogger."""
-    print(__file__)
+    """Run the command line interface when invoked as a module."""
+    console.cli()
 
 
 if __name__ == "__main__":
