@@ -4,6 +4,8 @@ import logging
 
 import click
 
+from . import tracelog
+
 logger = logging.getLogger(__name__)
 
 
@@ -16,7 +18,7 @@ logger = logging.getLogger(__name__)
 def cli(ctx: click.Context, quiet: bool, verbose: bool) -> None:
     """QT Py datalogger control program."""
     log_level = get_logging_level(quiet, verbose)
-    logging.basicConfig(level=log_level)
+    tracelog.initialize(log_level)
 
     if ctx.invoked_subcommand:
         pass
