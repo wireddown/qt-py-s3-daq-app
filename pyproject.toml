@@ -23,7 +23,7 @@ pyright = "^1.1.386"
 [tool.poe.tasks]
 _ruff_check = "ruff check"
 _ruff_diff = "ruff format --diff"
-_pyright = "pyright"
+_pyright = "pyright --dependencies"
 lint.help = "Run the analyzers for the package."
 lint.sequence = ["_ruff_check", "_ruff_diff", "_pyright"]
 lint.ignore_fail = "return_zero"
