@@ -13,6 +13,7 @@ qtpy-datalogger = "qtpy_datalogger.__main__:main"
 
 [tool.poetry.dependencies]
 python = "^3.11"
+click = "^8.1.7"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -23,10 +24,15 @@ pyright = "^1.1.386"
 [tool.poe.tasks]
 _ruff_check = "ruff check"
 _ruff_diff = "ruff format --diff"
-_pyright = "pyright"
+_pyright = "pyright --dependencies"
+_ruff_check_fix = "ruff check --fix"
+_ruff_format = "ruff format"
 lint.help = "Run the analyzers for the package."
 lint.sequence = ["_ruff_check", "_ruff_diff", "_pyright"]
 lint.ignore_fail = "return_zero"
+fix.help = "Run the code formatter on the package."
+fix.sequence = ["_ruff_check_fix", "_ruff_format"]
+fix.ignore_fail = "return_zero"
 test.help = "Run the tests for the package."
 test.cmd = "pytest"
 
@@ -36,7 +42,6 @@ addopts = "--showlocals"
 [tool.pyright]
 venvPath = ".venv"
 verboseOutput = true
-reportAttributeAccessIssue = false
 exclude = [
     ".venv",
     "docs/legacy",
