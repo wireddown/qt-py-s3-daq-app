@@ -36,7 +36,6 @@ addopts = "--showlocals"
 [tool.pyright]
 venvPath = ".venv"
 verboseOutput = true
-reportAttributeAccessIssue = false
 exclude = [
     ".venv",
     "docs/legacy",
