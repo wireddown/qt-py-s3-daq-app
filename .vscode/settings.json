@@ -1,0 +1,4 @@
+{
+    // https://code.visualstudio.com/docs/python/testing#_test-configuration-settings
+    "python.testing.pytestEnabled": true,
+}
