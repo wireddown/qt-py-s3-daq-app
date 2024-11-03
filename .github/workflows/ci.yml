@@ -45,21 +45,19 @@ jobs:
 
     - name: Run ruff check
       id: ruff-check
-      run: |
-        poetry run ruff check --output-format junit --output-file junit/ruff-check-results-${{ runner.os }}-${{ matrix.python_version }}.xml
-        echo "" > ruff-diff.md
+      run: poetry run ruff check --output-format junit --output-file junit/ruff-check-results-${{ runner.os }}-${{ matrix.python_version }}.xml
       if: always()
 
     - name: Run ruff format --diff
       run: |
-        echo '## ruff check errors' > ruff-diff.md
-        echo '- Use `poe fix` to apply safe fixes' >> ruff-diff.md
-        echo '- Use `ruff rule X000` to see examples' >> ruff-diff.md
-        echo '' >> ruff-diff.md
-        echo '### Required changes' >> ruff-diff.md
-        echo '```diff' >> ruff-diff.md
-        poetry run ruff format --diff >> ruff-diff.md
-        echo '```' >> ruff-diff.md
+        echo 'RUFF_DIFF=## ruff check errors' >> $env:GITHUB_ENV
+        echo 'RUFF_DIFF=$($env:RUFF_DIFF)- Use `poe fix` to apply safe fixes' >> $env:GITHUB_ENV
+        echo 'RUFF_DIFF=$($env:RUFF_DIFF)- Use `ruff rule X000` to see examples' >> $env:GITHUB_ENV
+        echo 'RUFF_DIFF=$($env:RUFF_DIFF)' >> $env:GITHUB_ENV
+        echo 'RUFF_DIFF=$($env:RUFF_DIFF)### Required changes' >> $env:GITHUB_ENV
+        echo 'RUFF_DIFF=$($env:RUFF_DIFF)```diff' >> $env:GITHUB_ENV
+        poetry run ruff format --diff >> $env:GITHUB_ENV
+        echo 'RUFF_DIFF=$($env:RUFF_DIFF)```' >> $env:GITHUB_ENV
       # if: ${{ always() }}
       if: ${{ failure() && steps.ruff-check.conclusion == 'failure' }}
 
@@ -99,5 +97,5 @@ jobs:
         echo "## :test_tube: [Test result report](https://github.com/${{github.repository}}/runs/$($env:REPORT_ID)?check_suite_focus=true)" >> $env:GITHUB_STEP_SUMMARY
         echo "| ${{ steps.result-report.outputs.passed }} :white_check_mark: | ${{ steps.result-report.outputs.failed }} :x: | ${{ steps.result-report.outputs.skipped }} :next_track_button: |"  >> $env:GITHUB_STEP_SUMMARY
         echo "|--|--|--|"  >> $env:GITHUB_STEP_SUMMARY
-        cat ruff-diff.md $env:GITHUB_STEP_SUMMARY
+        echo "$($env:RUFF_DIFF)" >> $env:GITHUB_STEP_SUMMARY
       if: always()
