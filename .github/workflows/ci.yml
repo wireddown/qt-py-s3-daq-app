@@ -71,6 +71,17 @@ jobs:
         path: test-summary.md
       if: always()
 
+    - name: Build package
+      run: poetry build --verbose --format sdist
+      if: always()
+
+    - name: Upload package
+      uses: actions/upload-artifact@v4
+      with:
+        name: "Package for Python ${{ matrix.python_version }} on ${{ runner.os }}"
+        path: dist/*.tar.gz
+      if: always()
+
     - name: Write workflow summary
       run: |
         echo "# Run Tests and Analyzers :checkered_flag:" >> $env:GITHUB_STEP_SUMMARY
