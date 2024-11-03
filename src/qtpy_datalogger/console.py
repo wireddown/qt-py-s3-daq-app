@@ -37,8 +37,8 @@ def run() -> None:
 def get_logging_level(quiet: bool, verbose: bool) -> int:
     """Get the logging level for the specified quiet and verbose options."""
     log_level = logging.INFO
-    if verbose:
-        log_level = logging.DEBUG
     if quiet:
         log_level = logging.ERROR
+    if verbose:
+        log_level = logging.DEBUG
     return log_level

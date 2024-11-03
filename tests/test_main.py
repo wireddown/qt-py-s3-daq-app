@@ -9,7 +9,7 @@ import pytest
 
 
 @contextmanager
-def program_args(args: list[str] | None = None):  # noqa: ANN201
+def program_args(args: list[str] | None = None) -> None:  # noqa: ANN201
     """Use the specified args as sys.argv[1:] during a with: statement."""
     old_sys_args = sys.argv
     try:
@@ -30,7 +30,7 @@ def test_run_as_module(capsys):  # noqa: ANN001, ANN201
     """Can Python invoke the entry point?"""
     with (
         pytest.raises(SystemExit),
-        program_args(),
+        program_args(["run"]),
     ):
         runpy.run_module("qtpy_datalogger", run_name="__main__")
     captured = capsys.readouterr()
