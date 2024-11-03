@@ -52,14 +52,14 @@ jobs:
 
     - name: Run ruff format --diff
       run: |
-        echo "## ruff check errors" > ruff-diff.md
-        echo "- Use `poe fix` to apply safe fixes" >> ruff-diff.md
-        echo "- Use `ruff rule X000` to see examples" >> ruff-diff.md
-        echo "" >> ruff-diff.md
-        echo "### Required changes" >> ruff-diff.md
-        echo "```diff" >> ruff-diff.md
+        echo '## ruff check errors' > ruff-diff.md
+        echo '- Use `poe fix` to apply safe fixes' >> ruff-diff.md
+        echo '- Use `ruff rule X000` to see examples' >> ruff-diff.md
+        echo '' >> ruff-diff.md
+        echo '### Required changes' >> ruff-diff.md
+        echo '```diff' >> ruff-diff.md
         poetry run ruff format --diff >> ruff-diff.md
-        echo "```" >> ruff-diff.md
+        echo '```' >> ruff-diff.md
       # if: ${{ always() }}
       if: ${{ failure() && steps.ruff-check.conclusion == 'failure' }}
 
