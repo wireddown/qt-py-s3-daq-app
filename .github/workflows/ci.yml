@@ -52,7 +52,7 @@ jobs:
       run: |
         echo "::warning title=ruff check errors::Use 'poe fix' to apply safe fixes. Use 'ruff rule X000' to see examples."
         poetry run ruff format --diff
-      if: ${{ steps.ruff-check.outcome }} == 'failure'
+      if: ${{ steps.ruff-check.outcome == 'failure' }}
 
     - name: Run pyright
       run: poetry run pyright --dependencies
