@@ -1,0 +1,76 @@
+name: Run Tests and Analyzers
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test on Python ${{ matrix.python_version }}
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python_version: ["3.11"]
+
+    steps:
+    - name: Get source code
+      uses: actions/checkout@v4
+
+    - name: Install poetry
+      run: |
+        pipx install poetry
+        poetry about
+        poetry config --list
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "${{ matrix.python_version }}"
+        cache: "poetry"
+
+    - name: Install dependencies
+      run: |
+        poetry install
+        poetry show
+
+    - name: Run pytest
+      run: poetry run pytest --verbose --junit-xml=junit/pytest-results-${{ runner.os }}-${{ matrix.python_version }}.xml
+
+    - name: Upload pytest results
+      uses: actions/upload-artifact@v4
+      with:
+        name: pytest results for ${{ runner.os }}-${{ matrix.python-version }}
+        path: junit/pytest-results-${{ runner.os }}-${{ matrix.python_version }}.xml
+      if: ${{ always() }}
+
+    - name: Run ruff check
+      id: ruff-check
+      run: poetry run ruff check --output-format junit --output-file junit/ruff-check-results-${{ runner.os }}-${{ matrix.python_version }}.xml
+      if: ${{ always() }}
+
+    - name: Upload ruff check results
+      uses: actions/upload-artifact@v4
+      with:
+        name: ruff check results for ${{ runner.os }}-${{ matrix.python_version }}
+        path: junit/ruff-check-results-${{ runner.os }}-${{ matrix.python_version }}.xml
+      if: ${{ always() }}
+
+    - name: Run ruff format --diff
+      run: |
+        echo "::warning title=ruff check errors::Use 'poe fix' to apply safe fixes. Use 'ruff rule X000' to see examples."
+        poetry run ruff format --diff
+      if: ${{ steps.ruff-check.outcome == "failure" }}
+
+    - name: Run pyright
+      run: poetry run pyright --dependencies
+      if: ${{ always() }}
+
+    - name: Write workflow summary
+      run: |
+        echo "# Run Tests and Analyzers :checkered_flag:" >> $GITHUB_STEP_SUMMARY
+      if: ${{ always() }}
