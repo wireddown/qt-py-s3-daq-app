@@ -51,8 +51,14 @@ jobs:
     - name: Run ruff format --diff
       run: |
         echo "::warning title=ruff check errors::Use 'poe fix' to apply safe fixes. Use 'ruff rule X000' to see examples."
+        echo "::notice ::${{ steps.ruff-check }}" 
+        echo "::debug::${{ steps.ruff-check.outputs }}"
+        echo "::debug::${{ steps.ruff-check.conclusion }}"
+        echo "::debug::${{ steps.ruff-check.outcome }}"
+        echo "::debug::${{ steps.ruff-check. }}"
         poetry run ruff format --diff
-      if: ${{ steps.ruff-check.conclusion == 'failure' }}
+      if: ${{ always() }}
+      # if: ${{ steps.ruff-check.conclusion == 'failure' }}
 
     - name: Run pyright
       run: poetry run pyright --dependencies
