@@ -2,9 +2,9 @@ name: Run Tests and Analyzers
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ main ]
 
 permissions:
   contents: read
@@ -17,7 +17,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python_version: ["3.11"]
+        python_version: ['3.11']
 
     steps:
     - name: Get source code
@@ -25,7 +25,7 @@ jobs:
 
     - name: Install poetry
       run: |
-        echo "# :checkered_flag: Run Tests and Analyzers" >> $env:GITHUB_STEP_SUMMARY
+        echo '# :checkered_flag: Run Tests and Analyzers (run ${{ github.run_id }})' >> $env:GITHUB_STEP_SUMMARY
         pipx install poetry
         poetry about
         poetry config --list
@@ -33,13 +33,14 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: "${{ matrix.python_version }}"
-        cache: "poetry"
+        python-version: ${{ matrix.python_version }}
+        cache: poetry
 
     - name: Install dependencies
       run: |
         poetry install
-        poetry show
+        echo '## :package: Installed dependencies' >> $env:GITHUB_STEP_SUMMARY
+        poetry show >> $env:GITHUB_STEP_SUMMARY
 
     - name: Run pytest
       run: poetry run pytest --verbose --junit-xml=junit/pytest-results-${{ runner.os }}-${{ matrix.python_version }}.xml
@@ -60,11 +61,12 @@ jobs:
         echo '```diff' >> $env:GITHUB_STEP_SUMMARY
         poetry run ruff format --diff >> $env:GITHUB_STEP_SUMMARY
         echo '```' >> $env:GITHUB_STEP_SUMMARY
-      # if: ${{ always() }}
       if: ${{ failure() && steps.ruff-check.conclusion == 'failure' }}
 
     - name: Run pyright
-      run: poetry run pyright --dependencies
+      run: |
+        echo '## :microscope: pyright results' >> $env:GITHUB_STEP_SUMMARY
+        poetry run pyright --dependencies >> $env:GITHUB_STEP_SUMMARY
       if: always()
 
     - name: Create result report
@@ -79,7 +81,7 @@ jobs:
     - name: Get report ID
       run: |
         $report_id_segment = '${{steps.result-report.outputs.url}}'.split('/')[-1]
-        echo "REPORT_ID=$report_id_segment" >> $env:GITHUB_ENV
+        echo 'REPORT_ID=$report_id_segment' >> $env:GITHUB_ENV
       if: always()
 
     - name: Build package
@@ -95,7 +97,7 @@ jobs:
 
     - name: Write workflow summary
       run: |
-        echo "## :test_tube: [Test result report](https://github.com/${{github.repository}}/runs/$($env:REPORT_ID)?check_suite_focus=true)" >> $env:GITHUB_STEP_SUMMARY
-        echo "| ${{ steps.result-report.outputs.passed }} :white_check_mark: | ${{ steps.result-report.outputs.failed }} :x: | ${{ steps.result-report.outputs.skipped }} :next_track_button: |"  >> $env:GITHUB_STEP_SUMMARY
-        echo "|--|--|--|"  >> $env:GITHUB_STEP_SUMMARY
+        echo '## :test_tube: [Combined result report](https://github.com/${{github.repository}}/runs/$($env:REPORT_ID)?check_suite_focus=true)' >> $env:GITHUB_STEP_SUMMARY
+        echo '| ${{ steps.result-report.outputs.passed }} :white_check_mark: | ${{ steps.result-report.outputs.failed }} :x: | ${{ steps.result-report.outputs.skipped }} :next_track_button: |'  >> $env:GITHUB_STEP_SUMMARY
+        echo '|--|--|--|'  >> $env:GITHUB_STEP_SUMMARY
       if: always()
