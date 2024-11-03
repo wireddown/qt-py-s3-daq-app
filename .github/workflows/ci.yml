@@ -60,7 +60,7 @@ jobs:
       uses: dorny/test-reporter@v1.9.1
       with:
         name: Results for Python ${{ matrix.python_version }} on ${{ runner.os }}
-        path: junit/**/TEST-*.xml
+        path: junit/*.xml
         reporter: 'java-junit'
       if: always()
 
