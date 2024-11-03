@@ -32,7 +32,6 @@ logger.info("Hello from each file")
 # Reworked from https://github.com/click-contrib/click-log
 
 import logging
-import time
 
 import click
 
@@ -99,8 +98,8 @@ class ColorFormatter(logging.Formatter):
         time_string = ""
         location_string = ""
         if self.level < logging.INFO:
-            timestamp = time.localtime(record.created)
-            time_string = click.style(f"{time.strftime('%Y.%m.%d %H:%M:%S', timestamp)}.{record.msecs:03.0f}", fg=color)
+            timestamp = logging.time.localtime(record.created)
+            time_string = click.style(f"{logging.time.strftime('%Y.%m.%d %H:%M:%S', timestamp)}.{record.msecs:03.0f}", fg=color)
             location_string = click.style(f"{record.name:>30}::{record.funcName} {record.lineno:>4}", fg=color)
 
         severity_string = click.style(f"{record.levelname:<8}", fg=color)
