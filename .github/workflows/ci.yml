@@ -57,7 +57,7 @@ jobs:
         echo "::warning ::${{ steps.ruff-check.outcome }}"
         poetry run ruff format --diff
       # if: ${{ always() }}
-      if: ${{ steps.ruff-check.conclusion == 'failure' }}
+      if: ${{ failure() && steps.ruff-check.conclusion == 'failure' }}
 
     - name: Run pyright
       run: poetry run pyright --dependencies
