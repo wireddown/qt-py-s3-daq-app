@@ -68,7 +68,10 @@ jobs:
       if: always()
 
     - name: Get report ID
-      run: echo "REPORT_ID=$('${{steps.result-report.outputs.url}}'.split('/')[-1])" >> $env:GITHUB_ENV
+         # echo "REPORT_ID=$('${{steps.result-report.outputs.url}}'.split('/')[-1])"
+      run: |
+        $report_id_segment = '${{steps.result-report.outputs.url}}'.split('/')[-1]
+        echo "REPORT_ID=$report_id_segment" >> $env:GITHUB_ENV
 
     - name: Build package
       run: poetry build --verbose --format sdist
