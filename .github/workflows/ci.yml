@@ -46,7 +46,7 @@ jobs:
     - name: Run ruff check
       id: ruff-check
       run: poetry run ruff check --output-format junit --output-file junit/ruff-check-results-${{ runner.os }}-${{ matrix.python_version }}.xml
-      if: ${{ always() }}
+      if: always()
 
     - name: Run ruff format --diff
       run: |
@@ -56,7 +56,7 @@ jobs:
 
     - name: Run pyright
       run: poetry run pyright --dependencies
-      if: ${{ always() }}
+      if: always()
 
     - name: Create result report
       id: result-report
@@ -71,6 +71,7 @@ jobs:
       run: |
         $report_id_segment = '${{steps.result-report.outputs.url}}'.split('/')[-1]
         echo "REPORT_ID=$report_id_segment" >> $env:GITHUB_ENV
+      if: always()
 
     - name: Build package
       run: poetry build --verbose --format sdist
@@ -89,4 +90,4 @@ jobs:
         echo "## :test_tube: [Test result report](https://github.com/${{github.repository}}/runs/$($env:REPORT_ID)?check_suite_focus=true)" >> $env:GITHUB_STEP_SUMMARY
         echo "| ${{ steps.result-report.outputs.passed }} :white_check_mark: | ${{ steps.result-report.outputs.failed }} :x: | ${{ steps.result-report.outputs.skipped }} :next_track_button: |"  >> $env:GITHUB_STEP_SUMMARY
         echo "|--|--|--|"  >> $env:GITHUB_STEP_SUMMARY
-      if: ${{ always() }}
+      if: always()
