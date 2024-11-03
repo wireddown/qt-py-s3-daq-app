@@ -41,23 +41,9 @@ jobs:
     - name: Run pytest
       run: poetry run pytest --verbose --junit-xml=junit/pytest-results-${{ runner.os }}-${{ matrix.python_version }}.xml
 
-    - name: Upload pytest results
-      uses: actions/upload-artifact@v4
-      with:
-        name: pytest results for Python ${{ matrix.python_version }} on ${{ runner.os }}
-        path: junit/pytest-results-${{ runner.os }}-${{ matrix.python_version }}.xml
-      if: ${{ always() }}
-
     - name: Run ruff check
       id: ruff-check
       run: poetry run ruff check --output-format junit --output-file junit/ruff-check-results-${{ runner.os }}-${{ matrix.python_version }}.xml
-      if: ${{ always() }}
-
-    - name: Upload ruff check results
-      uses: actions/upload-artifact@v4
-      with:
-        name: ruff check results for Python ${{ matrix.python_version }} on ${{ runner.os }}
-        path: junit/ruff-check-results-${{ runner.os }}-${{ matrix.python_version }}.xml
       if: ${{ always() }}
 
     - name: Run ruff format --diff
@@ -69,6 +55,21 @@ jobs:
     - name: Run pyright
       run: poetry run pyright --dependencies
       if: ${{ always() }}
+
+    - name: Test summary
+      uses: test-summary/action@v2
+      with:
+        paths: "junit/**/TEST-*.xml"
+        output: test-summary.md
+        show: "all"
+      if: always()
+
+    - name: Upload test summary
+      uses: actions/upload-artifact@v4
+      with:
+        name: ":test_tube: Test summary for Python ${{ matrix.python_version }} on ${{ runner.os }}"
+        path: test-summary.md
+      if: always()
 
     - name: Write workflow summary
       run: |
