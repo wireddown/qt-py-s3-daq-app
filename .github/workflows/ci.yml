@@ -59,8 +59,10 @@ jobs:
     - name: Create result report
       uses: dorny/test-reporter@v1.9.1
       with:
+        name: Results for Python ${{ matrix.python_version }} on ${{ runner.os }}
         path: junit/**/TEST-*.xml
         reporter: 'java-junit'
+      if: always()
 
     - name: Build package
       run: poetry build --verbose --format sdist
@@ -69,13 +71,11 @@ jobs:
     - name: Upload package
       uses: actions/upload-artifact@v4
       with:
-        name: "Package for Python ${{ matrix.python_version }} on ${{ runner.os }}"
+        name: Package for Python ${{ matrix.python_version }} on ${{ runner.os }}
         path: dist/*.tar.gz
       if: always()
 
     - name: Write workflow summary
       run: |
-        echo "# Run Tests and Analyzers :checkered_flag:" >> $env:GITHUB_STEP_SUMMARY
-        echo "## Test summary for Python ${{ matrix.python_version }} on ${{ runner.os }}" >> $env:GITHUB_STEP_SUMMARY
-        cat test-summary.md
+        echo "# :checkered_flag: Run Tests and Analyzers" >> $env:GITHUB_STEP_SUMMARY
       if: ${{ always() }}
