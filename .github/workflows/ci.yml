@@ -67,7 +67,7 @@ jobs:
     - name: Upload test summary
       uses: actions/upload-artifact@v4
       with:
-        name: ":test_tube: Test summary for Python ${{ matrix.python_version }} on ${{ runner.os }}"
+        name: "Test summary for Python ${{ matrix.python_version }} on ${{ runner.os }}"
         path: test-summary.md
       if: always()
 
