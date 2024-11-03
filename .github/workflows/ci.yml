@@ -72,5 +72,5 @@ jobs:
 
     - name: Write workflow summary
       run: |
-        echo "# Run Tests and Analyzers :checkered_flag:" >> $GITHUB_STEP_SUMMARY
+        echo "# Run Tests and Analyzers :checkered_flag:" >> $env:GITHUB_STEP_SUMMARY
       if: ${{ always() }}
