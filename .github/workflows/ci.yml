@@ -51,8 +51,8 @@ jobs:
     - name: Run ruff format --diff
       run: |
         echo "::warning title=ruff check errors::Use 'poe fix' to apply safe fixes. Use 'ruff rule X000' to see examples."
-        echo "::warning ::${{ steps.ruff-check }}" 
-        echo "::warning ::${{ steps.ruff-check.outputs }}"
+        echo "::warning ::${{ toJSON(steps.ruff-check) }}" 
+        echo "::warning ::${{ toJSON(steps.ruff-check.outputs) }}"
         echo "::warning ::${{ steps.ruff-check.conclusion }}"
         echo "::warning ::${{ steps.ruff-check.outcome }}"
         poetry run ruff format --diff
