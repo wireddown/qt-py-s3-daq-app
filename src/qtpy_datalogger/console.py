@@ -1,4 +1,6 @@
-"""Command line interface for qtpy_datalogger."""
+"""
+Command line interface for qtpy_datalogger.
+"""
 
 import logging
 
@@ -31,7 +33,6 @@ def cli(ctx: click.Context, quiet: bool, verbose: bool) -> None:
 def run() -> None:
     """Stub entry point for 'run' subcommand."""
     logger.warning("this is a stub command")
-
 
 def get_logging_level(quiet: bool, verbose: bool) -> int:
     """Get the logging level for the specified quiet and verbose options."""
