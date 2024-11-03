@@ -59,6 +59,7 @@ jobs:
       if: ${{ always() }}
 
     - name: Create result report
+      id: result-report
       uses: dorny/test-reporter@v1.9.1
       with:
         name: Results for Python ${{ matrix.python_version }} on ${{ runner.os }}
@@ -80,4 +81,8 @@ jobs:
     - name: Write workflow summary
       run: |
         echo "# :checkered_flag: Run Tests and Analyzers" >> $env:GITHUB_STEP_SUMMARY
+        echo "## :test_tube: [Test result report](${{ steps.result-report.outputs.url }})" >> $env:GITHUB_STEP_SUMMARY
+        echo "| ${{ steps.result-report.outputs.passed }} :check_mark_button: | ${{ steps.result-report.outputs.failed }} :cross_mark: | ${{ steps.result-report.outputs.skipped }} :next_track_button: |"  >> $env:GITHUB_STEP_SUMMARY
+        echo "|--|--|--|"  >> $env:GITHUB_STEP_SUMMARY
+        echo ""  >> $env:GITHUB_STEP_SUMMARY
       if: ${{ always() }}
