@@ -85,4 +85,6 @@ jobs:
     - name: Write workflow summary
       run: |
         echo "# Run Tests and Analyzers :checkered_flag:" >> $env:GITHUB_STEP_SUMMARY
+        echo "## Test summary for Python ${{ matrix.python_version }} on ${{ runner.os }}" >> $env:GITHUB_STEP_SUMMARY
+        cat test-summary.md
       if: ${{ always() }}
