@@ -55,7 +55,6 @@ jobs:
         echo "::debug::${{ steps.ruff-check.outputs }}"
         echo "::debug::${{ steps.ruff-check.conclusion }}"
         echo "::debug::${{ steps.ruff-check.outcome }}"
-        echo "::debug::${{ steps.ruff-check. }}"
         poetry run ruff format --diff
       if: ${{ always() }}
       # if: ${{ steps.ruff-check.conclusion == 'failure' }}
