@@ -49,7 +49,9 @@ jobs:
 
     - name: Run ruff check
       id: ruff-check
-      run: poetry run ruff check --output-format junit --output-file junit/ruff-check-results-${{ runner.os }}-${{ matrix.python_version }}.xml
+      run: |
+        poetry run ruff check --output-format github
+        poetry run ruff check --output-format junit --output-file junit/ruff-check-results-${{ runner.os }}-${{ matrix.python_version }}.xml
       if: always()
 
     - name: Run ruff format --diff
@@ -59,6 +61,11 @@ jobs:
         echo '- Use `poe fix` to apply safe fixes' >> $env:GITHUB_STEP_SUMMARY
         echo '- Use `ruff rule X000` to see examples' >> $env:GITHUB_STEP_SUMMARY
         echo '  - Full list on https://docs.astral.sh/ruff/rules/' >> $env:GITHUB_STEP_SUMMARY
+        echo '' >> $env:GITHUB_STEP_SUMMARY
+        echo '### Rules' >> $env:GITHUB_STEP_SUMMARY
+        echo '```' >> $env:GITHUB_STEP_SUMMARY
+        poetry run ruff check --output-format grouped >> $env:GITHUB_STEP_SUMMARY
+        echo '```' >> $env:GITHUB_STEP_SUMMARY
         echo '' >> $env:GITHUB_STEP_SUMMARY
         echo '### Required changes' >> $env:GITHUB_STEP_SUMMARY
         echo '```diff' >> $env:GITHUB_STEP_SUMMARY
