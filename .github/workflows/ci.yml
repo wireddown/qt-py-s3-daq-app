@@ -45,11 +45,13 @@ jobs:
         echo '```' >> $env:GITHUB_STEP_SUMMARY
 
     - name: Run pytest
+      # run: poetry run pytest --verbose --junit-xml=junit/pytest-results-${{ runner.os }}-${{ matrix.python_version }}.xml
       run: poetry run pytest --verbose --junit-xml=junit/pytest-results-${{ runner.os }}-${{ matrix.python_version }}.xml
 
     - name: Run ruff check
       id: ruff-check
-      run: poetry run ruff check --output-format junit --output-file junit/ruff-check-results-${{ runner.os }}-${{ matrix.python_version }}.xml
+      # run: poetry run ruff check --output-format junit --output-file junit/ruff-check-results-${{ runner.os }}-${{ matrix.python_version }}.xml
+      run: poetry run ruff check --output-format json --output-file json/ruff-check-results-${{ runner.os }}-${{ matrix.python_version }}.json
       if: always()
 
     - name: Run ruff format --diff
@@ -70,6 +72,7 @@ jobs:
         echo '## :microscope: pyright results' >> $env:GITHUB_STEP_SUMMARY
         echo '```' >> $env:GITHUB_STEP_SUMMARY
         poetry run pyright --dependencies >> $env:GITHUB_STEP_SUMMARY
+        poetry run pyright --dependencies --outputjson > json/pyright-results-${{ runner.os }}-${{ matrix.python_version }}.json
         echo '```' >> $env:GITHUB_STEP_SUMMARY
       if: always()
 
@@ -78,8 +81,10 @@ jobs:
       uses: dorny/test-reporter@v1.9.1
       with:
         name: Results for Python ${{ matrix.python_version }} on ${{ runner.os }}
-        path: junit/*.xml
-        reporter: 'java-junit'
+        # path: junit/*.xml
+        # reporter: 'java-junit'
+        path: json/*.json
+        reporter: mocha-json
       if: always()
 
     - name: Get report ID
