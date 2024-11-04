@@ -64,7 +64,8 @@ jobs:
         poetry run ruff check --output-format grouped >> $env:GITHUB_STEP_SUMMARY
         echo '```' >> $env:GITHUB_STEP_SUMMARY
         echo '- Use `poe fix` to apply safe fixes' >> $env:GITHUB_STEP_SUMMARY
-        echo '- Use `ruff rule X000` to see examples' >> $env:GITHUB_STEP_SUMMARY
+        echo '- Use `ruff check --fix --unsafe-fixes` to apply experimental fixes' >> $env:GITHUB_STEP_SUMMARY
+        echo '- Use `ruff rule Z000 | mdv -` to see examples' >> $env:GITHUB_STEP_SUMMARY
         echo '  - Full list on https://docs.astral.sh/ruff/rules/' >> $env:GITHUB_STEP_SUMMARY
         echo '' >> $env:GITHUB_STEP_SUMMARY
         echo '### Required changes' >> $env:GITHUB_STEP_SUMMARY
