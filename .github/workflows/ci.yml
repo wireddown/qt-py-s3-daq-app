@@ -1,0 +1,123 @@
+name: Run Tests and Analyzers
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+jobs:
+  test:
+    name: Test on Python ${{ matrix.python_version }}
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python_version: ['3.11']
+
+    steps:
+    - name: Get source code
+      uses: actions/checkout@v4
+
+    - name: Install poetry
+      run: |
+        echo '# :checkered_flag: Run Tests and Analyzers _(run ${{ github.run_number }} attempt ${{ github.run_attempt }})_' >> $env:GITHUB_STEP_SUMMARY
+        pipx install poetry
+        poetry about
+        poetry config --list
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python_version }}
+        cache: poetry
+
+    - name: Install dependencies
+      run: |
+        poetry install
+        echo '## :package: Installed dependencies' >> $env:GITHUB_STEP_SUMMARY
+        echo '```' >> $env:GITHUB_STEP_SUMMARY
+        poetry show >> $env:GITHUB_STEP_SUMMARY
+        echo '```' >> $env:GITHUB_STEP_SUMMARY
+
+    - name: Run pytest
+      run: poetry run pytest --verbose --junit-xml=junit/pytest-results-${{ runner.os }}-${{ matrix.python_version }}.xml
+
+    - name: Run ruff check
+      id: ruff-check
+      run: |
+        poetry run ruff check --output-format github
+        poetry run ruff check --output-format junit --output-file junit/ruff-check-results-${{ runner.os }}-${{ matrix.python_version }}.xml
+      if: always()
+
+    - name: Run ruff format --diff
+      run: |
+        poetry run ruff format --diff
+        echo '## :microscope: ruff check errors' >> $env:GITHUB_STEP_SUMMARY
+        echo '' >> $env:GITHUB_STEP_SUMMARY
+        echo '### Lint rule errors' >> $env:GITHUB_STEP_SUMMARY
+        echo '```' >> $env:GITHUB_STEP_SUMMARY
+        poetry run ruff check --output-format grouped >> $env:GITHUB_STEP_SUMMARY
+        echo '```' >> $env:GITHUB_STEP_SUMMARY
+        echo '- :green_circle: Use `poe fix` to apply safe fixes' >> $env:GITHUB_STEP_SUMMARY
+        echo '- :warning: Use `ruff check --fix --unsafe-fixes` to apply experimental fixes' >> $env:GITHUB_STEP_SUMMARY
+        echo '- :book: Use `ruff rule Z123 | mdv -` to see examples' >> $env:GITHUB_STEP_SUMMARY
+        echo '  - `mdv` is a [terminal viewer](https://github.com/axiros/terminal_markdown_viewer) for markdown' >> $env:GITHUB_STEP_SUMMARY
+        echo '  - Full list on https://docs.astral.sh/ruff/rules/' >> $env:GITHUB_STEP_SUMMARY
+        echo '' >> $env:GITHUB_STEP_SUMMARY
+        echo '### Format errors' >> $env:GITHUB_STEP_SUMMARY
+        echo '```diff' >> $env:GITHUB_STEP_SUMMARY
+        poetry run ruff format --diff >> $env:GITHUB_STEP_SUMMARY
+        echo '```' >> $env:GITHUB_STEP_SUMMARY
+        echo ' - :green_circle: Use `ruff format` to fix errors' >> $env:GITHUB_STEP_SUMMARY
+        echo '' >> $env:GITHUB_STEP_SUMMARY
+      if: ${{ failure() && steps.ruff-check.conclusion == 'failure' }}
+      continue-on-error: true
+
+    - name: Run pyright
+      run: |
+        poetry run pyright --dependencies
+        echo '## :microscope: pyright results' >> $env:GITHUB_STEP_SUMMARY
+        echo '```' >> $env:GITHUB_STEP_SUMMARY
+        poetry run pyright --dependencies >> $env:GITHUB_STEP_SUMMARY
+        echo '```' >> $env:GITHUB_STEP_SUMMARY
+      if: always()
+
+    - name: Create result report
+      id: result-report
+      uses: dorny/test-reporter@v1.9.1
+      with:
+        name: Results for Python ${{ matrix.python_version }} on ${{ runner.os }}
+        path: junit/*.xml
+        reporter: 'java-junit'
+        fail-on-error: false
+      if: always()
+
+    - name: Get report ID
+      run: |
+        $report_id_segment = '${{steps.result-report.outputs.url}}'.split('/')[-1]
+        echo "REPORT_ID=$report_id_segment" >> $env:GITHUB_ENV
+      if: always()
+
+    - name: Build package
+      run: poetry build --verbose --format sdist
+      if: always()
+
+    - name: Upload package
+      id: upload-package
+      uses: actions/upload-artifact@v4
+      with:
+        name: qtpy_datalogger for Python ${{ matrix.python_version }} on ${{ runner.os }}
+        path: dist/*.tar.gz
+      if: always()
+
+    - name: Write workflow summary
+      run: |
+        echo "## :test_tube: [Combined results](https://github.com/${{github.repository}}/runs/$($env:REPORT_ID)?check_suite_focus=true) :small_blue_diamond: ${{ steps.result-report.outputs.passed }} :white_check_mark: :small_blue_diamond: ${{ steps.result-report.outputs.failed }} :x: :small_blue_diamond: ${{ steps.result-report.outputs.skipped }} :next_track_button:" >> $env:GITHUB_STEP_SUMMARY
+        echo '' >> $env:GITHUB_STEP_SUMMARY
+        echo '## :arrow_heading_down: [Download](${{ steps.upload-package.outputs.artifact-url }})' >> $env:GITHUB_STEP_SUMMARY
+      if: always()
