@@ -96,7 +96,7 @@ jobs:
       id: upload-package
       uses: actions/upload-artifact@v4
       with:
-        name: Package for Python ${{ matrix.python_version }} on ${{ runner.os }}
+        name: qtpy_datalogger for Python ${{ matrix.python_version }} on ${{ runner.os }}
         path: dist/*.tar.gz
       if: always()
 
@@ -106,5 +106,5 @@ jobs:
         echo '| ${{ steps.result-report.outputs.passed }} :white_check_mark: | ${{ steps.result-report.outputs.failed }} :x: | ${{ steps.result-report.outputs.skipped }} :next_track_button: |' >> $env:GITHUB_STEP_SUMMARY
         echo '|--|--|--|' >> $env:GITHUB_STEP_SUMMARY
         echo '' >> $env:GITHUB_STEP_SUMMARY
-        echo '## ::arrow_heading_down:: [Download](${{ steps.upload-package.outputs.artifact-url }})' >> $env:GITHUB_STEP_SUMMARY
+        echo '## :arrow_heading_down: [Download](${{ steps.upload-package.outputs.artifact-url }})' >> $env:GITHUB_STEP_SUMMARY
       if: always()
