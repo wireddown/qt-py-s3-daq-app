@@ -40,7 +40,9 @@ jobs:
       run: |
         poetry install
         echo '## :package: Installed dependencies' >> $env:GITHUB_STEP_SUMMARY
+        echo '```' >> $env:GITHUB_STEP_SUMMARY
         poetry show >> $env:GITHUB_STEP_SUMMARY
+        echo '```' >> $env:GITHUB_STEP_SUMMARY
 
     - name: Run pytest
       run: poetry run pytest --verbose --junit-xml=junit/pytest-results-${{ runner.os }}-${{ matrix.python_version }}.xml
@@ -66,7 +68,9 @@ jobs:
     - name: Run pyright
       run: |
         echo '## :microscope: pyright results' >> $env:GITHUB_STEP_SUMMARY
+        echo '```' >> $env:GITHUB_STEP_SUMMARY
         poetry run pyright --dependencies >> $env:GITHUB_STEP_SUMMARY
+        echo '```' >> $env:GITHUB_STEP_SUMMARY
       if: always()
 
     - name: Create result report
@@ -97,7 +101,7 @@ jobs:
 
     - name: Write workflow summary
       run: |
-        echo '## :test_tube: [Combined result report](https://github.com/${{github.repository}}/runs/$($env:REPORT_ID)?check_suite_focus=true)' >> $env:GITHUB_STEP_SUMMARY
+        echo "## :test_tube: [Combined result report](https://github.com/${{github.repository}}/runs/$($env:REPORT_ID)?check_suite_focus=true)" >> $env:GITHUB_STEP_SUMMARY
         echo '| ${{ steps.result-report.outputs.passed }} :white_check_mark: | ${{ steps.result-report.outputs.failed }} :x: | ${{ steps.result-report.outputs.skipped }} :next_track_button: |'  >> $env:GITHUB_STEP_SUMMARY
         echo '|--|--|--|'  >> $env:GITHUB_STEP_SUMMARY
       if: always()
