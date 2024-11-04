@@ -30,7 +30,7 @@ def test_run_as_module(capsys):  # noqa: ANN001, ANN201
     """Can Python invoke the entry point?"""
     with (
         pytest.raises(SystemExit),
-        program_args(["run"]),
+        program_args(),
     ):
         runpy.run_module("qtpy_datalogger", run_name="__main__")
     captured = capsys.readouterr()
