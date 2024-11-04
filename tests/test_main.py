@@ -9,7 +9,7 @@ import pytest
 
 
 @contextmanager
-def program_args(args: list[str] | None = None) -> None:  # noqa: ANN201
+def program_args(args: list[str] | None = None):  # noqa: ANN201
     """Use the specified args as sys.argv[1:] during a with: statement."""
     old_sys_args = sys.argv
     try:
