@@ -54,6 +54,7 @@ jobs:
 
     - name: Run ruff format --diff
       run: |
+        poetry run ruff format --diff
         echo '## :microscope: ruff check errors' >> $env:GITHUB_STEP_SUMMARY
         echo '- Use `poe fix` to apply safe fixes' >> $env:GITHUB_STEP_SUMMARY
         echo '- Use `ruff rule X000` to see examples' >> $env:GITHUB_STEP_SUMMARY
@@ -67,6 +68,7 @@ jobs:
 
     - name: Run pyright
       run: |
+        poetry run pyright --dependencies
         echo '## :microscope: pyright results' >> $env:GITHUB_STEP_SUMMARY
         echo '```' >> $env:GITHUB_STEP_SUMMARY
         poetry run pyright --dependencies >> $env:GITHUB_STEP_SUMMARY
