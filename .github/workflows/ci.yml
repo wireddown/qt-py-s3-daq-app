@@ -83,7 +83,7 @@ jobs:
         name: Results for Python ${{ matrix.python_version }} on ${{ runner.os }}
         path: junit/*.xml
         reporter: 'java-junit'
-      fail-on-error: false
+        fail-on-error: false
       if: always()
 
     - name: Get report ID
