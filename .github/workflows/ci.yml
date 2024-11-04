@@ -45,13 +45,11 @@ jobs:
         echo '```' >> $env:GITHUB_STEP_SUMMARY
 
     - name: Run pytest
-      # run: poetry run pytest --verbose --junit-xml=junit/pytest-results-${{ runner.os }}-${{ matrix.python_version }}.xml
       run: poetry run pytest --verbose --junit-xml=junit/pytest-results-${{ runner.os }}-${{ matrix.python_version }}.xml
 
     - name: Run ruff check
       id: ruff-check
-      # run: poetry run ruff check --output-format junit --output-file junit/ruff-check-results-${{ runner.os }}-${{ matrix.python_version }}.xml
-      run: poetry run ruff check --output-format json --output-file json/ruff-check-results-${{ runner.os }}-${{ matrix.python_version }}.json
+      run: poetry run ruff check --output-format junit --output-file junit/ruff-check-results-${{ runner.os }}-${{ matrix.python_version }}.xml
       if: always()
 
     - name: Run ruff format --diff
@@ -80,10 +78,8 @@ jobs:
       uses: dorny/test-reporter@v1.9.1
       with:
         name: Results for Python ${{ matrix.python_version }} on ${{ runner.os }}
-        # path: junit/*.xml
-        # reporter: 'java-junit'
-        path: json/*.json
-        reporter: flutter-json
+        path: junit/*.xml
+        reporter: 'java-junit'
       if: always()
 
     - name: Get report ID
@@ -97,6 +93,7 @@ jobs:
       if: always()
 
     - name: Upload package
+      id: upload-package
       uses: actions/upload-artifact@v4
       with:
         name: Package for Python ${{ matrix.python_version }} on ${{ runner.os }}
@@ -106,6 +103,8 @@ jobs:
     - name: Write workflow summary
       run: |
         echo "## :test_tube: [Combined result report](https://github.com/${{github.repository}}/runs/$($env:REPORT_ID)?check_suite_focus=true)" >> $env:GITHUB_STEP_SUMMARY
-        echo '| ${{ steps.result-report.outputs.passed }} :white_check_mark: | ${{ steps.result-report.outputs.failed }} :x: | ${{ steps.result-report.outputs.skipped }} :next_track_button: |'  >> $env:GITHUB_STEP_SUMMARY
-        echo '|--|--|--|'  >> $env:GITHUB_STEP_SUMMARY
+        echo '| ${{ steps.result-report.outputs.passed }} :white_check_mark: | ${{ steps.result-report.outputs.failed }} :x: | ${{ steps.result-report.outputs.skipped }} :next_track_button: |' >> $env:GITHUB_STEP_SUMMARY
+        echo '|--|--|--|' >> $env:GITHUB_STEP_SUMMARY
+        echo '' >> $env:GITHUB_STEP_SUMMARY
+        echo '## ::arrow_heading_down:: [Download](${{ steps.upload-package.outputs.artifact-url }})' >> $env:GITHUB_STEP_SUMMARY
       if: always()
