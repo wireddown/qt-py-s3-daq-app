@@ -65,6 +65,7 @@ jobs:
         poetry run ruff format --diff >> $env:GITHUB_STEP_SUMMARY
         echo '```' >> $env:GITHUB_STEP_SUMMARY
       if: ${{ failure() && steps.ruff-check.conclusion == 'failure' }}
+      continue-on-error: true
 
     - name: Run pyright
       run: |
