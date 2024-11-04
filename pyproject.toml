@@ -18,7 +18,7 @@ click = "^8.1.7"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.3"
-ruff = "^0.7.1"
+ruff = "^0.7.2"
 pyright = "^1.1.387"
 
 [tool.poe.tasks]
