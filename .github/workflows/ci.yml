@@ -84,7 +84,7 @@ jobs:
         # path: junit/*.xml
         # reporter: 'java-junit'
         path: json/*.json
-        reporter: dart-json
+        reporter: flutter-json
       if: always()
 
     - name: Get report ID
