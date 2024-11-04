@@ -117,9 +117,7 @@ jobs:
 
     - name: Write workflow summary
       run: |
-        echo "## :test_tube: [Combined result report](https://github.com/${{github.repository}}/runs/$($env:REPORT_ID)?check_suite_focus=true)" >> $env:GITHUB_STEP_SUMMARY
-        echo '| ${{ steps.result-report.outputs.passed }} :white_check_mark: | ${{ steps.result-report.outputs.failed }} :x: | ${{ steps.result-report.outputs.skipped }} :next_track_button: |' >> $env:GITHUB_STEP_SUMMARY
-        echo '|--|--|--|' >> $env:GITHUB_STEP_SUMMARY
+        echo "## :test_tube: [Combined results](https://github.com/${{github.repository}}/runs/$($env:REPORT_ID)?check_suite_focus=true) :small_blue_diamond: ${{ steps.result-report.outputs.passed }} :white_check_mark: :small_blue_diamond: ${{ steps.result-report.outputs.failed }} :x: :small_blue_diamond: ${{ steps.result-report.outputs.skipped }} :next_track_button:" >> $env:GITHUB_STEP_SUMMARY
         echo '' >> $env:GITHUB_STEP_SUMMARY
         echo '## :arrow_heading_down: [Download](${{ steps.upload-package.outputs.artifact-url }})' >> $env:GITHUB_STEP_SUMMARY
       if: always()
