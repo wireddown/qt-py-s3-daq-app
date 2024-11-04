@@ -72,7 +72,6 @@ jobs:
         echo '## :microscope: pyright results' >> $env:GITHUB_STEP_SUMMARY
         echo '```' >> $env:GITHUB_STEP_SUMMARY
         poetry run pyright --dependencies >> $env:GITHUB_STEP_SUMMARY
-        poetry run pyright --outputjson > json/pyright-results-${{ runner.os }}-${{ matrix.python_version }}.json
         echo '```' >> $env:GITHUB_STEP_SUMMARY
       if: always()
 
