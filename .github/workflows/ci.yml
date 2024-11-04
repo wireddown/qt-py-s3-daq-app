@@ -59,19 +59,21 @@ jobs:
         poetry run ruff format --diff
         echo '## :microscope: ruff check errors' >> $env:GITHUB_STEP_SUMMARY
         echo '' >> $env:GITHUB_STEP_SUMMARY
-        echo '### Rules' >> $env:GITHUB_STEP_SUMMARY
+        echo '### Lint rule errors' >> $env:GITHUB_STEP_SUMMARY
         echo '```' >> $env:GITHUB_STEP_SUMMARY
         poetry run ruff check --output-format grouped >> $env:GITHUB_STEP_SUMMARY
         echo '```' >> $env:GITHUB_STEP_SUMMARY
         echo '- Use `poe fix` to apply safe fixes' >> $env:GITHUB_STEP_SUMMARY
         echo '- Use `ruff check --fix --unsafe-fixes` to apply experimental fixes' >> $env:GITHUB_STEP_SUMMARY
-        echo '- Use `ruff rule Z000 | mdv -` to see examples' >> $env:GITHUB_STEP_SUMMARY
+        echo '- Use `ruff rule Z123 | mdv -` to see examples' >> $env:GITHUB_STEP_SUMMARY
         echo '  - Full list on https://docs.astral.sh/ruff/rules/' >> $env:GITHUB_STEP_SUMMARY
         echo '' >> $env:GITHUB_STEP_SUMMARY
-        echo '### Required changes' >> $env:GITHUB_STEP_SUMMARY
+        echo '### Format errors' >> $env:GITHUB_STEP_SUMMARY
         echo '```diff' >> $env:GITHUB_STEP_SUMMARY
         poetry run ruff format --diff >> $env:GITHUB_STEP_SUMMARY
         echo '```' >> $env:GITHUB_STEP_SUMMARY
+        echo ' - Use `ruff format` to fix errors' >> $env:GITHUB_STEP_SUMMARY
+        echo '' >> $env:GITHUB_STEP_SUMMARY
       if: ${{ failure() && steps.ruff-check.conclusion == 'failure' }}
       continue-on-error: true
 
