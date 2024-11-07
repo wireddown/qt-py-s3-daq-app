@@ -29,6 +29,12 @@ graph LR
 - Host program: `qtpy_datalogger`
 - QT Py program: `qtpy_sensor_node`
 
+## Contributing
+
+This project manages its Python programs with `poetry`.
+
+The environment setup instructions are in the wiki on the [Contributing](../../wiki/Contributing) page.
+
 ## Legacy system
 
 [Summary and source code](./docs/legacy/README.md)
