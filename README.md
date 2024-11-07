@@ -1,6 +1,6 @@
 # QT Py S3 DAQ App
 
-Data acquisition application using Adafruit QT Py S3
+A data acquisition application using the [Adafruit QT Py S3](https://learn.adafruit.com/adafruit-qt-py-esp32-s3) and [CircuitPython](https://circuitpython.org/).
 
 ## Legacy system
 
