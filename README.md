@@ -37,4 +37,6 @@ The environment setup instructions are in the wiki on the [Contributing](../../w
 
 ## Legacy system
 
-[Summary and source code](./docs/legacy/README.md)
+This project replaces a legacy system that uses Python and JeeNodes.
+
+See the [summary and source code](./docs/legacy/README.md) in the `docs/legacy` folder for details.
