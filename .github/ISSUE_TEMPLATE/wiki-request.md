@@ -1,6 +1,6 @@
 ---
 name: Wiki request
-about: Ask a question or add a suggestion about the wiki
+about: "🤔 Ask a question or add a suggestion about the wiki"
 title: ''
 labels: inbox, wiki
 assignees: ''
