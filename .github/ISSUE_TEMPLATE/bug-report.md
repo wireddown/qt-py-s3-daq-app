@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Create a bug report and track in Issues
+about: "\U0001F41E Create a bug report and track in Issues"
 title: ''
 labels: inbox
 assignees: wireddown
