@@ -74,6 +74,8 @@ extend-select = [
     "ISC",
     "LOG",
     "N",
+    "NPY",
+    "PD",
     "PL",
     "PIE",
     "PT",
