@@ -1,6 +1,6 @@
 ---
 name: Help request
-about: "\U0001F6DF Ask for help running the program or setting up your computer"
+about: "🛟 Ask for help running the program or setting up your computer"
 title: ''
 labels: help me, inbox
 assignees: ''
