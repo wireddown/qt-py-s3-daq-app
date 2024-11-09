@@ -88,6 +88,7 @@ extend-select = [
     "T10",
     "T20",
     "TD",
+    "TRY",
     "UP",
     "W",
 ]
