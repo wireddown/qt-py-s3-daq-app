@@ -86,6 +86,7 @@ extend-select = [
     "S",
     "SIM",
     "T10",
+    "T20",
     "UP",
     "W",
 ]
