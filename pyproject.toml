@@ -57,6 +57,7 @@ extend-exclude = [
 extend-select = [
     "A",
     "ANN",
+    "ASYNC",
     "B",
     "BLE",
     "C4",
