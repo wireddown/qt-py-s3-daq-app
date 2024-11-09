@@ -2,12 +2,12 @@
 name: Bug report
 about: Create a bug report and track in Issues
 title: ''
-labels: 'inbox'
+labels: inbox
 assignees: wireddown
 
 ---
 
-#### Describe the bug
+#### Description
 _Add a clear and concise description of the bug_
 
 #### To reproduce
@@ -17,7 +17,7 @@ _Add steps to reproduce the behavior_
 1. See error
 
 #### Expected behavior
-_Add a clear and concise description of what you expected to happen_
+_Describe what you expected to happen_
 
 #### Screenshots or logs
 _If applicable, add screenshots or logs to help explain the problem_
