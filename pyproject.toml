@@ -57,12 +57,16 @@ extend-exclude = [
 extend-select = [
     "A",
     "ANN",
+    "ASYNC",
     "B",
     "BLE",
     "C4",
     "COM",
     "D",
+    "DTZ",
     "EM",
+    "ERA",
+    "FURB",
     "G",
     "I",
     "ICN",
@@ -70,6 +74,8 @@ extend-select = [
     "ISC",
     "LOG",
     "N",
+    "NPY",
+    "PD",
     "PL",
     "PIE",
     "PT",
@@ -80,6 +86,9 @@ extend-select = [
     "S",
     "SIM",
     "T10",
+    "T20",
+    "TD",
+    "TRY",
     "UP",
     "W",
 ]
@@ -92,6 +101,7 @@ ignore = [
     "G004",
     "ISC001",
     "RET504",
+    "TD002",
 ]
 
 [tool.ruff.lint.per-file-ignores]
