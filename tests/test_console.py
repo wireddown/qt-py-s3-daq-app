@@ -23,7 +23,7 @@ def test_subcommand():  # noqa: ANN201
 
     @click.command("subcommand_name")
     def subcommand_name() -> None:
-        print(command_was_invoked_message)
+        print(command_was_invoked_message)  # noqa: T201 Allow print for this test
 
     console.cli.add_command(subcommand_name)
 
