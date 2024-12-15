@@ -21,6 +21,11 @@ pytest = "^8.3.4"
 ruff = "^0.8.4"
 pyright = "^1.1.391"
 
+
+[tool.poetry.group.jupyter.dependencies]
+jupyter = "^1.1.1"
+seaborn = "^0.13.2"
+
 [tool.poe.tasks]
 _ruff_check = "ruff check"
 _ruff_diff = "ruff format --diff"
