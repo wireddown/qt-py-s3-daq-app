@@ -97,7 +97,7 @@ def console_query(query_sequence_ords, output, input, stop_ord):
 def console_esc_ob_command(command_sequence_ords, output):
     full_command = [ORD_ESC, ORD_OPEN_BRACKET]
     full_command.extend(command_sequence_ords)
-    ##print(bytes(full_command[2:-1]))
+    ##print(bytes(full_command[2:]))
     output.write(bytes(full_command).decode("UTF-8"))
 
 
@@ -192,18 +192,15 @@ def _prompt(message="", *, input_=None, output=None, history=None, debug=False):
                         control_pattern = CONTROL_PATTERN_EDITOR_KEY  # We read more and learned we're reading an editor command
                         debug(f"*** processing editor control code {debug_str(in_ord):4}")
                     else:
-                        # Looks like the line buffer needs to help calculate and limit moves for tab, return new cursor position ?
                         move_cursor_command = []
                         if in_ord == ord("C"):
                             columns_moved = key_codes.move_right()
                             if columns_moved:
-                                # Need to account for tab
                                 as_ords = [ord(x) for x in list(str(columns_moved))]
                                 move_cursor_command.extend(as_ords)
                         elif in_ord == ord("D"):
                             columns_moved = key_codes.move_left()
                             if columns_moved:
-                                # Need to account for tab
                                 as_ords = [ord(x) for x in list(str(columns_moved))]
                                 move_cursor_command.extend(as_ords)
                         elif in_ord == ord("F"):
@@ -277,17 +274,17 @@ def _prompt(message="", *, input_=None, output=None, history=None, debug=False):
                 set_cursor_column(new_column=old_column-deleted_columns, output=output)
         else:
             debug(f"** accepted {debug_str(in_ord)}")
-            key_codes.accept(in_ord)
-            output.write(in_char)
+            #updated_ords = [in_ord]
+            new_column = key_codes.accept(in_ord)
+            #updated_ords.extend(remaining_ords)
+            #old_column = get_cursor_column(output, input=input_)
+            #erase_to_eol = [ord("0"), ord("K")]
+            #console_esc_ob_command(erase_to_eol, output)
+            redraw_input(output, len(message) + 1, key_codes.ord_codes)
+            set_cursor_column(new_column=new_column + 1, output=output)
 
         _PREVIOUS_ORD = in_ord
         debug(f"\n** loop conditions key_codes: {key_codes.ord_codes} previous_ord: {debug_str(_PREVIOUS_ORD)} break: {break_loop}")
-        response = console_query(
-            query_sequence_ords=[ORD_ESC, ORD_OPEN_BRACKET, ord("6"), ord("n")],
-            output=output,
-            input=input_,
-            stop_ord=ord("R")
-        )
     output.write(b"\n")
     debug("encoded", key_codes.get_decoded_bytes())
 
@@ -360,6 +357,7 @@ class LineBuffer:
         self.ord_codes.insert(self.index, ord_code)
         self.index += 1
         self.column = self.get_column()
+        return self.get_column(self.index)
 
     def move_distance(self, direction):
         first_user_column = self.prompt_length
@@ -371,7 +369,6 @@ class LineBuffer:
                 column += to_next_tab_stop
             else:
                 column += 1
-        ##print([direction, self.column, column, abs(self.column - column)])
         return abs(self.column - column)
 
     def move_right(self):
@@ -400,10 +397,11 @@ class LineBuffer:
         while self.move_right():
             pass
 
-    def get_column(self):
+    def get_column(self, constraint = None):
         first_user_column = self.prompt_length
         column = first_user_column
-        for ord in self.ord_codes:
+        slice = self.ord_codes[:constraint] if constraint else self.ord_codes[:self.index]
+        for ord in slice:
             if ord == ORD_TAB:
                 tab_stops, remaining_columns = divmod(column, self.tab_size)
                 to_next_tab_stop = self.tab_size - remaining_columns
