@@ -8,6 +8,7 @@ ORD_LF = 0x0A
 ORD_CR = 0x0D
 ORD_EOF = 0x1A
 ORD_ESC = 0x1B
+ORD_SPACE = 0x20
 ORD_OPEN_BRACKET = 0x5B
 ORD_LOWER_B = 0x62
 ORD_TILDE = 0x7E
@@ -81,19 +82,45 @@ def debug_str(in_ordinal):
     return chr(in_ordinal) if is_printable(in_ordinal) else _PRINTABLE_FOR_NONPRINTABLE.get(in_ordinal, "?")
 
 
+def erase_chars(count):
+    erase_one = [ORD_BACKSPACE, ORD_SPACE, ORD_BACKSPACE]
+    sequence = []
+    for _ in range(count):
+        sequence.extend(erase_one)
+    return bytes(sequence).decode("UTF-8")
+
+
+def console_query(query_sequence_ords, output, input, stop_ord):
+    output.write(bytes(query_sequence_ords).decode("UTF-8"))
+    in_ord = ORD_NUL
+    response_ords = []
+    while in_ord != stop_ord:
+        in_char = input.read(1)
+        in_ord = ord(in_char)
+        response_ords.append(in_ord)
+    return response_ords
+
+
 # plink only sends CR (like classic macOS)
 # miniterm sends CRLF on Windows
 # (untested: expecting Linux to send LF)
 def _prompt(message="", *, input_=None, output=None, history=None, debug=False):
     global _PREVIOUS_ORD
-    debug = True
+    debug = False
     debug = print if debug else __unused
-    output.write(message.encode("utf-8"))
-    key_codes = []
+    output.write(message.encode("UTF-8"))
+    cursor_position_codes = console_query(
+        query_sequence_ords=[ORD_ESC, ORD_OPEN_BRACKET, ord("6"), ord("n")],
+        output=output,
+        input=input_,
+        stop_ord=ord("R")
+    )
+    #print((f"prompt length: {len(message)} cursor position: {[debug_str(x) for x in cursor_position_codes]}"))
+    key_codes = LineBuffer(prompt_length=len(message))
     control_codes = []
     control_pattern = CONTROL_PATTERN_NONE
     break_loop = False
-    while (not key_codes or _PREVIOUS_ORD not in [ORD_CR, ORD_LF]) and not break_loop:
+    while (not key_codes.has_bytes() or _PREVIOUS_ORD not in [ORD_CR, ORD_LF]) and not break_loop:
         in_char = input_.read(1)
         in_ord = ord(in_char)
         debug(f"* received {in_ord:4}d {debug_str(in_ord):4} previous {debug_str(_PREVIOUS_ORD):4}")
@@ -160,36 +187,39 @@ def _prompt(message="", *, input_=None, output=None, history=None, debug=False):
 
         if in_ord in [ORD_CR, ORD_LF]:
             # Do not capture EOL characters
+            debug("** skipped EOL char")
+            debug("** matched loop exit")
+            break_loop = True
+        elif in_ord in NOOP_ORDS:
             # Filter for more
             # - Other non-printables
             # But allow
             # - Backspace \x08
             # - TAB \x09
             # - Delete
-            debug("** skipped EOL char")
-        elif in_ord in NOOP_ORDS:
-            debug(f"** skipped non printable char {in_ord}")
+            debug(f"** skipping non printable char {in_ord}")
+        elif in_ord == ORD_BACKSPACE:
+            deleted_count = key_codes.backspace()
+            if deleted_count:
+                output.write(erase_chars(deleted_count))
         else:
             debug(f"** accepted {debug_str(in_ord)}")
-            key_codes.append(in_ord)
-
-        if in_ord == ORD_DEL:
-            key_codes.pop()  # Remove the DEL char
-            key_codes.pop()  # Remove the preceding char
-            output.write(b"\b\x1b[K")  # Update the line
-        elif in_ord in [ORD_CR, ORD_LF]:
-            # Do not echo EOL characters back to the user
-            debug("** matched loop exit")
-            break_loop = True
-        else:
+            key_codes.accept(in_ord)
             output.write(in_char)
 
         _PREVIOUS_ORD = in_ord
-        debug(f"\n** loop conditions key_codes: {key_codes} previous_ord: {debug_str(_PREVIOUS_ORD)} break: {break_loop}")
+        debug(f"\n** loop conditions key_codes: {key_codes.ord_codes} previous_ord: {debug_str(_PREVIOUS_ORD)} break: {break_loop}")
+        response = console_query(
+            query_sequence_ords=[ORD_ESC, ORD_OPEN_BRACKET, ord("6"), ord("n")],
+            output=output,
+            input=input_,
+            stop_ord=ord("R")
+        )
+        debug(f"cursor position: {[debug_str(x) for x in response]}")
     output.write(b"\n")
-    debug("encoded", key_codes)
+    debug("encoded", key_codes.get_decoded_bytes())
 
-    decoded = bytes(key_codes).decode("utf-8")
+    decoded = key_codes.get_decoded_bytes()
     return decoded
 
 
@@ -228,11 +258,73 @@ class PromptSession:
         return decoded
 
 
-# SPDX-FileCopyrightText: Copyright (c) 2023 Scott Shawcroft for Adafruit Industries
-#
-# SPDX-License-Identifier: MIT
+class LineBuffer:
+    def __init__(self, prompt_length, tab_size=8):
+        self.ord_codes = []
+        self.index = 0
+        self.prompt_length = prompt_length
+        self.tab_size = tab_size
+        self.column = self.get_column()
 
-"""Various ways of storing command history."""
+    def has_bytes(self):
+        return len(self.ord_codes) > 0
+
+    def get_decoded_bytes(self):
+        return bytes(self.ord_codes).decode("UTF-8")
+
+    def accept(self, ord_code):
+        self.ord_codes.insert(self.index, ord_code)
+        self.index += 1
+        self.column = self.get_column()
+
+    def move_right(self):
+        if self.index == len(self.ord_codes):
+            return False
+        else:
+            self.index += 1
+            return True
+
+    def move_left(self):
+        if self.index == 0:
+            return False
+        else:
+            self.index -= 1
+            return True
+
+    def move_home(self):
+        while self.move_left():
+            pass
+
+    def move_end(self):
+        while self.move_right():
+            pass
+
+    def get_column(self):
+        first_user_column = self.prompt_length
+        column = first_user_column
+        for ord in self.ord_codes:
+            if ord == ORD_TAB:
+                tab_stops, remaining_columns = divmod(column, self.tab_size)
+                to_next_tab_stop = self.tab_size - remaining_columns
+                column += to_next_tab_stop
+            else:
+                column += 1
+        return column
+
+    def delete(self):
+        if self.index == len(self.ord_codes):
+            deleted_count = 0
+        else:
+            deleted = self.ord_codes.pop(self.index)
+            deleted_count = self.column - self.get_column()
+        self.column = self.get_column()
+        return deleted_count
+
+    def backspace(self):
+        if self.move_left():
+            return self.delete()
+        else:
+            return 0
 
 
 class InMemoryHistory:
