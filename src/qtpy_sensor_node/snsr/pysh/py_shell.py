@@ -84,7 +84,7 @@ def debug_str(in_ordinal):
 
 
 def console_query(query_sequence_ords, output, input, stop_ord):
-    output.write(bytes(query_sequence_ords).decode("UTF-8"))
+    output.write(bytes(query_sequence_ords))#.decode("UTF-8"))
     in_ord = ORD_NUL
     response_ords = []
     while in_ord != stop_ord:
@@ -98,7 +98,7 @@ def console_esc_ob_command(command_sequence_ords, output):
     full_command = [ORD_ESC, ORD_OPEN_BRACKET]
     full_command.extend(command_sequence_ords)
     ##print(bytes(full_command[2:]))
-    output.write(bytes(full_command).decode("UTF-8"))
+    output.write(bytes(full_command))#.decode("UTF-8"))
 
 
 def get_cursor_column(output, input):
@@ -142,7 +142,7 @@ def redraw_input(output, first_user_column, user_input_ords):
     erase_to_eol = [ord("0"), ord("K")]
     console_esc_ob_command(erase_to_eol, output)
 
-    output.write(bytes(user_input_ords).decode("UTF-8"))
+    output.write(bytes(user_input_ords))#.decode("UTF-8"))
     show_cursor(output)
 
 
@@ -156,25 +156,27 @@ def _prompt2(message="", *, input_=None, output=None, history=None, debug=False)
     return from_remote
 
 
+def traced(traced_function, trace_list):
+    # AttributeError: can't set attribute 'write'
+    def with_tracing(*args, **kwargs):
+        trace_list.append(f"{args} {kwargs}")
+        return traced_function(*args, **kwargs)
+    return with_tracing
+
+
 # plink only sends CR (like classic macOS)
 # miniterm sends CRLF on Windows
 # (untested: expecting Linux to send LF)
 # - add tests on codes
-#   - collect debug messages in a buffer, yield on-demand
-#   - split IO at the bytes layer, force only one input and output method for bytes
 #   - assert on the bytes received and bytes sent
-#     - an object that supports read(1)
-#     - an object that supports write(str)
 # - use other vt commands to manipulate the cursor and text?
 # - use regex to help?
-def _prompt(message="", *, input_=None, output=None, history=None, tracer=None):
-    global _PREVIOUS_ORD
-    if tracer is not None:
-        trace_record = tracer.append
-    else:
-        trace_record = __unused
+def _prompt(message, in_stream, out_stream, history=None):
 
-    output.write(message.encode("UTF-8"))
+    trace_record = __unused
+
+    global _PREVIOUS_ORD
+    out_stream.write(message.encode("UTF-8"))
 
     key_codes = LineBuffer(prompt_length=len(message))
     control_codes = []
@@ -182,7 +184,7 @@ def _prompt(message="", *, input_=None, output=None, history=None, tracer=None):
 
     break_loop = False
     while (not key_codes.has_bytes() or _PREVIOUS_ORD not in [ORD_CR, ORD_LF]) and not break_loop:
-        in_char = input_.read(1)
+        in_char = in_stream.read(1)
         in_ord = ord(in_char)
         trace_record(f"* received {in_ord:4}d {debug_str(in_ord):4} previous {debug_str(_PREVIOUS_ORD):4}")
 
@@ -222,13 +224,13 @@ def _prompt(message="", *, input_=None, output=None, history=None, tracer=None):
                                 move_cursor_command.extend(as_ords)
                         elif in_ord == ord("F"):
                             new_cursor = key_codes.move_end()
-                            set_cursor_column(new_column=new_cursor + 1, output=output)
+                            set_cursor_column(new_column=new_cursor + 1, output=out_stream)
                         elif in_ord == ord("H"):
                             key_codes.move_home()
-                            set_cursor_column(new_column=len(message) + 1, output=output)
+                            set_cursor_column(new_column=len(message) + 1, output=out_stream)
                         if move_cursor_command:
                             move_cursor_command.append(in_ord)
-                            console_esc_ob_command(move_cursor_command, output)
+                            console_esc_ob_command(move_cursor_command, out_stream)
                         trace_record(f"*** completed move-cursor control code {debug_str(in_ord):4}")
                         control_pattern = CONTROL_PATTERN_NONE
                         control_codes.clear()
@@ -246,9 +248,9 @@ def _prompt(message="", *, input_=None, output=None, history=None, tracer=None):
                         if control_codes[2:-1] == [ord("3")]:
                             # Delete
                             deleted_columns = key_codes.delete()
-                            old_column = get_cursor_column(output, input=input_)
-                            redraw_input(output, len(message) + 1, key_codes.ord_codes)
-                            set_cursor_column(new_column=old_column, output=output)
+                            old_column = get_cursor_column(out_stream, input=in_stream)
+                            redraw_input(out_stream, len(message) + 1, key_codes.ord_codes)
+                            set_cursor_column(new_column=old_column, output=out_stream)
                         control_pattern = CONTROL_PATTERN_NONE
                         control_codes.clear()
                 elif control_pattern == CONTROL_PATTERN_LOWER_F_KEY:
@@ -284,20 +286,20 @@ def _prompt(message="", *, input_=None, output=None, history=None, tracer=None):
             deleted_columns = key_codes.backspace()
             if deleted_columns:
                 # save cursor column
-                old_column = get_cursor_column(output, input=input_)
-                redraw_input(output, len(message) + 1, key_codes.ord_codes)
+                old_column = get_cursor_column(out_stream, input=in_stream)
+                redraw_input(out_stream, len(message) + 1, key_codes.ord_codes)
                 # restore cursor column
-                set_cursor_column(new_column=old_column-deleted_columns, output=output)
+                set_cursor_column(new_column=old_column-deleted_columns, output=out_stream)
         else:
             trace_record(f"** accepted {debug_str(in_ord)}")
             new_column = key_codes.accept(in_ord)
-            redraw_input(output, len(message) + 1, key_codes.ord_codes)
-            set_cursor_column(new_column=new_column + 1, output=output)
+            redraw_input(out_stream, len(message) + 1, key_codes.ord_codes)
+            set_cursor_column(new_column=new_column + 1, output=out_stream)
 
         _PREVIOUS_ORD = in_ord
         trace_record(f"** loop conditions key_codes: {key_codes.ord_codes} previous_char: {debug_str(_PREVIOUS_ORD)} break: {break_loop}")
 
-    output.write(b"\n")
+    out_stream.write(b"\n")
     trace_record(f"encoded {key_codes.get_decoded_bytes()}")
 
     decoded = key_codes.get_decoded_bytes()
@@ -310,23 +312,78 @@ def prompt(message="", *, input=None, output=None):
     # "input" and "output" are only on PromptSession in upstream "prompt_toolkit" but we use it for
     # prompts without history.
     # pylint: disable=redefined-builtin
-    return _prompt(message, input_=input, output=output)
+    return _prompt(message, in_stream=input, out_stream=output)
+
+
+class TracedReader:
+    """input_stream must support a function with signature 'read(int) -> str'"""
+    def __init__(self, input_stream, shared_tracelog, log_prefix=None):
+        self._input_stream = input_stream
+        self._shared_tracelog = shared_tracelog
+        self._log_prefix = log_prefix if log_prefix else type(self)
+        self._trace(f"tracing input from {type(input_stream)}")
+
+    def _trace(self, message):
+        self._shared_tracelog.append(f"{self._log_prefix}: {message}")
+
+    def read(self, byte_count):
+        input_chars = self._input_stream.read(byte_count)
+        ordinals_read = list(input_chars)
+        self._trace(f"read ordinals '{ordinals_read}'")
+        return input_chars
+
+
+class TracedWriter:
+    """output_stream must support a function with signature 'write(str) -> None'"""
+    def __init__(self, output_stream, shared_tracelog, log_prefix=None):
+        self._output_stream = output_stream
+        self._shared_tracelog = shared_tracelog
+        self._log_prefix = log_prefix if log_prefix else type(self)
+        self._trace(f"tracing output from {type(output_stream)}")
+
+    def _trace(self, message):
+        self._shared_tracelog.append(f"{self._log_prefix}: {message}")
+
+    def write(self, encoded_string):
+        ordinals_sent = list(encoded_string)
+        self._trace(f"sent ordinals '{ordinals_sent}'")
+        self._output_stream.write(encoded_string)
+
+
+class IOTracer:
+    def __init__(self, input_stream, output_stream):
+        self._shared_tracelog = []
+        self._traced_input = TracedReader(input_stream, self._shared_tracelog)
+        self._traced_output = TracedWriter(output_stream, self._shared_tracelog)
+
+    @property
+    def input_stream(self):
+        return self._traced_input
+
+    @property
+    def output_stream(self):
+        return self._traced_output
+
+    @property
+    def traced_io_log(self):
+        return self._shared_tracelog.copy()
+
+    def clear_log(self):
+        self._shared_tracelog.clear()
 
 
 class PromptSession:
     """Session for multiple prompts. Stores common arguments to `prompt()` and
     history of commands for user selection."""
 
-    def __init__(self, message="", *, input=None, output=None, history=None, tracer=None):
+    def __init__(self, message="", *, input=None, output=None, history=None):
         # "input" and "output" are names used in upstream "prompt_toolkit" so we
         # use them too.
         # pylint: disable=redefined-builtin
         self.message = message
         self._input = input
         self._output = output
-
         self.history = history if history else InMemoryHistory()
-        self.tracer = tracer
 
     def prompt(self, message=None) -> str:
         """Prompt the user for input over the session's ``input`` with the given
@@ -334,7 +391,7 @@ class PromptSession:
         message = message if message else self.message
 
         decoded = _prompt(
-            message, input_=self._input, output=self._output, history=self.history, tracer=self.tracer
+            message, in_stream=self._input, out_stream=self._output, history=self.history
         )
 
         # decoded = _prompt2(
