@@ -161,7 +161,7 @@ def _redraw_from_column(from_column: int, ords_to_draw: list[int], output: Binar
 # plink only sends CR (like classic macOS)
 # miniterm sends CRLF on Windows
 # (untested: expecting Linux to send LF)
-def _prompt(message: str, in_stream: BinaryIO, out_stream: BinaryIO, history: InMemoryHistory | None = None) -> str:  # noqa: PLR0912 PLR0915 -- need many lines and statements to process control codes
+def _prompt(message: str, in_stream: BinaryIO, out_stream: BinaryIO, history: InMemoryHistory | None = None) -> str:
     """Use a custom shell processor to prompt the user with message and return the response."""
     global _PREVIOUS_ORD  # noqa PLW0603 -- need a global to track EOL characters from Windows across calls
     out_stream.write(message.encode("UTF-8"))
@@ -176,74 +176,7 @@ def _prompt(message: str, in_stream: BinaryIO, out_stream: BinaryIO, history: In
         in_ord = in_bytes[0]
 
         if control_codes:
-            control_codes.append(in_ord)
-            control_command_length = len(control_codes)
-            if control_command_length == 2:  # noqa: PLR2004 -- this magic number is used as a length, has no separate meaning
-                if control_codes[0] == _ORD_ESC and in_ord == _ORD_OPEN_BRACKET:
-                    # Begin escape control sequence, assume cursor move until further reads show otherwise
-                    control_pattern = _CONTROL_PATTERN_MOVE_CURSOR_KEY
-                elif control_codes[0] == _ORD_FKEY_START and in_ord == _ORD_LOWER_B:
-                    # Begin F-key control sequence, assume lower F-key until further reads show otherwise
-                    control_pattern = _CONTROL_PATTERN_LOWER_F_KEY
-                else:
-                    # No handlers for other command sequences
-                    control_codes.clear()
-            elif control_command_length == 3:  # noqa: PLR2004 -- this magic number is used as a length, has no separate meaning
-                if control_pattern == _CONTROL_PATTERN_MOVE_CURSOR_KEY:
-                    if ord("0") <= in_ord <= ord("9"):
-                        # We read more and learned we're reading an editor command
-                        control_pattern = _CONTROL_PATTERN_EDITOR_KEY
-                    else:
-                        # We're reading a letter or symbol command ESC[*
-                        old_column = key_codes.get_terminal_column()
-                        new_column = old_column
-                        if in_ord == ord("C"):
-                            new_column = key_codes.move_right()
-                        elif in_ord == ord("D"):
-                            new_column = key_codes.move_left()
-                        elif in_ord == ord("F"):
-                            new_column = key_codes.move_end()
-                        elif in_ord == ord("H"):
-                            new_column = key_codes.move_home()
-
-                        if new_column != old_column:
-                            _set_cursor_column(new_column, out_stream)
-
-                        # Handling CSI control sequence complete
-                        control_pattern = _CONTROL_PATTERN_NONE
-                        control_codes.clear()
-                elif control_pattern == _CONTROL_PATTERN_LOWER_F_KEY:
-                    if in_ord == _ORD_OPEN_BRACKET:
-                        # We read more and learned we're reading an upper F-key command
-                        control_pattern = _CONTROL_PATTERN_UPPER_F_KEY
-                    else:
-                        # No handlers for lower F-key codes
-                        pass
-            elif control_command_length == 4:  # noqa: PLR2004 -- this magic number is used as a length, has no separate meaning
-                if control_pattern == _CONTROL_PATTERN_EDITOR_KEY:
-                    if in_ord == _ORD_TILDE:
-                        if control_codes[2:-1] == [ord("3")]:
-                            # Delete is ESC[3~
-                            cursor_column, codes_to_redraw = key_codes.delete()
-                            _hide_cursor(out_stream)
-                            _redraw_from_column(cursor_column, codes_to_redraw, out_stream)
-                            _set_cursor_column(cursor_column, out_stream)
-                            _show_cursor(out_stream)
-                        # Handling complete -- '~' terminated command
-                        control_pattern = _CONTROL_PATTERN_NONE
-                        control_codes.clear()
-                elif control_pattern == _CONTROL_PATTERN_LOWER_F_KEY:
-                    # Handling lower F-key control code complete -- fixed length command
-                    control_pattern = _CONTROL_PATTERN_NONE
-                    control_codes.clear()
-            else:  # noqa: PLR5501 -- this level of if-else is for branching based on the command sequence length
-                if in_ord == _ORD_TILDE:
-                    # Handling upper F-key control code complete -- '~' terminated command
-                    control_pattern = _CONTROL_PATTERN_NONE
-                    control_codes.clear()
-                else:
-                    # No handlers for upper F-key codes
-                    pass
+            control_pattern = _process_control_sequence(control_codes, in_ord, control_pattern, key_codes, out_stream)
             # Keep reading more control codes
             continue
 
@@ -284,3 +217,75 @@ def _prompt(message: str, in_stream: BinaryIO, out_stream: BinaryIO, history: In
 
     decoded = key_codes.get_decoded_bytes()
     return decoded
+
+
+def _process_control_sequence(control_codes, in_ord, control_pattern, key_codes, out_stream):
+    control_codes.append(in_ord)
+    control_command_length = len(control_codes)
+    if control_command_length == 2:  # noqa: PLR2004 -- this magic number is used as a length, has no separate meaning
+        if control_codes[0] == _ORD_ESC and in_ord == _ORD_OPEN_BRACKET:
+            # Begin escape control sequence, assume cursor move until further reads show otherwise
+            control_pattern = _CONTROL_PATTERN_MOVE_CURSOR_KEY
+        elif control_codes[0] == _ORD_FKEY_START and in_ord == _ORD_LOWER_B:
+            # Begin F-key control sequence, assume lower F-key until further reads show otherwise
+            control_pattern = _CONTROL_PATTERN_LOWER_F_KEY
+        else:
+            # No handlers for other command sequences
+            control_codes.clear()
+    elif control_command_length == 3:  # noqa: PLR2004 -- this magic number is used as a length, has no separate meaning
+        if control_pattern == _CONTROL_PATTERN_MOVE_CURSOR_KEY:
+            if ord("0") <= in_ord <= ord("9"):
+                # We read more and learned we're reading an editor command
+                control_pattern = _CONTROL_PATTERN_EDITOR_KEY
+            else:
+                # We're reading a letter or symbol command ESC[*
+                old_column = key_codes.get_terminal_column()
+                new_column = old_column
+                if in_ord == ord("C"):
+                    new_column = key_codes.move_right()
+                elif in_ord == ord("D"):
+                    new_column = key_codes.move_left()
+                elif in_ord == ord("F"):
+                    new_column = key_codes.move_end()
+                elif in_ord == ord("H"):
+                    new_column = key_codes.move_home()
+
+                if new_column != old_column:
+                    _set_cursor_column(new_column, out_stream)
+
+                # Handling CSI control sequence complete
+                control_pattern = _CONTROL_PATTERN_NONE
+                control_codes.clear()
+        elif control_pattern == _CONTROL_PATTERN_LOWER_F_KEY:
+            if in_ord == _ORD_OPEN_BRACKET:
+                # We read more and learned we're reading an upper F-key command
+                control_pattern = _CONTROL_PATTERN_UPPER_F_KEY
+            else:
+                # No handlers for lower F-key codes
+                pass
+    elif control_command_length == 4:  # noqa: PLR2004 -- this magic number is used as a length, has no separate meaning
+        if control_pattern == _CONTROL_PATTERN_EDITOR_KEY:
+            if in_ord == _ORD_TILDE:
+                if control_codes[2:-1] == [ord("3")]:
+                    # Delete is ESC[3~
+                    cursor_column, codes_to_redraw = key_codes.delete()
+                    _hide_cursor(out_stream)
+                    _redraw_from_column(cursor_column, codes_to_redraw, out_stream)
+                    _set_cursor_column(cursor_column, out_stream)
+                    _show_cursor(out_stream)
+                # Handling complete -- '~' terminated command
+                control_pattern = _CONTROL_PATTERN_NONE
+                control_codes.clear()
+        elif control_pattern == _CONTROL_PATTERN_LOWER_F_KEY:
+            # Handling lower F-key control code complete -- fixed length command
+            control_pattern = _CONTROL_PATTERN_NONE
+            control_codes.clear()
+    else:  # noqa: PLR5501 -- this level of if-else is for branching based on the command sequence length
+        if in_ord == _ORD_TILDE:
+            # Handling upper F-key control code complete -- '~' terminated command
+            control_pattern = _CONTROL_PATTERN_NONE
+            control_codes.clear()
+        else:
+            # No handlers for upper F-key codes
+            pass
+    return control_pattern
