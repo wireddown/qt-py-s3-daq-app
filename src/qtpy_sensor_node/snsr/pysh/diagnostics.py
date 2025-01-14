@@ -1,5 +1,6 @@
 """Classes and functions for inspecting and tracing the shell's IO."""
 
+from .linebuffer import ORD_TAB
 from .py_shell import (
     _ORD_BACKSPACE,
     _ORD_CR,
@@ -13,8 +14,6 @@ from .py_shell import (
     _ORD_SEMICOLON,
     PromptSession,
 )
-
-from .linebuffer import ORD_TAB
 
 try:  # noqa: SIM105 -- contextlib is not available for CircuitPython
     from typing import BinaryIO, Callable
@@ -110,25 +109,24 @@ class IOTracer:
         self._shared_tracelog.clear()
 
 
-class TracedSession():
+class TracedSession:
     """A traced shell-like session for multiple interactive prompts that supports line editing."""
 
-    def __init__(self, in_stream, out_stream, autoecho=True) -> None:
+    def __init__(self, in_stream: BinaryIO, out_stream: BinaryIO, autoecho: bool = True) -> None:
         """."""
         self._autoecho = autoecho
         self._tracer = IOTracer(input_stream=in_stream, output_stream=out_stream)
         self._session = PromptSession(
-            in_stream=self._tracer.input_stream,
-            out_stream=self._tracer.output_stream
+            in_stream=self._tracer.input_stream,  # type: ignore -- we're swapping a builtin type for our own
+            out_stream=self._tracer.output_stream,  # type: ignore -- we're swapping a builtin type for our own
         )
 
     def prompt(self, message: str) -> bytes:
         """."""
         response = self._session.prompt(message)
-        if self._autoecho:
-            if self._tracer.traced_io_log:
-                _ = [print(entry) for entry in self._tracer.traced_io_log]
-                self._tracer.clear_log()
+        if self._autoecho and self._tracer.traced_io_log:
+            _ = [print(entry) for entry in self._tracer.traced_io_log]  # noqa: T201 -- use builtin to bypass self-tracing
+            self._tracer.clear_log()
         return response.encode("UTF-8")
 
     @property
@@ -175,6 +173,7 @@ def get_cursor_column(output: BinaryIO, in_stream: BinaryIO) -> int:
     semicolon_index = clipped.index(_ORD_SEMICOLON)
     column_ords = clipped[semicolon_index + 1 :]
     return int(bytes(column_ords))
+
 
 # Can we use input() to get a whole client-side edited line?
 # - input() does     line editing

@@ -68,6 +68,7 @@ _CONTROL_PATTERN_UPPER_F_KEY = 4      # F5..F12                         : code 0
 
 _PREVIOUS_ORD = _ORD_NUL
 
+
 class InMemoryHistory:
     """An in-memory history of commands, infinite in size."""
 
@@ -219,7 +220,9 @@ def _prompt(message: str, in_stream: BinaryIO, out_stream: BinaryIO, history: In
     return decoded
 
 
-def _process_control_sequence(control_codes, in_ord, control_pattern, key_codes, out_stream):
+def _process_control_sequence(  # noqa: PLR0912 PLR0915 -- need many lines and statements to process control codes
+    control_codes: list[int], in_ord: int, control_pattern: int, key_codes: LineBuffer, out_stream: BinaryIO
+) -> int:
     control_codes.append(in_ord)
     control_command_length = len(control_codes)
     if control_command_length == 2:  # noqa: PLR2004 -- this magic number is used as a length, has no separate meaning
