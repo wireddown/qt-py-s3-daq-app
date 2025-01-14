@@ -223,6 +223,7 @@ def _prompt(message: str, in_stream: BinaryIO, out_stream: BinaryIO, history: In
 def _process_control_sequence(  # noqa: PLR0912 PLR0915 -- need many lines and statements to process control codes
     control_codes: list[int], in_ord: int, control_pattern: int, key_codes: LineBuffer, out_stream: BinaryIO
 ) -> int:
+    """Track and handle the control codes as they are read."""
     control_codes.append(in_ord)
     control_command_length = len(control_codes)
     if control_command_length == 2:  # noqa: PLR2004 -- this magic number is used as a length, has no separate meaning

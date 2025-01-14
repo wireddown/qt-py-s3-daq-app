@@ -113,7 +113,15 @@ class TracedSession:
     """A traced shell-like session for multiple interactive prompts that supports line editing."""
 
     def __init__(self, in_stream: BinaryIO, out_stream: BinaryIO, autoecho: bool = True) -> None:
-        """."""
+        """
+        Create a TracedSession using in_stream and out_stream for IO.
+
+        Before returning the user's response, this session prints the control codes sent and
+        received before the user completed their response with the enter key.
+
+        If you set autoecho to False, you must manage the size of the tracer's traced_io_log. Otherwise
+        the QT Py runs out of memory and exits with an allocation error.
+        """
         self._autoecho = autoecho
         self._tracer = IOTracer(input_stream=in_stream, output_stream=out_stream)
         self._session = PromptSession(
@@ -122,7 +130,7 @@ class TracedSession:
         )
 
     def prompt(self, message: str) -> bytes:
-        """."""
+        """Prompt the user for input with the given message."""
         response = self._session.prompt(message)
         if self._autoecho and self._tracer.traced_io_log:
             _ = [print(entry) for entry in self._tracer.traced_io_log]  # noqa: T201 -- use builtin to bypass self-tracing
@@ -131,7 +139,7 @@ class TracedSession:
 
     @property
     def tracer(self) -> IOTracer:
-        """."""
+        """Return the IOTracer object capturing the input and output stream bytes."""
         return self._tracer
 
 
