@@ -204,9 +204,8 @@ def _prompt(message="", *, input_=None, output=None, history=None, debug=False):
                                 as_ords = [ord(x) for x in list(str(columns_moved))]
                                 move_cursor_command.extend(as_ords)
                         elif in_ord == ord("F"):
-                            # Need to move cursor
-                            key_codes.move_end()
-                            cursor_move_direction = ord("C")
+                            new_cursor = key_codes.move_end()
+                            set_cursor_column(new_column=new_cursor + 1, output=output)
                         elif in_ord == ord("H"):
                             key_codes.move_home()
                             set_cursor_column(new_column=len(message) + 1, output=output)
@@ -274,12 +273,7 @@ def _prompt(message="", *, input_=None, output=None, history=None, debug=False):
                 set_cursor_column(new_column=old_column-deleted_columns, output=output)
         else:
             debug(f"** accepted {debug_str(in_ord)}")
-            #updated_ords = [in_ord]
             new_column = key_codes.accept(in_ord)
-            #updated_ords.extend(remaining_ords)
-            #old_column = get_cursor_column(output, input=input_)
-            #erase_to_eol = [ord("0"), ord("K")]
-            #console_esc_ob_command(erase_to_eol, output)
             redraw_input(output, len(message) + 1, key_codes.ord_codes)
             set_cursor_column(new_column=new_column + 1, output=output)
 
@@ -357,7 +351,7 @@ class LineBuffer:
         self.ord_codes.insert(self.index, ord_code)
         self.index += 1
         self.column = self.get_column()
-        return self.get_column(self.index)
+        return self.column
 
     def move_distance(self, direction):
         first_user_column = self.prompt_length
@@ -392,16 +386,17 @@ class LineBuffer:
     def move_home(self):
         while self.move_left():
             pass
+        return self.column
 
     def move_end(self):
         while self.move_right():
             pass
+        return self.column
 
-    def get_column(self, constraint = None):
+    def get_column(self):
         first_user_column = self.prompt_length
         column = first_user_column
-        slice = self.ord_codes[:constraint] if constraint else self.ord_codes[:self.index]
-        for ord in slice:
+        for ord in self.ord_codes[:self.index]:
             if ord == ORD_TAB:
                 tab_stops, remaining_columns = divmod(column, self.tab_size)
                 to_next_tab_stop = self.tab_size - remaining_columns
