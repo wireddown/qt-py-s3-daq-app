@@ -9,6 +9,7 @@ ORD_CR = 0x0D
 ORD_EOF = 0x1A
 ORD_ESC = 0x1B
 ORD_SPACE = 0x20
+ORD_SEMICOLON = 0x3B
 ORD_OPEN_BRACKET = 0x5B
 ORD_LOWER_B = 0x62
 ORD_TILDE = 0x7E
@@ -82,14 +83,6 @@ def debug_str(in_ordinal):
     return chr(in_ordinal) if is_printable(in_ordinal) else _PRINTABLE_FOR_NONPRINTABLE.get(in_ordinal, "?")
 
 
-def erase_chars(count):
-    erase_one = [ORD_BACKSPACE, ORD_SPACE, ORD_BACKSPACE]
-    sequence = []
-    for _ in range(count):
-        sequence.extend(erase_one)
-    return bytes(sequence).decode("UTF-8")
-
-
 def console_query(query_sequence_ords, output, input, stop_ord):
     output.write(bytes(query_sequence_ords).decode("UTF-8"))
     in_ord = ORD_NUL
@@ -99,6 +92,57 @@ def console_query(query_sequence_ords, output, input, stop_ord):
         in_ord = ord(in_char)
         response_ords.append(in_ord)
     return response_ords
+
+
+def console_esc_ob_command(command_sequence_ords, output):
+    full_command = [ORD_ESC, ORD_OPEN_BRACKET]
+    full_command.extend(command_sequence_ords)
+    output.write(bytes(full_command).decode("UTF-8"))
+
+
+def get_cursor_column(output, input):
+    cursor_position_codes = console_query(
+        query_sequence_ords=[ORD_ESC, ORD_OPEN_BRACKET, ord("6"), ord("n")],
+        output=output,
+        input=input,
+        stop_ord=ord("R")
+    )
+    # Full response has format ESC[#;#R
+    clipped = cursor_position_codes[2:-1]
+    semicolon_index = clipped.index(ORD_SEMICOLON)
+    line_ords = clipped[:semicolon_index]
+    column_ords = clipped[semicolon_index+1:]
+    return int(bytes(column_ords))
+
+
+def set_cursor_column(new_column, output):
+    column_number = [ord(x) for x in list(str(new_column))]
+    column_number.append(ord("G"))
+    console_esc_ob_command(column_number, output)
+
+
+def hide_cursor(output):
+    # ESC[?25l to make cursor invisible
+    hide_cursor = [ord("?"), ord("2"), ord("5"), ord("l")]
+    console_esc_ob_command(hide_cursor, output)
+
+
+def show_cursor(output):
+    # ESC[?25h to make cursor visible
+    hide_cursor = [ord("?"), ord("2"), ord("5"), ord("h")]
+    console_esc_ob_command(hide_cursor, output)
+
+
+def redraw_input(output, first_user_column, user_input_ords):
+    hide_cursor(output)
+    set_cursor_column(first_user_column, output)
+
+    # ESC[0K to erase from cursor to end of line
+    erase_to_eol = [ord("0"), ord("K")]
+    console_esc_ob_command(erase_to_eol, output)
+
+    output.write(bytes(user_input_ords).decode("UTF-8"))
+    show_cursor(output)
 
 
 # plink only sends CR (like classic macOS)
@@ -147,6 +191,25 @@ def _prompt(message="", *, input_=None, output=None, history=None, debug=False):
                         control_pattern = CONTROL_PATTERN_EDITOR_KEY  # We read more and learned we're reading an editor command
                         debug(f"*** processing editor control code {debug_str(in_ord):4}")
                     else:
+                        # Looks like the line buffer needs to help calculate and limit moves for tab, return new cursor position ?
+                        move_cursor_command = []
+                        if in_ord == ord("C"):
+                            if key_codes.move_right():
+                                # Need to account for tab
+                                move_cursor_command.extend([ord("1"), in_ord])
+                        elif in_ord == ord("D"):
+                            if key_codes.move_left():
+                                # Need to account for tab
+                                move_cursor_command.extend([ord("1"), in_ord])
+                        elif in_ord == ord("F"):
+                            # Need to move cursor
+                            key_codes.move_end()
+                            cursor_move_direction = ord("C")
+                        elif in_ord == ord("H"):
+                            key_codes.move_home()
+                            set_cursor_column(new_column=len(message) + 1, output=output)
+                        if move_cursor_command:
+                            console_esc_ob_command(move_cursor_command, output)
                         debug(f"*** completed move-cursor control code {debug_str(in_ord):4}")
                         control_pattern = CONTROL_PATTERN_NONE
                         control_codes.clear()
@@ -194,14 +257,18 @@ def _prompt(message="", *, input_=None, output=None, history=None, debug=False):
             # Filter for more
             # - Other non-printables
             # But allow
-            # - Backspace \x08
-            # - TAB \x09
+            # - (done) Backspace \x08
+            # - (done) TAB \x09
             # - Delete
             debug(f"** skipping non printable char {in_ord}")
         elif in_ord == ORD_BACKSPACE:
             deleted_count = key_codes.backspace()
             if deleted_count:
-                output.write(erase_chars(deleted_count))
+                # save cursor column
+                old_column = get_cursor_column(output, input=input_)
+                redraw_input(output, len(message) + 1, key_codes.ord_codes)
+                # restore cursor column
+                set_cursor_column(new_column=old_column-1, output=output)
         else:
             debug(f"** accepted {debug_str(in_ord)}")
             key_codes.accept(in_ord)
@@ -215,7 +282,6 @@ def _prompt(message="", *, input_=None, output=None, history=None, debug=False):
             input=input_,
             stop_ord=ord("R")
         )
-        debug(f"cursor position: {[debug_str(x) for x in response]}")
     output.write(b"\n")
     debug("encoded", key_codes.get_decoded_bytes())
 
