@@ -84,7 +84,7 @@ def debug_str(in_ordinal):
 
 
 def console_query(query_sequence_ords, output, input, stop_ord):
-    output.write(bytes(query_sequence_ords))#.decode("UTF-8"))
+    output.write(bytes(query_sequence_ords))
     in_ord = ORD_NUL
     response_ords = []
     while in_ord != stop_ord:
@@ -97,8 +97,7 @@ def console_query(query_sequence_ords, output, input, stop_ord):
 def console_esc_ob_command(command_sequence_ords, output):
     full_command = [ORD_ESC, ORD_OPEN_BRACKET]
     full_command.extend(command_sequence_ords)
-    ##print(bytes(full_command[2:]))
-    output.write(bytes(full_command))#.decode("UTF-8"))
+    output.write(bytes(full_command))
 
 
 def get_cursor_column(output, input):
@@ -134,21 +133,23 @@ def show_cursor(output):
     console_esc_ob_command(hide_cursor, output)
 
 
-def redraw_input(output, first_user_column, user_input_ords):
-    hide_cursor(output)
-    set_cursor_column(first_user_column, output)
+#CSI Ps P  Delete Ps Character(s) (default = 1)
+## - difficult to track tabs
+#CSI Ps X  Erase Ps Character(s) (default = 1)
+
+def redraw_from_column(output, from_column, ords_to_draw):
+    set_cursor_column(from_column, output)
 
     # ESC[0K to erase from cursor to end of line
     erase_to_eol = [ord("0"), ord("K")]
     console_esc_ob_command(erase_to_eol, output)
 
-    output.write(bytes(user_input_ords))#.decode("UTF-8"))
-    show_cursor(output)
+    output.write(bytes(ords_to_draw))
 
 
 # - use input() to get a whole client-side edited line?
 ## -- input() does     line editing
-# #           does     autocomplete on globals() with tab (not configurable)
+##            does     autocomplete on globals() with tab (not configurable)
 ##            does     support UTF-8 characters
 ##            does not support the F-keys but echoes the printable control codes and homes the cursor
 def _prompt2(message="", *, input_=None, output=None, history=None, debug=False):
@@ -184,8 +185,8 @@ def _prompt(message, in_stream, out_stream, history=None):
 
     break_loop = False
     while (not key_codes.has_bytes() or _PREVIOUS_ORD not in [ORD_CR, ORD_LF]) and not break_loop:
-        in_char = in_stream.read(1)
-        in_ord = ord(in_char)
+        in_bytes = in_stream.read(1)
+        in_ord = in_bytes[0]
         trace_record(f"* received {in_ord:4}d {debug_str(in_ord):4} previous {debug_str(_PREVIOUS_ORD):4}")
 
         if control_codes:
@@ -320,16 +321,16 @@ class TracedReader:
     def __init__(self, input_stream, shared_tracelog, log_prefix=None):
         self._input_stream = input_stream
         self._shared_tracelog = shared_tracelog
-        self._log_prefix = log_prefix if log_prefix else type(self)
+        self._log_prefix = log_prefix if log_prefix is not None else type(self)
         self._trace(f"tracing input from {type(input_stream)}")
 
     def _trace(self, message):
-        self._shared_tracelog.append(f"{self._log_prefix}: {message}")
+        self._shared_tracelog.append(f"{self._log_prefix}{message}")
 
     def read(self, byte_count):
         input_chars = self._input_stream.read(byte_count)
-        ordinals_read = list(input_chars)
-        self._trace(f"read ordinals '{ordinals_read}'")
+        ordinals_read = input_chars  # [f"0x{code:02x}" for code in list(input_chars)]
+        self._trace(f" in   {ordinals_read}")
         return input_chars
 
 
@@ -338,23 +339,23 @@ class TracedWriter:
     def __init__(self, output_stream, shared_tracelog, log_prefix=None):
         self._output_stream = output_stream
         self._shared_tracelog = shared_tracelog
-        self._log_prefix = log_prefix if log_prefix else type(self)
+        self._log_prefix = log_prefix if log_prefix is not None else type(self)
         self._trace(f"tracing output from {type(output_stream)}")
 
     def _trace(self, message):
-        self._shared_tracelog.append(f"{self._log_prefix}: {message}")
+        self._shared_tracelog.append(f"{self._log_prefix}{message}")
 
     def write(self, encoded_string):
-        ordinals_sent = list(encoded_string)
-        self._trace(f"sent ordinals '{ordinals_sent}'")
+        ordinals_sent = encoded_string  # [f"0x{code:02x}" for code in list(encoded_string)]
+        self._trace(f"out > {ordinals_sent}")
         self._output_stream.write(encoded_string)
 
 
 class IOTracer:
     def __init__(self, input_stream, output_stream):
         self._shared_tracelog = []
-        self._traced_input = TracedReader(input_stream, self._shared_tracelog)
-        self._traced_output = TracedWriter(output_stream, self._shared_tracelog)
+        self._traced_input = TracedReader(input_stream, self._shared_tracelog, log_prefix="")
+        self._traced_output = TracedWriter(output_stream, self._shared_tracelog, log_prefix="")
 
     @property
     def input_stream(self):
@@ -405,9 +406,10 @@ class LineBuffer:
     def __init__(self, prompt_length, tab_size=8):
         self.ord_codes = []
         self.index = 0
-        self.prompt_length = prompt_length
+        self.prompt_length = prompt_length  # assumes that the prompt doesnt have a tab character :(
         self.tab_size = tab_size
-        self.column = self.get_column()
+        self._first_terminal_column = 1
+        self.column = self._get_column()
 
     def has_bytes(self):
         return len(self.ord_codes) > 0
@@ -415,13 +417,16 @@ class LineBuffer:
     def get_decoded_bytes(self):
         return bytes(self.ord_codes).decode("UTF-8")
 
-    def peek_next(self):
+    def get_cursor_column(self):
+        return self._get_column()
+
+    def _peek_next(self):
         if self.index == len(self.ord_codes):
             return None
         else:
             return self.ord_codes[self.index]
 
-    def peek_previous(self):
+    def _peek_previous(self):
         if self.index == 0:
             return None
         else:
@@ -430,11 +435,11 @@ class LineBuffer:
     def accept(self, ord_code):
         self.ord_codes.insert(self.index, ord_code)
         self.index += 1
-        self.column = self.get_column()
+        self.column = self._get_column()
         return self.column
 
-    def move_distance(self, direction):
-        first_user_column = self.prompt_length
+    def _move_distance(self, direction):
+        first_user_column = self._first_terminal_column + self.prompt_length
         column = first_user_column
         for ord in self.ord_codes[:self.index+direction]:
             if ord == ORD_TAB:
@@ -448,9 +453,9 @@ class LineBuffer:
     def move_right(self):
         # Maybe always return self.column
         move_distance = 0
-        next_ord = self.peek_next()
+        next_ord = self._peek_next()
         if next_ord:
-            move_distance = self.move_distance(direction=1)
+            move_distance = self._move_distance(direction=1)
             self.index += 1
             self.column += move_distance
         return move_distance
@@ -458,9 +463,9 @@ class LineBuffer:
     def move_left(self):
         # Maybe always return self.column
         move_distance = 0
-        previous_ord = self.peek_previous()
+        previous_ord = self._peek_previous()
         if previous_ord:
-            move_distance = self.move_distance(direction=-1)
+            move_distance = self._move_distance(direction=-1)
             self.index -= 1
             self.column -= move_distance
         return move_distance
@@ -475,13 +480,14 @@ class LineBuffer:
             pass
         return self.column
 
-    def get_column(self):
-        first_user_column = self.prompt_length
+    def _get_column(self):
+        first_user_column = self._first_terminal_column + self.prompt_length
         column = first_user_column
         for ord in self.ord_codes[:self.index]:
             if ord == ORD_TAB:
-                tab_stops, remaining_columns = divmod(column, self.tab_size)
-                to_next_tab_stop = self.tab_size - remaining_columns
+                corrected_x = column - self._first_terminal_column
+                one_based_quotient, one_based_remainder = divmod(corrected_x, self.tab_size)
+                to_next_tab_stop = self.tab_size - one_based_remainder
                 column += to_next_tab_stop
             else:
                 column += 1
@@ -492,8 +498,8 @@ class LineBuffer:
             deleted_columns = 0
         else:
             deleted = self.ord_codes.pop(self.index)
-            deleted_columns = self.column - self.get_column()
-        self.column = self.get_column()
+            deleted_columns = self.column - self._get_column()
+        self.column = self._get_column()
         return deleted_columns
 
     def backspace(self):
