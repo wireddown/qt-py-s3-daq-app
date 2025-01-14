@@ -268,13 +268,13 @@ def _prompt(message="", *, input_=None, output=None, history=None, debug=False):
             # - Delete
             debug(f"** skipping non printable char {in_ord}")
         elif in_ord == ORD_BACKSPACE:
-            deleted_count = key_codes.backspace()
-            if deleted_count:
+            deleted_columns = key_codes.backspace()
+            if deleted_columns:
                 # save cursor column
                 old_column = get_cursor_column(output, input=input_)
                 redraw_input(output, len(message) + 1, key_codes.ord_codes)
                 # restore cursor column
-                set_cursor_column(new_column=old_column-1, output=output)
+                set_cursor_column(new_column=old_column-deleted_columns, output=output)
         else:
             debug(f"** accepted {debug_str(in_ord)}")
             key_codes.accept(in_ord)
@@ -414,16 +414,18 @@ class LineBuffer:
 
     def delete(self):
         if self.index == len(self.ord_codes):
-            deleted_count = 0
+            deleted_columns = 0
         else:
             deleted = self.ord_codes.pop(self.index)
-            deleted_count = self.column - self.get_column()
+            deleted_columns = self.column - self.get_column()
         self.column = self.get_column()
-        return deleted_count
+        return deleted_columns
 
     def backspace(self):
-        if self.move_left():
-            return self.delete()
+        move_distance = self.move_left()
+        if move_distance:
+            deleted_columns = self.delete()
+            return move_distance + deleted_columns
         else:
             return 0
 
