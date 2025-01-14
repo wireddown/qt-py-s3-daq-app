@@ -1,16 +1,16 @@
 """Classes and functions for inspecting and tracing the shell's IO."""
 
 from .py_shell import (
-    ORD_BACKSPACE,
-    ORD_CR,
-    ORD_DEL,
-    ORD_EOF,
-    ORD_ESC,
-    ORD_FKEY_START,
-    ORD_LF,
-    ORD_NUL,
-    ORD_OPEN_BRACKET,
-    ORD_SEMICOLON,
+    _ORD_BACKSPACE,
+    _ORD_CR,
+    _ORD_DEL,
+    _ORD_EOF,
+    _ORD_ESC,
+    _ORD_FKEY_START,
+    _ORD_LF,
+    _ORD_NUL,
+    _ORD_OPEN_BRACKET,
+    _ORD_SEMICOLON,
     PromptSession,
 )
 
@@ -22,15 +22,15 @@ except ImportError:
     pass
 
 _PRINTABLE_FOR_NONPRINTABLE = {
-    ORD_NUL: "(0)",
-    ORD_FKEY_START: "(F)",
-    ORD_BACKSPACE: "BS",
+    _ORD_NUL: "(0)",
+    _ORD_FKEY_START: "(F)",
+    _ORD_BACKSPACE: "BS",
     ORD_TAB: "TAB",
-    ORD_LF: "LF",
-    ORD_CR: "CR",
-    ORD_EOF: "EOF",
-    ORD_ESC: "ESC",
-    ORD_DEL: "DEL",
+    _ORD_LF: "LF",
+    _ORD_CR: "CR",
+    _ORD_EOF: "EOF",
+    _ORD_ESC: "ESC",
+    _ORD_DEL: "DEL",
 }
 
 
@@ -153,7 +153,7 @@ def console_query(
 ) -> list[int]:
     """Send the query_sequence_ords to the remote console and return its response."""
     out_stream.write(bytes(query_sequence_ords))
-    in_ord = ORD_NUL
+    in_ord = _ORD_NUL
     response_ords = []
     while in_ord != stop_ord:
         in_char = in_stream.read(1)
@@ -165,14 +165,14 @@ def console_query(
 def get_cursor_column(output: BinaryIO, in_stream: BinaryIO) -> int:
     """Get the cursor column from the remote console."""
     cursor_position_codes = console_query(
-        query_sequence_ords=[ORD_ESC, ORD_OPEN_BRACKET, ord("6"), ord("n")],
+        query_sequence_ords=[_ORD_ESC, _ORD_OPEN_BRACKET, ord("6"), ord("n")],
         out_stream=output,
         in_stream=in_stream,
         stop_ord=ord("R"),
     )
     # Full response has format ESC[#;#R
     clipped = cursor_position_codes[2:-1]
-    semicolon_index = clipped.index(ORD_SEMICOLON)
+    semicolon_index = clipped.index(_ORD_SEMICOLON)
     column_ords = clipped[semicolon_index + 1 :]
     return int(bytes(column_ords))
 

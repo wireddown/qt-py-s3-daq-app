@@ -9,21 +9,21 @@ try:  # noqa: SIM105 -- contextlib is not available for CircuitPython
 except ImportError:
     pass
 
-ORD_NUL = 0x00
-ORD_FKEY_START = 0x01
-ORD_BACKSPACE = 0x08
-ORD_LF = 0x0A
-ORD_CR = 0x0D
-ORD_EOF = 0x1A
-ORD_ESC = 0x1B
-ORD_SPACE = 0x20
-ORD_SEMICOLON = 0x3B
-ORD_OPEN_BRACKET = 0x5B
-ORD_LOWER_B = 0x62
-ORD_TILDE = 0x7E
-ORD_DEL = 0x7F
+_ORD_NUL = 0x00
+_ORD_FKEY_START = 0x01
+_ORD_BACKSPACE = 0x08
+_ORD_LF = 0x0A
+_ORD_CR = 0x0D
+_ORD_EOF = 0x1A
+_ORD_ESC = 0x1B
+_ORD_SPACE = 0x20
+_ORD_SEMICOLON = 0x3B
+_ORD_OPEN_BRACKET = 0x5B
+_ORD_LOWER_B = 0x62
+_ORD_TILDE = 0x7E
+_ORD_DEL = 0x7F
 
-NOOP_ORDS = [
+_NOOP_ORDS = [
     # 0x00
     # 0x01
     0x02,
@@ -59,14 +59,14 @@ NOOP_ORDS = [
 ]
 
 # fmt: off
-CONTROL_PATTERN_NONE = 0
-CONTROL_PATTERN_MOVE_CURSOR_KEY = 1  # up, down, right, left, end, home: code 0x1B then '['  then the single-ord command: one of [ABCDFH]
-CONTROL_PATTERN_EDITOR_KEY = 2       # Ins Del PgUp PgDown             : code 0x1B then '['  then the single-ord command: one of [2356]                 then the close '~'
-CONTROL_PATTERN_LOWER_F_KEY = 3      # F1..F4                          : code 0x01 then 'bO' then the single-ord command: one of [PQRS]
-CONTROL_PATTERN_UPPER_F_KEY = 4      # F5..F12                         : code 0x01 then 'b[' then the   dual-ord command:        [1][5789] or [2][0123] then the close '~'
+_CONTROL_PATTERN_NONE = 0
+_CONTROL_PATTERN_MOVE_CURSOR_KEY = 1  # up, down, right, left, end, home: code 0x1B then '['  then the single-ord command: one of [ABCDFH]
+_CONTROL_PATTERN_EDITOR_KEY = 2       # Ins Del PgUp PgDown             : code 0x1B then '['  then the single-ord command: one of [2356]                 then the close '~'
+_CONTROL_PATTERN_LOWER_F_KEY = 3      # F1..F4                          : code 0x01 then 'bO' then the single-ord command: one of [PQRS]
+_CONTROL_PATTERN_UPPER_F_KEY = 4      # F5..F12                         : code 0x01 then 'b[' then the   dual-ord command:        [1][5789] or [2][0123] then the close '~'
 # fmt: on
 
-_PREVIOUS_ORD = ORD_NUL
+_PREVIOUS_ORD = _ORD_NUL
 
 class InMemoryHistory:
     """An in-memory history of commands, infinite in size."""
@@ -82,6 +82,36 @@ class InMemoryHistory:
     def get_strings(self) -> list[str]:
         """List of all past strings. Oldest first."""
         return self._history
+
+
+class PromptSession:
+    """A shell-like session for multiple interactive prompts that supports line editing and command history."""
+
+    def __init__(
+        self,
+        in_stream: BinaryIO,
+        out_stream: BinaryIO,
+        default_prompt: str = "",
+        history: InMemoryHistory | None = None,
+    ) -> None:
+        """Create a PromptSession using in_stream and out_stream for IO, with an optional default_prompt and command history buffer."""
+        self.default_prompt = default_prompt
+        self.in_stream = in_stream
+        self.out_stream = out_stream
+        self.history = history if history else InMemoryHistory()
+
+    def prompt(self, message: str | None = None) -> str:
+        """Prompt the user for input with the given message or the default message."""
+        message = message if message else self.default_prompt
+
+        decoded = _prompt(message, in_stream=self.in_stream, out_stream=self.out_stream, history=self.history)
+
+        return decoded
+
+
+def prompt(message: str = "", *, in_stream: BinaryIO, out_stream: BinaryIO) -> str:
+    """Prompt the user for input with the given message."""
+    return _prompt(message, in_stream, out_stream)
 
 
 def _set_cursor_column(new_column: int, output: BinaryIO) -> None:
@@ -108,7 +138,7 @@ def _show_cursor(output: BinaryIO) -> None:
 
 def _console_csi_command(command_sequence_ords: list[int], output: BinaryIO) -> None:
     """Send a command prefixed with the control sequence introducer 'ESC ['."""
-    full_command = [ORD_ESC, ORD_OPEN_BRACKET]
+    full_command = [_ORD_ESC, _ORD_OPEN_BRACKET]
     full_command.extend(command_sequence_ords)
     output.write(bytes(full_command))
 
@@ -138,10 +168,10 @@ def _prompt(message: str, in_stream: BinaryIO, out_stream: BinaryIO, history: In
 
     key_codes = LineBuffer(prompt_length=len(message))
     control_codes = []
-    control_pattern = CONTROL_PATTERN_NONE
+    control_pattern = _CONTROL_PATTERN_NONE
 
     break_loop = False
-    while (not key_codes.has_bytes() or _PREVIOUS_ORD not in [ORD_CR, ORD_LF]) and not break_loop:
+    while (not key_codes.has_bytes() or _PREVIOUS_ORD not in [_ORD_CR, _ORD_LF]) and not break_loop:
         in_bytes = in_stream.read(1)
         in_ord = in_bytes[0]
 
@@ -149,20 +179,20 @@ def _prompt(message: str, in_stream: BinaryIO, out_stream: BinaryIO, history: In
             control_codes.append(in_ord)
             control_command_length = len(control_codes)
             if control_command_length == 2:  # noqa: PLR2004 -- this magic number is used as a length, has no separate meaning
-                if control_codes[0] == ORD_ESC and in_ord == ORD_OPEN_BRACKET:
+                if control_codes[0] == _ORD_ESC and in_ord == _ORD_OPEN_BRACKET:
                     # Begin escape control sequence, assume cursor move until further reads show otherwise
-                    control_pattern = CONTROL_PATTERN_MOVE_CURSOR_KEY
-                elif control_codes[0] == ORD_FKEY_START and in_ord == ORD_LOWER_B:
+                    control_pattern = _CONTROL_PATTERN_MOVE_CURSOR_KEY
+                elif control_codes[0] == _ORD_FKEY_START and in_ord == _ORD_LOWER_B:
                     # Begin F-key control sequence, assume lower F-key until further reads show otherwise
-                    control_pattern = CONTROL_PATTERN_LOWER_F_KEY
+                    control_pattern = _CONTROL_PATTERN_LOWER_F_KEY
                 else:
                     # No handlers for other command sequences
                     control_codes.clear()
             elif control_command_length == 3:  # noqa: PLR2004 -- this magic number is used as a length, has no separate meaning
-                if control_pattern == CONTROL_PATTERN_MOVE_CURSOR_KEY:
+                if control_pattern == _CONTROL_PATTERN_MOVE_CURSOR_KEY:
                     if ord("0") <= in_ord <= ord("9"):
                         # We read more and learned we're reading an editor command
-                        control_pattern = CONTROL_PATTERN_EDITOR_KEY
+                        control_pattern = _CONTROL_PATTERN_EDITOR_KEY
                     else:
                         # We're reading a letter or symbol command ESC[*
                         old_column = key_codes.get_terminal_column()
@@ -180,18 +210,18 @@ def _prompt(message: str, in_stream: BinaryIO, out_stream: BinaryIO, history: In
                             _set_cursor_column(new_column, out_stream)
 
                         # Handling CSI control sequence complete
-                        control_pattern = CONTROL_PATTERN_NONE
+                        control_pattern = _CONTROL_PATTERN_NONE
                         control_codes.clear()
-                elif control_pattern == CONTROL_PATTERN_LOWER_F_KEY:
-                    if in_ord == ORD_OPEN_BRACKET:
+                elif control_pattern == _CONTROL_PATTERN_LOWER_F_KEY:
+                    if in_ord == _ORD_OPEN_BRACKET:
                         # We read more and learned we're reading an upper F-key command
-                        control_pattern = CONTROL_PATTERN_UPPER_F_KEY
+                        control_pattern = _CONTROL_PATTERN_UPPER_F_KEY
                     else:
                         # No handlers for lower F-key codes
                         pass
             elif control_command_length == 4:  # noqa: PLR2004 -- this magic number is used as a length, has no separate meaning
-                if control_pattern == CONTROL_PATTERN_EDITOR_KEY:
-                    if in_ord == ORD_TILDE:
+                if control_pattern == _CONTROL_PATTERN_EDITOR_KEY:
+                    if in_ord == _ORD_TILDE:
                         if control_codes[2:-1] == [ord("3")]:
                             # Delete is ESC[3~
                             cursor_column, codes_to_redraw = key_codes.delete()
@@ -200,16 +230,16 @@ def _prompt(message: str, in_stream: BinaryIO, out_stream: BinaryIO, history: In
                             _set_cursor_column(cursor_column, out_stream)
                             _show_cursor(out_stream)
                         # Handling complete -- '~' terminated command
-                        control_pattern = CONTROL_PATTERN_NONE
+                        control_pattern = _CONTROL_PATTERN_NONE
                         control_codes.clear()
-                elif control_pattern == CONTROL_PATTERN_LOWER_F_KEY:
+                elif control_pattern == _CONTROL_PATTERN_LOWER_F_KEY:
                     # Handling lower F-key control code complete -- fixed length command
-                    control_pattern = CONTROL_PATTERN_NONE
+                    control_pattern = _CONTROL_PATTERN_NONE
                     control_codes.clear()
             else:  # noqa: PLR5501 -- this level of if-else is for branching based on the command sequence length
-                if in_ord == ORD_TILDE:
+                if in_ord == _ORD_TILDE:
                     # Handling upper F-key control code complete -- '~' terminated command
-                    control_pattern = CONTROL_PATTERN_NONE
+                    control_pattern = _CONTROL_PATTERN_NONE
                     control_codes.clear()
                 else:
                     # No handlers for upper F-key codes
@@ -217,22 +247,22 @@ def _prompt(message: str, in_stream: BinaryIO, out_stream: BinaryIO, history: In
             # Keep reading more control codes
             continue
 
-        if in_ord in [ORD_ESC, ORD_FKEY_START]:
+        if in_ord in [_ORD_ESC, _ORD_FKEY_START]:
             # Begin a control sequence
             control_codes.append(in_ord)
             continue
 
-        if in_ord == ORD_LF and _PREVIOUS_ORD == ORD_CR:
+        if in_ord == _ORD_LF and _PREVIOUS_ORD == _ORD_CR:
             # Throw away the line feed from Windows
             continue
 
-        if in_ord in [ORD_CR, ORD_LF]:
+        if in_ord in [_ORD_CR, _ORD_LF]:
             # Do not capture or handle EOL characters
             break_loop = True
-        elif in_ord in NOOP_ORDS:
+        elif in_ord in _NOOP_ORDS:
             # No handlers for these
             pass
-        elif in_ord == ORD_BACKSPACE:
+        elif in_ord == _ORD_BACKSPACE:
             # Handle backspace
             cursor_column, codes_to_redraw = key_codes.backspace()
             _hide_cursor(out_stream)
@@ -254,33 +284,3 @@ def _prompt(message: str, in_stream: BinaryIO, out_stream: BinaryIO, history: In
 
     decoded = key_codes.get_decoded_bytes()
     return decoded
-
-
-def prompt(message: str = "", *, in_stream: BinaryIO, out_stream: BinaryIO) -> str:
-    """Prompt the user for input with the given message."""
-    return _prompt(message, in_stream, out_stream)
-
-
-class PromptSession:
-    """A shell-like session for multiple interactive prompts that supports line editing and command history."""
-
-    def __init__(
-        self,
-        in_stream: BinaryIO,
-        out_stream: BinaryIO,
-        default_prompt: str = "",
-        history: InMemoryHistory | None = None,
-    ) -> None:
-        """Create a PromptSession using in_stream and out_stream for IO, with an optional default_prompt and command history buffer."""
-        self.default_prompt = default_prompt
-        self.in_stream = in_stream
-        self.out_stream = out_stream
-        self.history = history if history else InMemoryHistory()
-
-    def prompt(self, message: str | None = None) -> str:
-        """Prompt the user for input with the given message or the default message."""
-        message = message if message else self.default_prompt
-
-        decoded = _prompt(message, in_stream=self.in_stream, out_stream=self.out_stream, history=self.history)
-
-        return decoded
