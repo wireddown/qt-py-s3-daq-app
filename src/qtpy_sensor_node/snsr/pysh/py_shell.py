@@ -2,15 +2,16 @@
 
 # Reworked from https://github.com/adafruit/Adafruit_CircuitPython_Prompt_Toolkit
 
+from .linebuffer import LineBuffer
+
 try:  # noqa: SIM105 -- contextlib is not available for CircuitPython
-    from typing import BinaryIO, Callable
+    from typing import BinaryIO
 except ImportError:
     pass
 
 ORD_NUL = 0x00
 ORD_FKEY_START = 0x01
 ORD_BACKSPACE = 0x08
-ORD_TAB = 0x09
 ORD_LF = 0x0A
 ORD_CR = 0x0D
 ORD_EOF = 0x1A
@@ -67,19 +68,6 @@ CONTROL_PATTERN_UPPER_F_KEY = 4      # F5..F12                         : code 0x
 
 _PREVIOUS_ORD = ORD_NUL
 
-_PRINTABLE_FOR_NONPRINTABLE = {
-    ORD_NUL: "(0)",
-    ORD_FKEY_START: "(F)",
-    ORD_BACKSPACE: "BS",
-    ORD_TAB: "TAB",
-    ORD_LF: "LF",
-    ORD_CR: "CR",
-    ORD_EOF: "EOF",
-    ORD_ESC: "ESC",
-    ORD_DEL: "DEL",
-}
-
-
 class InMemoryHistory:
     """An in-memory history of commands, infinite in size."""
 
@@ -94,46 +82,6 @@ class InMemoryHistory:
     def get_strings(self) -> list[str]:
         """List of all past strings. Oldest first."""
         return self._history
-
-
-def is_printable(char_ord: int) -> bool:
-    """Return true if the specified ordinal is printable in a terminal."""
-    # https://ss64.com/ascii.html
-    return char_ord > 31 and char_ord < 127  # noqa: PLR2004 -- ordinals /are/ magic numbers
-
-
-def debug_str(in_ordinal: int) -> str:
-    """Return a printable substitute for a non-printable ordinal."""
-    return chr(in_ordinal) if is_printable(in_ordinal) else _PRINTABLE_FOR_NONPRINTABLE.get(in_ordinal, "?")
-
-
-def console_query(
-    query_sequence_ords: list[int], out_stream: BinaryIO, in_stream: BinaryIO, stop_ord: int
-) -> list[int]:
-    """Send the query_sequence_ords to the remote console and return its response."""
-    out_stream.write(bytes(query_sequence_ords))
-    in_ord = ORD_NUL
-    response_ords = []
-    while in_ord != stop_ord:
-        in_char = in_stream.read(1)
-        in_ord = ord(in_char)
-        response_ords.append(in_ord)
-    return response_ords
-
-
-def get_cursor_column(output: BinaryIO, in_stream: BinaryIO) -> int:
-    """Get the cursor column from the remote console."""
-    cursor_position_codes = console_query(
-        query_sequence_ords=[ORD_ESC, ORD_OPEN_BRACKET, ord("6"), ord("n")],
-        out_stream=output,
-        in_stream=in_stream,
-        stop_ord=ord("R"),
-    )
-    # Full response has format ESC[#;#R
-    clipped = cursor_position_codes[2:-1]
-    semicolon_index = clipped.index(ORD_SEMICOLON)
-    column_ords = clipped[semicolon_index + 1 :]
-    return int(bytes(column_ords))
 
 
 def set_cursor_column(new_column: int, output: BinaryIO) -> None:
@@ -178,28 +126,6 @@ def redraw_from_column(from_column: int, ords_to_draw: list[int], output: Binary
     console_csi_command(erase_to_eol, output)
 
     output.write(bytes(ords_to_draw))
-
-
-# - use input() to get a whole client-side edited line?
-## -- input() does     line editing
-##            does     autocomplete on globals() with tab (not configurable)
-##            does     support UTF-8 characters
-##            does not support the F-keys but echoes the printable control codes and homes the cursor
-def _prompt2(message: str = "") -> str:
-    """Use the built-in 'input' function to prompt the user with message and return the response."""
-    from_remote = input(message)
-    return from_remote
-
-
-# AttributeError: can't set attribute 'write'
-def traced(traced_function: Callable, trace_list: list[str]) -> Callable:
-    """When traced_function is called, add a message containing the parameters to trace_list."""
-
-    def with_tracing(*args, **kwargs) -> Callable:  # noqa: ANN002 ANN003 -- wrapping an unknown function signature
-        trace_list.append(f"{args} {kwargs}")
-        return traced_function(*args, **kwargs)
-
-    return with_tracing
 
 
 # plink only sends CR (like classic macOS)
@@ -335,82 +261,6 @@ def prompt(message: str = "", *, in_stream: BinaryIO, out_stream: BinaryIO) -> s
     return _prompt(message, in_stream, out_stream)
 
 
-class TracedReader:
-    """A stream reader that logs bytes read from the stream."""
-
-    def __init__(self, input_stream: BinaryIO, shared_tracelog: list[str], log_prefix: str | None = None) -> None:
-        """
-        Create a TracedReader that logs all reads from input_stream into shared_tracelog.
-
-        input_stream must support a function with signature 'read(int) -> bytes'.
-        """
-        self._input_stream = input_stream
-        self._shared_tracelog = shared_tracelog
-        self._log_prefix = log_prefix if log_prefix is not None else type(self)
-        self._trace(f"tracing input from {type(input_stream)}")
-
-    def read(self, byte_count: int) -> bytes:
-        """Read from the input_stream and log it."""
-        input_chars = self._input_stream.read(byte_count)
-        self._trace(f" in   {input_chars}")
-        return input_chars
-
-    def _trace(self, message: str) -> None:
-        self._shared_tracelog.append(f"{self._log_prefix}{message}")
-
-
-class TracedWriter:
-    """A stream writer that logs bytes written to the stream."""
-
-    def __init__(self, output_stream: BinaryIO, shared_tracelog: list[str], log_prefix: str | None = None) -> None:
-        """
-        Create a TracedWriter that logs all writes to output_stream into shared_tracelog.
-
-        output_stream must support a function with signature 'write(bytes) -> None'.
-        """
-        self._output_stream = output_stream
-        self._shared_tracelog = shared_tracelog
-        self._log_prefix = log_prefix if log_prefix is not None else type(self)
-        self._trace(f"tracing output from {type(output_stream)}")
-
-    def write(self, encoded_string: bytes) -> None:
-        """Read to the output_stream and log it."""
-        self._trace(f"out > {encoded_string}")
-        self._output_stream.write(encoded_string)
-
-    def _trace(self, message: str) -> None:
-        self._shared_tracelog.append(f"{self._log_prefix}{message}")
-
-
-class IOTracer:
-    """An IO stream tracer that logs bytes read and written to the streams."""
-
-    def __init__(self, input_stream: BinaryIO, output_stream: BinaryIO) -> None:
-        """Create an IOTracer that logs all IO with input_stream and output_stream."""
-        self._shared_tracelog = []
-        self._traced_input = TracedReader(input_stream, self._shared_tracelog, log_prefix="")
-        self._traced_output = TracedWriter(output_stream, self._shared_tracelog, log_prefix="")
-
-    @property
-    def input_stream(self) -> TracedReader:
-        """Return the TracedReader used by the IOTracer."""
-        return self._traced_input
-
-    @property
-    def output_stream(self) -> TracedWriter:
-        """Return the TracedWriter used by the IOTracer."""
-        return self._traced_output
-
-    @property
-    def traced_io_log(self) -> list[str]:
-        """Return a copy of the logged IO traces from the streams."""
-        return self._shared_tracelog.copy()
-
-    def clear_log(self) -> None:
-        """Clear the trace log."""
-        self._shared_tracelog.clear()
-
-
 class PromptSession:
     """A shell-like session for multiple interactive prompts that supports line editing and command history."""
 
@@ -434,136 +284,3 @@ class PromptSession:
         decoded = _prompt(message, in_stream=self.in_stream, out_stream=self.out_stream, history=self.history)
 
         return decoded
-
-
-class LineBuffer:
-    """A user input buffer that supports tabs, moving the cursor, deleting, and backspacing."""
-
-    def __init__(self, prompt_length: int, tab_size: int = 8) -> None:
-        """Create a new LineBuffer for interactive user input."""
-        self._first_terminal_column = 1
-        self.prompt_length = prompt_length
-        self.tab_size = tab_size
-        self.ord_codes = []
-        self.input_cursor = 0
-        self.terminal_column = self._get_column_at_cursor()
-
-    def has_bytes(self) -> bool:
-        """Return whether the buffer has contents."""
-        return len(self.ord_codes) > 0
-
-    def get_decoded_bytes(self) -> str:
-        """Get the buffer as a UTF-8 string."""
-        return bytes(self.ord_codes).decode("UTF-8")
-
-    def get_terminal_column(self) -> int:
-        """Return the terminal column of the input cursor."""
-        return self.terminal_column
-
-    def accept(self, ord_code: int) -> tuple[int, list[int]]:
-        """
-        Insert a new ordinate at the input cursor.
-
-        Returns a tuple of the new terminal column and a slice of the
-        input buffer from the new ordinate to the end of the buffer.
-        """
-        self.ord_codes.insert(self.input_cursor, ord_code)
-        code_with_remaining_line = self.ord_codes[self.input_cursor :]
-        self.input_cursor += 1
-        self.terminal_column = self._get_column_at_cursor()
-        return self.terminal_column, code_with_remaining_line
-
-    def delete(self) -> tuple[int, list[int]]:
-        """
-        Delete the ordinate after the input cursor.
-
-        Returns a tuple of the new terminal column and a slice of the
-        input buffer from the cursor to the end of the buffer.
-        """
-        if self.input_cursor < len(self.ord_codes):
-            _ = self.ord_codes.pop(self.input_cursor)
-            self.terminal_column = self._get_column_at_cursor()
-        remaining_line = self.ord_codes[self.input_cursor :]
-        return self.terminal_column, remaining_line
-
-    def backspace(self) -> tuple[int, list[int]]:
-        """
-        Delete the ordinate before the input cursor.
-
-        Returns a tuple of the new terminal column and a slice of the
-        input buffer from the cursor to the end of the buffer.
-        """
-        old_column = self.terminal_column
-        new_column = self.move_left()
-        if new_column != old_column:
-            self.delete()
-        remaining_line = self.ord_codes[self.input_cursor :]
-        return new_column, remaining_line
-
-    def move_home(self) -> int:
-        """
-        Move the input cursor to the beginning of the buffer.
-
-        Returns the new terminal column of the input cursor.
-        """
-        self.input_cursor = 0
-        self.terminal_column = self._get_column_at_cursor()
-        return self.terminal_column
-
-    def move_end(self) -> int:
-        """
-        Move the input cursor to the end of the buffer.
-
-        Returns the new terminal column of the input cursor.
-        """
-        self.input_cursor = len(self.ord_codes)
-        self.terminal_column = self._get_column_at_cursor()
-        return self.terminal_column
-
-    def move_left(self) -> int:
-        """
-        Move input cursor one character to the left.
-
-        Returns the new terminal column of the input cursor.
-        """
-        if self.input_cursor > 0:
-            move_distance = self._get_column_move_distance_for_cursor_move(-1)
-            self.input_cursor -= 1
-            self.terminal_column -= move_distance
-        return self.terminal_column
-
-    def move_right(self) -> int:
-        """
-        Move the input cursor one character to the right.
-
-        Returns the new terminal column of the input cursor.
-        """
-        if self.input_cursor < len(self.ord_codes):
-            move_distance = self._get_column_move_distance_for_cursor_move(1)
-            self.input_cursor += 1
-            self.terminal_column += move_distance
-        return self.terminal_column
-
-    def _get_column_at_cursor(self) -> int:
-        codes_to_cursor = self.ord_codes[: self.input_cursor]
-        column = self._calculate_column_for_codes(codes_to_cursor)
-        return column
-
-    def _get_column_move_distance_for_cursor_move(self, cursor_move: int) -> int:
-        index_after_move = self.input_cursor + cursor_move
-        codes_after_move = self.ord_codes[:index_after_move]
-        new_column = self._calculate_column_for_codes(codes_after_move)
-        return abs(self.terminal_column - new_column)
-
-    def _calculate_column_for_codes(self, codes: list[int]) -> int:
-        first_user_column = self._first_terminal_column + self.prompt_length
-        terminal_column = first_user_column
-        for ord_code in codes:
-            if ord_code == ORD_TAB:
-                one_based_x = terminal_column - self._first_terminal_column
-                one_based_remainder = one_based_x % self.tab_size
-                to_next_tab_stop = self.tab_size - one_based_remainder
-                terminal_column += to_next_tab_stop
-            else:
-                terminal_column += 1
-        return terminal_column
