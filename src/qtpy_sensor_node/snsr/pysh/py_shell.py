@@ -84,29 +84,29 @@ class InMemoryHistory:
         return self._history
 
 
-def set_cursor_column(new_column: int, output: BinaryIO) -> None:
+def _set_cursor_column(new_column: int, output: BinaryIO) -> None:
     """Set the cursor column in the remote console."""
     # ESC[##G to set cursor column
     column_number = [ord(x) for x in list(str(new_column))]
     column_number.append(ord("G"))
-    console_csi_command(column_number, output)
+    _console_csi_command(column_number, output)
 
 
-def hide_cursor(output: BinaryIO) -> None:
+def _hide_cursor(output: BinaryIO) -> None:
     """Hide the cursor in the remote console."""
     # ESC[?25l to make cursor invisible
     hide_cursor = [ord(x) for x in list("?25l")]
-    console_csi_command(hide_cursor, output)
+    _console_csi_command(hide_cursor, output)
 
 
-def show_cursor(output: BinaryIO) -> None:
+def _show_cursor(output: BinaryIO) -> None:
     """Show the cursor in the remote console."""
     # ESC[?25h to make cursor visible
     show_cursor = [ord(x) for x in list("?25h")]
-    console_csi_command(show_cursor, output)
+    _console_csi_command(show_cursor, output)
 
 
-def console_csi_command(command_sequence_ords: list[int], output: BinaryIO) -> None:
+def _console_csi_command(command_sequence_ords: list[int], output: BinaryIO) -> None:
     """Send a command prefixed with the control sequence introducer 'ESC ['."""
     full_command = [ORD_ESC, ORD_OPEN_BRACKET]
     full_command.extend(command_sequence_ords)
@@ -117,13 +117,13 @@ def console_csi_command(command_sequence_ords: list[int], output: BinaryIO) -> N
 #   - difficult to track tabs
 # CSI Ps X  Erase Ps Character(s) (default = 1)
 #   - untested
-def redraw_from_column(from_column: int, ords_to_draw: list[int], output: BinaryIO) -> None:
+def _redraw_from_column(from_column: int, ords_to_draw: list[int], output: BinaryIO) -> None:
     """Erase the line starting at from_column and redraw ords_to_draw."""
-    set_cursor_column(from_column, output)
+    _set_cursor_column(from_column, output)
 
     # ESC[0K to erase from cursor to end of line
     erase_to_eol = [ord(x) for x in list("0K")]
-    console_csi_command(erase_to_eol, output)
+    _console_csi_command(erase_to_eol, output)
 
     output.write(bytes(ords_to_draw))
 
@@ -177,7 +177,7 @@ def _prompt(message: str, in_stream: BinaryIO, out_stream: BinaryIO, history: In
                             new_column = key_codes.move_home()
 
                         if new_column != old_column:
-                            set_cursor_column(new_column, out_stream)
+                            _set_cursor_column(new_column, out_stream)
 
                         # Handling CSI control sequence complete
                         control_pattern = CONTROL_PATTERN_NONE
@@ -195,10 +195,10 @@ def _prompt(message: str, in_stream: BinaryIO, out_stream: BinaryIO, history: In
                         if control_codes[2:-1] == [ord("3")]:
                             # Delete is ESC[3~
                             cursor_column, codes_to_redraw = key_codes.delete()
-                            hide_cursor(out_stream)
-                            redraw_from_column(cursor_column, codes_to_redraw, out_stream)
-                            set_cursor_column(cursor_column, out_stream)
-                            show_cursor(out_stream)
+                            _hide_cursor(out_stream)
+                            _redraw_from_column(cursor_column, codes_to_redraw, out_stream)
+                            _set_cursor_column(cursor_column, out_stream)
+                            _show_cursor(out_stream)
                         # Handling complete -- '~' terminated command
                         control_pattern = CONTROL_PATTERN_NONE
                         control_codes.clear()
@@ -235,18 +235,18 @@ def _prompt(message: str, in_stream: BinaryIO, out_stream: BinaryIO, history: In
         elif in_ord == ORD_BACKSPACE:
             # Handle backspace
             cursor_column, codes_to_redraw = key_codes.backspace()
-            hide_cursor(out_stream)
-            redraw_from_column(cursor_column, codes_to_redraw, out_stream)
-            set_cursor_column(cursor_column, out_stream)
-            show_cursor(out_stream)
+            _hide_cursor(out_stream)
+            _redraw_from_column(cursor_column, codes_to_redraw, out_stream)
+            _set_cursor_column(cursor_column, out_stream)
+            _show_cursor(out_stream)
         else:
             # Accept the user's input character
             old_column = key_codes.get_terminal_column()
             new_column, codes_to_redraw = key_codes.accept(in_ord)
-            hide_cursor(out_stream)
-            redraw_from_column(old_column, codes_to_redraw, out_stream)
-            set_cursor_column(new_column, out_stream)
-            show_cursor(out_stream)
+            _hide_cursor(out_stream)
+            _redraw_from_column(old_column, codes_to_redraw, out_stream)
+            _set_cursor_column(new_column, out_stream)
+            _show_cursor(out_stream)
 
         _PREVIOUS_ORD = in_ord
 
