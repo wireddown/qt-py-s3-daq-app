@@ -11,9 +11,10 @@ from .py_shell import (
     ORD_NUL,
     ORD_OPEN_BRACKET,
     ORD_SEMICOLON,
-    ORD_TAB,
     PromptSession,
 )
+
+from .linebuffer import ORD_TAB
 
 try:  # noqa: SIM105 -- contextlib is not available for CircuitPython
     from typing import BinaryIO, Callable
