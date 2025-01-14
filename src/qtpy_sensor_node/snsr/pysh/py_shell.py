@@ -97,6 +97,7 @@ def console_query(query_sequence_ords, output, input, stop_ord):
 def console_esc_ob_command(command_sequence_ords, output):
     full_command = [ORD_ESC, ORD_OPEN_BRACKET]
     full_command.extend(command_sequence_ords)
+    ##print(bytes(full_command[2:-1]))
     output.write(bytes(full_command).decode("UTF-8"))
 
 
@@ -194,13 +195,17 @@ def _prompt(message="", *, input_=None, output=None, history=None, debug=False):
                         # Looks like the line buffer needs to help calculate and limit moves for tab, return new cursor position ?
                         move_cursor_command = []
                         if in_ord == ord("C"):
-                            if key_codes.move_right():
+                            columns_moved = key_codes.move_right()
+                            if columns_moved:
                                 # Need to account for tab
-                                move_cursor_command.extend([ord("1"), in_ord])
+                                as_ords = [ord(x) for x in list(str(columns_moved))]
+                                move_cursor_command.extend(as_ords)
                         elif in_ord == ord("D"):
-                            if key_codes.move_left():
+                            columns_moved = key_codes.move_left()
+                            if columns_moved:
                                 # Need to account for tab
-                                move_cursor_command.extend([ord("1"), in_ord])
+                                as_ords = [ord(x) for x in list(str(columns_moved))]
+                                move_cursor_command.extend(as_ords)
                         elif in_ord == ord("F"):
                             # Need to move cursor
                             key_codes.move_end()
@@ -209,6 +214,7 @@ def _prompt(message="", *, input_=None, output=None, history=None, debug=False):
                             key_codes.move_home()
                             set_cursor_column(new_column=len(message) + 1, output=output)
                         if move_cursor_command:
+                            move_cursor_command.append(in_ord)
                             console_esc_ob_command(move_cursor_command, output)
                         debug(f"*** completed move-cursor control code {debug_str(in_ord):4}")
                         control_pattern = CONTROL_PATTERN_NONE
@@ -338,24 +344,53 @@ class LineBuffer:
     def get_decoded_bytes(self):
         return bytes(self.ord_codes).decode("UTF-8")
 
+    def peek_next(self):
+        if self.index == len(self.ord_codes):
+            return None
+        else:
+            return self.ord_codes[self.index]
+
+    def peek_previous(self):
+        if self.index == 0:
+            return None
+        else:
+            return self.ord_codes[self.index - 1]
+
     def accept(self, ord_code):
         self.ord_codes.insert(self.index, ord_code)
         self.index += 1
         self.column = self.get_column()
 
+    def move_distance(self, direction):
+        first_user_column = self.prompt_length
+        column = first_user_column
+        for ord in self.ord_codes[:self.index+direction]:
+            if ord == ORD_TAB:
+                tab_stops, remaining_columns = divmod(column, self.tab_size)
+                to_next_tab_stop = self.tab_size - remaining_columns
+                column += to_next_tab_stop
+            else:
+                column += 1
+        ##print([direction, self.column, column, abs(self.column - column)])
+        return abs(self.column - column)
+
     def move_right(self):
-        if self.index == len(self.ord_codes):
-            return False
-        else:
+        move_distance = 0
+        next_ord = self.peek_next()
+        if next_ord:
+            move_distance = self.move_distance(direction=1)
             self.index += 1
-            return True
+            self.column += move_distance
+        return move_distance
 
     def move_left(self):
-        if self.index == 0:
-            return False
-        else:
+        move_distance = 0
+        previous_ord = self.peek_previous()
+        if previous_ord:
+            move_distance = self.move_distance(direction=-1)
             self.index -= 1
-            return True
+            self.column -= move_distance
+        return move_distance
 
     def move_home(self):
         while self.move_left():
