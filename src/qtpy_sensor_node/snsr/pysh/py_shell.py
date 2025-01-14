@@ -146,51 +146,68 @@ def redraw_input(output, first_user_column, user_input_ords):
     show_cursor(output)
 
 
+# - use input() to get a whole client-side edited line?
+## -- input() does     line editing
+# #           does     autocomplete on globals() with tab (not configurable)
+##            does     support UTF-8 characters
+##            does not support the F-keys but echoes the printable control codes and homes the cursor
+def _prompt2(message="", *, input_=None, output=None, history=None, debug=False):
+    from_remote = input("p2]")
+    return from_remote
+
+
 # plink only sends CR (like classic macOS)
 # miniterm sends CRLF on Windows
 # (untested: expecting Linux to send LF)
-def _prompt(message="", *, input_=None, output=None, history=None, debug=False):
+# - add tests on codes
+#   - collect debug messages in a buffer, yield on-demand
+#   - split IO at the bytes layer, force only one input and output method for bytes
+#   - assert on the bytes received and bytes sent
+#     - an object that supports read(1)
+#     - an object that supports write(str)
+# - use other vt commands to manipulate the cursor and text?
+# - use regex to help?
+def _prompt(message="", *, input_=None, output=None, history=None, tracer=None):
     global _PREVIOUS_ORD
-    debug = False
-    debug = print if debug else __unused
+    if tracer is not None:
+        trace_record = tracer.append
+    else:
+        trace_record = __unused
+
     output.write(message.encode("UTF-8"))
-    cursor_position_codes = console_query(
-        query_sequence_ords=[ORD_ESC, ORD_OPEN_BRACKET, ord("6"), ord("n")],
-        output=output,
-        input=input_,
-        stop_ord=ord("R")
-    )
-    #print((f"prompt length: {len(message)} cursor position: {[debug_str(x) for x in cursor_position_codes]}"))
+
     key_codes = LineBuffer(prompt_length=len(message))
     control_codes = []
     control_pattern = CONTROL_PATTERN_NONE
+
     break_loop = False
     while (not key_codes.has_bytes() or _PREVIOUS_ORD not in [ORD_CR, ORD_LF]) and not break_loop:
         in_char = input_.read(1)
         in_ord = ord(in_char)
-        debug(f"* received {in_ord:4}d {debug_str(in_ord):4} previous {debug_str(_PREVIOUS_ORD):4}")
+        trace_record(f"* received {in_ord:4}d {debug_str(in_ord):4} previous {debug_str(_PREVIOUS_ORD):4}")
 
         if control_codes:
             control_codes.append(in_ord)
             control_command_length = len(control_codes)
-            debug(f"** entering control char sequence {control_codes}")
+            trace_record(f"** entering control char sequence {control_codes}")
             if control_command_length == 2:
                 if control_codes[0] == ORD_ESC and in_ord == ORD_OPEN_BRACKET:
                     # begin escape control sequence
-                    debug(f"** detected ESC control char sequence {control_codes}")
+                    trace_record(f"** detected ESC control char sequence {control_codes}")
                     control_pattern = CONTROL_PATTERN_MOVE_CURSOR_KEY  # Assume until further reads show otherwise
                 elif control_codes[0] == ORD_FKEY_START and in_ord == ORD_LOWER_B:
                     # begin f-key control sequence
-                    debug(f"** detected F-key control char sequence {control_codes}")
+                    trace_record(f"** detected F-key control char sequence {control_codes}")
                     control_pattern = CONTROL_PATTERN_LOWER_F_KEY  # Assume until further reads show otherwise
                 else:
-                    debug(f"*** exiting control char sequence unsupported control code {debug_str(in_ord):4}")
+                    trace_record(f"*** exiting control char sequence unsupported control code {debug_str(in_ord):4}")
                     control_codes.clear()
             elif control_command_length == 3:
                 if control_pattern == CONTROL_PATTERN_MOVE_CURSOR_KEY:
                     if (ord("0") <= in_ord <= ord("9")):
-                        control_pattern = CONTROL_PATTERN_EDITOR_KEY  # We read more and learned we're reading an editor command
-                        debug(f"*** processing editor control code {debug_str(in_ord):4}")
+                        # We read more and learned we're reading an editor command
+                        control_pattern = CONTROL_PATTERN_EDITOR_KEY
+                        trace_record(f"*** processing editor control code {debug_str(in_ord):4}")
                     else:
                         move_cursor_command = []
                         if in_ord == ord("C"):
@@ -212,57 +229,57 @@ def _prompt(message="", *, input_=None, output=None, history=None, debug=False):
                         if move_cursor_command:
                             move_cursor_command.append(in_ord)
                             console_esc_ob_command(move_cursor_command, output)
-                        debug(f"*** completed move-cursor control code {debug_str(in_ord):4}")
+                        trace_record(f"*** completed move-cursor control code {debug_str(in_ord):4}")
                         control_pattern = CONTROL_PATTERN_NONE
                         control_codes.clear()
                 elif control_pattern == CONTROL_PATTERN_LOWER_F_KEY:
                     if in_ord == ORD_OPEN_BRACKET:
-                        control_pattern = CONTROL_PATTERN_UPPER_F_KEY  # We read more and learned we're reading an upper F-key command
-                        debug(f"** detected upper F-key control char sequence {control_codes}")
+                        # We read more and learned we're reading an upper F-key command
+                        control_pattern = CONTROL_PATTERN_UPPER_F_KEY
+                        trace_record(f"** detected upper F-key control char sequence {control_codes}")
                     else:
-                        debug(f"*** processing lower F-key control code {debug_str(in_ord):4}")
+                        trace_record(f"*** processing lower F-key control code {debug_str(in_ord):4}")
             elif control_command_length == 4:
                 if control_pattern == CONTROL_PATTERN_EDITOR_KEY:
                     if in_ord == ORD_TILDE:
-                        debug(f"*** completed processing editor control code {debug_str(in_ord):4}")
+                        trace_record(f"*** completed processing editor control code {debug_str(in_ord):4}")
+                        if control_codes[2:-1] == [ord("3")]:
+                            # Delete
+                            deleted_columns = key_codes.delete()
+                            old_column = get_cursor_column(output, input=input_)
+                            redraw_input(output, len(message) + 1, key_codes.ord_codes)
+                            set_cursor_column(new_column=old_column, output=output)
                         control_pattern = CONTROL_PATTERN_NONE
                         control_codes.clear()
                 elif control_pattern == CONTROL_PATTERN_LOWER_F_KEY:
-                    debug(f"*** completed processing lower F-key control code {debug_str(in_ord):4}")
+                    trace_record(f"*** completed processing lower F-key control code {debug_str(in_ord):4}")
                     control_pattern = CONTROL_PATTERN_NONE
                     control_codes.clear()
             else:
                 if in_ord == ORD_TILDE:
-                    debug(f"*** completed processing upper F-key control code {debug_str(in_ord):4}")
+                    trace_record(f"*** completed processing upper F-key control code {debug_str(in_ord):4}")
                     control_pattern = CONTROL_PATTERN_NONE
                     control_codes.clear()
                 else:
-                    debug(f"*** processing upper F-key control code {debug_str(in_ord):4}")
+                    trace_record(f"*** processing upper F-key control code {debug_str(in_ord):4}")
             continue
 
         if in_ord in [ORD_ESC, ORD_FKEY_START]:
-            debug("** detected control char sequence")
+            trace_record("** detected control char sequence")
             control_codes.append(in_ord)
             continue
 
         if in_ord == ORD_LF and _PREVIOUS_ORD == ORD_CR:
             # Throw away the line feed from Windows
-            debug("** completed windows EOL")
+            trace_record("** completed windows EOL")
             continue
 
         if in_ord in [ORD_CR, ORD_LF]:
             # Do not capture EOL characters
-            debug("** skipped EOL char")
-            debug("** matched loop exit")
+            trace_record("** matched loop exit")
             break_loop = True
         elif in_ord in NOOP_ORDS:
-            # Filter for more
-            # - Other non-printables
-            # But allow
-            # - (done) Backspace \x08
-            # - (done) TAB \x09
-            # - Delete
-            debug(f"** skipping non printable char {in_ord}")
+            trace_record(f"** skipping non printable char {in_ord}")
         elif in_ord == ORD_BACKSPACE:
             deleted_columns = key_codes.backspace()
             if deleted_columns:
@@ -272,15 +289,16 @@ def _prompt(message="", *, input_=None, output=None, history=None, debug=False):
                 # restore cursor column
                 set_cursor_column(new_column=old_column-deleted_columns, output=output)
         else:
-            debug(f"** accepted {debug_str(in_ord)}")
+            trace_record(f"** accepted {debug_str(in_ord)}")
             new_column = key_codes.accept(in_ord)
             redraw_input(output, len(message) + 1, key_codes.ord_codes)
             set_cursor_column(new_column=new_column + 1, output=output)
 
         _PREVIOUS_ORD = in_ord
-        debug(f"\n** loop conditions key_codes: {key_codes.ord_codes} previous_ord: {debug_str(_PREVIOUS_ORD)} break: {break_loop}")
+        trace_record(f"** loop conditions key_codes: {key_codes.ord_codes} previous_char: {debug_str(_PREVIOUS_ORD)} break: {break_loop}")
+
     output.write(b"\n")
-    debug("encoded", key_codes.get_decoded_bytes())
+    trace_record(f"encoded {key_codes.get_decoded_bytes()}")
 
     decoded = key_codes.get_decoded_bytes()
     return decoded
@@ -299,7 +317,7 @@ class PromptSession:
     """Session for multiple prompts. Stores common arguments to `prompt()` and
     history of commands for user selection."""
 
-    def __init__(self, message="", *, input=None, output=None, history=None):
+    def __init__(self, message="", *, input=None, output=None, history=None, tracer=None):
         # "input" and "output" are names used in upstream "prompt_toolkit" so we
         # use them too.
         # pylint: disable=redefined-builtin
@@ -308,6 +326,7 @@ class PromptSession:
         self._output = output
 
         self.history = history if history else InMemoryHistory()
+        self.tracer = tracer
 
     def prompt(self, message=None) -> str:
         """Prompt the user for input over the session's ``input`` with the given
@@ -315,8 +334,12 @@ class PromptSession:
         message = message if message else self.message
 
         decoded = _prompt(
-            message, input_=self._input, output=self._output, history=self.history
+            message, input_=self._input, output=self._output, history=self.history, tracer=self.tracer
         )
+
+        # decoded = _prompt2(
+        #     message, input_=self._input, output=self._output, history=self.history
+        # )
 
         return decoded
 
@@ -366,6 +389,7 @@ class LineBuffer:
         return abs(self.column - column)
 
     def move_right(self):
+        # Maybe always return self.column
         move_distance = 0
         next_ord = self.peek_next()
         if next_ord:
@@ -375,6 +399,7 @@ class LineBuffer:
         return move_distance
 
     def move_left(self):
+        # Maybe always return self.column
         move_distance = 0
         previous_ord = self.peek_previous()
         if previous_ord:
