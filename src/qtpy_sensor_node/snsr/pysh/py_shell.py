@@ -144,7 +144,7 @@ def _console_csi_command(command_sequence_ords: list[int], output: BinaryIO) -> 
     output.write(bytes(full_command))
 
 
-# Room for improvement
+# Room for improvement -- see GitHub Issue #30
 # Delete the columns, do not redraw from the cursor
 # - CSI Ps P  Delete Ps Character(s) (default = 1)
 #   - also need to track tabs
