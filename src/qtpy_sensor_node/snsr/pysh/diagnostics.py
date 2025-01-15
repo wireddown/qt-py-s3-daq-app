@@ -194,7 +194,7 @@ def builtin_input(message: str = "") -> str:
     return from_remote
 
 
-# Can we set a new wrapped fuction on the serial object?
+# Can we set a new wrapped function on the serial object?
 # - AttributeError: can't set attribute 'write'
 def traced(traced_function: Callable, trace_list: list[str]) -> Callable:
     """When traced_function is called, add a message containing the parameters to trace_list."""
