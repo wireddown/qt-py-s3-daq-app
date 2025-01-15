@@ -56,7 +56,7 @@ def test_custom_shell_prompt() -> None:
     ],
 )
 def test_prompt_exits_on_eol(in_eol_bytes: bytes, assert_message: str) -> None:
-    """Does it return a repsonse after the EOL character?"""
+    """Does it return a response after the EOL character?"""
     shell_prompt = "qtpy $"
     input_buffer = io.BytesIO(initial_bytes=in_eol_bytes)
     output_buffer = io.BytesIO(initial_bytes=b"")
