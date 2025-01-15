@@ -144,10 +144,14 @@ def _console_csi_command(command_sequence_ords: list[int], output: BinaryIO) -> 
     output.write(bytes(full_command))
 
 
-# CSI Ps P  Delete Ps Character(s) (default = 1)
-#   - difficult to track tabs
-# CSI Ps X  Erase Ps Character(s) (default = 1)
+# Room for improvement
+# Delete the columns, do not redraw from the cursor
+# - CSI Ps P  Delete Ps Character(s) (default = 1)
+#   - also need to track tabs
+# - CSI Ps X  Erase Ps Character(s) (default = 1)
 #   - untested
+# Insert empty columns and fill them with new input characters
+# - CSI Ps @  Insert Ps (Blank) Character(s) (default = 1)
 def _redraw_from_column(from_column: int, ords_to_draw: list[int], output: BinaryIO) -> None:
     """Erase the line starting at from_column and redraw ords_to_draw."""
     _set_cursor_column(from_column, output)
@@ -164,7 +168,7 @@ def _redraw_from_column(from_column: int, ords_to_draw: list[int], output: Binar
 # (untested: expecting Linux to send LF)
 def _prompt(message: str, in_stream: BinaryIO, out_stream: BinaryIO, history: InMemoryHistory | None = None) -> str:
     """Use a custom shell processor to prompt the user with message and return the response."""
-    global _PREVIOUS_ORD  # noqa PLW0603 -- need a global to track EOL characters from Windows across calls
+    global _PREVIOUS_ORD  # noqa PLW0603 -- need a global to track EOL characters from Windows across calls in a session
     out_stream.write(message.encode("UTF-8"))
 
     key_codes = LineBuffer(prompt_length=len(message))
@@ -220,7 +224,7 @@ def _prompt(message: str, in_stream: BinaryIO, out_stream: BinaryIO, history: In
     return decoded
 
 
-def _process_control_sequence(  # noqa: PLR0912 PLR0915 -- need many lines and statements to process control codes
+def _process_control_sequence(  # noqa: PLR0912 PLR0915 -- we need many lines and statements to process control codes
     control_codes: list[int], in_ord: int, control_pattern: int, key_codes: LineBuffer, out_stream: BinaryIO
 ) -> int:
     """Track and handle the control codes as they are read."""

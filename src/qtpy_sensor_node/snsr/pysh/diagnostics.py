@@ -81,7 +81,7 @@ class TracedWriter:
 
 
 class IOTracer:
-    """An IO stream tracer that logs bytes read and written to the streams."""
+    """An IO stream tracer that logs bytes read from and written to the streams."""
 
     def __init__(self, input_stream: BinaryIO, output_stream: BinaryIO) -> None:
         """Create an IOTracer that logs all IO with input_stream and output_stream."""
