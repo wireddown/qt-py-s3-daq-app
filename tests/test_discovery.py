@@ -20,7 +20,7 @@ def one_qtpy_device() -> list[dict[str, str]]:
             "drive_label": "CIRCUITPY",
             "disk_description": "Adafruit QT Py ESP32S3 no PSRAM",
             "serial_number": "00AA00AA00AA",
-            "com_port": "COM2",
+            "com_port": "COMxx",
             "com_id": "USB VID:PID=239A:811A SER=00AA00AA00AA LOCATION=1-7:x.0",
         },
     ]
@@ -34,7 +34,7 @@ def two_qtpy_devices() -> list[dict[str, str]]:
             "drive_label": "CIRCUITPY",
             "disk_description": "Adafruit QT Py ESP32S3 no PSRAM",
             "serial_number": "00AA00AA00AA",
-            "com_port": "COM2",
+            "com_port": "COMxx",
             "com_id": "USB VID:PID=239A:811A SER=00AA00AA00AA LOCATION=1-7:x.0",
         },
         {
@@ -42,7 +42,7 @@ def two_qtpy_devices() -> list[dict[str, str]]:
             "drive_label": "CIRCUITPY",
             "disk_description": "Adafruit QT Py ESP32S3 2MB PSRAM",
             "serial_number": "11CC11CC11CC",
-            "com_port": "COM3",
+            "com_port": "COMyy",
             "com_id": "USB VID:PID=239A:8144 SER=11CC11CC11CC LOCATION=1-8:x.0",
         },
     ]
