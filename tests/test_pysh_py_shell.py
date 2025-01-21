@@ -1,4 +1,4 @@
-"""Acceptance tests for the custom_shell Circuit Python module."""
+"""Acceptance tests for the py_shell module."""
 
 import io
 import itertools
