@@ -29,7 +29,7 @@ def cli(ctx: click.Context, quiet: bool, verbose: bool) -> None:
 @cli.command()
 @click.help_option()
 def run() -> None:
-    """Stub entry point for 'run' subcommand."""
+    """Stub entry point for 'run' command."""
     logger.warning("this is a stub command")
 
 
