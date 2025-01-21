@@ -4,7 +4,7 @@ import logging
 
 import click
 
-from . import tracelog
+from . import discovery, tracelog
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +27,31 @@ def cli(ctx: click.Context, quiet: bool, verbose: bool) -> None:
 
 
 @cli.command()
+@click.option(
+    "--auto-connect",
+    "behavior",
+    flag_value=discovery.Behavior.AutoConnect,
+    default=True,
+    help="Behavior: Find and open a session with a QT Py device. [default]",
+)
+@click.option(
+    "--discover-only",
+    "behavior",
+    flag_value=discovery.Behavior.DiscoverOnly,
+    help="Behavior: List discovered ports and exit.",
+)
+@click.option("-p", "--port", default="", metavar="COM#", help="COM port to open for communication.")
+@click.help_option()
+def connect(behavior: str, port: str) -> None:
+    """Connect to a serial port."""
+    discovery_behavior = discovery.Behavior(behavior)
+    discovery.handle_connect(discovery_behavior, port)
+
+
+@cli.command()
 @click.help_option()
 def run() -> None:
-    """Stub entry point for 'run' subcommand."""
+    """Stub entry point for 'run' command."""
     logger.warning("this is a stub command")
 
 
