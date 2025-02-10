@@ -21,12 +21,10 @@ findimports = "^2.5.2"
 packaging = "^24.2"
 beautifulsoup4 = "^4.13.3"
 
-
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
 ruff = "^0.9.4"
 pyright = "^1.1.393"
-
 
 [tool.poetry.group.circup.dependencies]
 circuitpython-stubs = "9.2.1"
@@ -62,7 +60,6 @@ executionEnvironments = [
     { root = "src/qtpy_datalogger/sensor_node", reportMissingModuleSource = "information", reportAttributeAccessIssue = "information" },
     { root = "." },
 ]
-
 
 [tool.ruff]
 line-length = 120
