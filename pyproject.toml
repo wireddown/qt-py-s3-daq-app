@@ -58,6 +58,11 @@ exclude = [
     ".venv",
     "docs/legacy",
 ]
+executionEnvironments = [
+    { root = "src/qtpy_datalogger/sensor_node", reportMissingModuleSource = "information", reportAttributeAccessIssue = "information" },
+    { root = "." },
+]
+
 
 [tool.ruff]
 line-length = 120
