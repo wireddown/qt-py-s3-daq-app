@@ -5,7 +5,7 @@ import itertools
 
 import pytest
 
-from qtpy_sensor_node.snsr.pysh import py_shell
+from qtpy_datalogger.sensor_node.snsr.pysh import py_shell
 
 _CODES_FOR_KEY_NAME = {
     "left arrow": b"\x1b[D",
