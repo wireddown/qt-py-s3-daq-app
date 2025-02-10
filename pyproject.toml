@@ -19,6 +19,7 @@ wmi = "^1.5.1"
 circup = "^2.1.1"
 findimports = "^2.5.2"
 packaging = "^24.2"
+beautifulsoup4 = "^4.13.3"
 
 
 [tool.poetry.group.dev.dependencies]
