@@ -38,9 +38,11 @@ jobs:
 
     - name: Install dependencies
       run: |
+        poetry self add 'poethepoet[poetry_plugin]'
         poetry install
-        echo '## :package: Installed dependencies' >> $env:GITHUB_STEP_SUMMARY
+        echo '## :package: Installed plugins and dependencies' >> $env:GITHUB_STEP_SUMMARY
         echo '```' >> $env:GITHUB_STEP_SUMMARY
+        poetry self show plugins >> $env:GITHUB_STEP_SUMMARY
         poetry show >> $env:GITHUB_STEP_SUMMARY
         echo '```' >> $env:GITHUB_STEP_SUMMARY
 
