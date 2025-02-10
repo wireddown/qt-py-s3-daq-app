@@ -60,10 +60,11 @@ def handle_connect(behavior: Behavior, port: str) -> None:
         raise SystemExit(_EXIT_SUCCESS)
 
     if not port:
-        port = _discover_and_select_port()
-        if not port:
+        qtpy_device = discover_and_select_qtpy()
+        if not qtpy_device:
             logger.error("No QT Py devices found!")
             raise SystemExit(_EXIT_DISCOVERY_FAILURE)
+        port = qtpy_device[_INFO_KEY_com_port]
 
     if not port.startswith("COM"):
         logger.error("Format for --port argument is '--port COM#' where # is a number.")
@@ -177,19 +178,26 @@ def open_session_on_port(port: str) -> None:
     logger.info(f"Reconnect with 'qtpy-datalogger connect --port {port}'")
 
 
-def _discover_and_select_port() -> str:
+def discover_and_select_qtpy() -> dict[str, str]:
     """
-    Scan for QT Py devices and return a serial port name.
+    Scan for QT Py devices and return one.
 
     Ask the user for input when there is more than one device available.
+
+    Returned entries
+    - drive_letter
+    - drive_label
+    - disk_description
+    - serial_number
+    - com_port
+    - com_id
     """
     qtpy_devices = discover_qtpy_devices()
     if qtpy_devices:
         selected_device = qtpy_devices[0]
         selected_reason = "Auto-selected"
         if len(qtpy_devices) > 1:
-            logger.info(f"Found {len(qtpy_devices)} QT Py devices")
-            logger.info("Select a QT Py device to open for serial communication")
+            logger.info(f"Found {len(qtpy_devices)} QT Py devices, select a device to continue")
             formatted_lines = _format_port_table(qtpy_devices)
             _ = [print(line) for line in formatted_lines]  # noqa: T201 -- use direct IO for user
 
@@ -204,10 +212,10 @@ def _discover_and_select_port() -> str:
             selected_device = qtpy_devices[selected_index]
             selected_reason = "User-selected"
         logger.info(
-            f"{selected_reason} {selected_device[_INFO_KEY_com_port]} from '{selected_device[_INFO_KEY_disk_description]}' on '{selected_device[_INFO_KEY_drive_letter]}\\'"
+            f"{selected_reason} '{selected_device[_INFO_KEY_disk_description]}' on '{selected_device[_INFO_KEY_drive_letter]}\\' with port '{selected_device[_INFO_KEY_com_port]}'"
         )
-        return selected_device[_INFO_KEY_com_port]
-    return ""
+        return selected_device
+    return {}
 
 
 def _query_ports_from_serial() -> dict[str, dict[str, str]]:

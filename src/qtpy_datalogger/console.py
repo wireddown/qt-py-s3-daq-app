@@ -32,7 +32,7 @@ def cli(ctx: click.Context, quiet: bool, verbose: bool) -> None:
     "behavior",
     flag_value=discovery.Behavior.AutoConnect,
     default=True,
-    help="Behavior: Find and open a session with a QT Py device. [default]",
+    help="Behavior: [default] Find and open a session with a QT Py device.",
 )
 @click.option(
     "--discover-only",
@@ -43,7 +43,7 @@ def cli(ctx: click.Context, quiet: bool, verbose: bool) -> None:
 @click.option("-p", "--port", default="", metavar="COM#", help="COM port to open for communication.")
 @click.help_option()
 def connect(behavior: str, port: str) -> None:
-    """Connect to a serial port."""
+    """Connect to a serial port, preferring a CircuitPython device."""
     discovery_behavior = discovery.Behavior(behavior)
     discovery.handle_connect(discovery_behavior, port)
 
