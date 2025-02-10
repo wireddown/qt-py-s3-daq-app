@@ -16,6 +16,7 @@ python = "^3.11"
 click = "^8.1.8"
 pyserial = "^3.5"
 wmi = "^1.5.1"
+circup = "^2.1.1"
 
 
 [tool.poetry.group.dev.dependencies]
