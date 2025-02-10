@@ -20,6 +20,37 @@ pyftdi = ">=0.40.0"
 sysv_ipc = {version = ">=1.1.0", markers = "sys_platform == \"linux\" and platform_machine != \"mips\""}
 
 [[package]]
+name = "adafruit-circuitpython-adxl34x"
+version = "1.12.15"
+description = "A CircuitPython driver for the ADXL34x family of accelerometers."
+optional = false
+python-versions = "*"
+files = [
+    {file = "adafruit_circuitpython_adxl34x-1.12.15-py3-none-any.whl", hash = "sha256:3746c7117dd354c9de1d8d548d524c7dc36e25c3a0febc68ae09bd200e778fe7"},
+    {file = "adafruit_circuitpython_adxl34x-1.12.15.tar.gz", hash = "sha256:0ca05117451837860c287236e9d5770f8c7e460c554fbe2397de70435a580849"},
+]
+
+[package.dependencies]
+Adafruit-Blinka = "*"
+adafruit-circuitpython-busdevice = "*"
+
+[[package]]
+name = "adafruit-circuitpython-adxl37x"
+version = "1.2.2"
+description = "A CircuitPython driver for the ADXL37x family of accelerometers"
+optional = false
+python-versions = "*"
+files = [
+    {file = "adafruit_circuitpython_adxl37x-1.2.2-py3-none-any.whl", hash = "sha256:8244c96e5b001106709284831e7f13198ed26b5980dff04b136ba90e94093bce"},
+    {file = "adafruit_circuitpython_adxl37x-1.2.2.tar.gz", hash = "sha256:4ccb65c8161b1f4ac4d05c86ce58d50934b2f85afe380a60d4e6bd261858efc1"},
+]
+
+[package.dependencies]
+Adafruit-Blinka = "*"
+adafruit-circuitpython-adxl34x = "*"
+adafruit-circuitpython-busdevice = "*"
+
+[[package]]
 name = "adafruit-circuitpython-busdevice"
 version = "5.2.11"
 description = "CircuitPython bus device classes to manage bus sharing."
@@ -697,4 +728,4 @@ tests = ["pytest"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "852ac9425c895cd49ef89c60393c6a5044564fda24f5359c6c44a6486a843f1d"
+content-hash = "a89971d237e5758d0b4e74ba241837a66eba6d0d314202a027d9957e3c6267ff"
