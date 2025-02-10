@@ -28,6 +28,9 @@ ruff = "^0.9.4"
 pyright = "^1.1.393"
 
 
+[tool.poetry.group.circup.dependencies]
+circuitpython-stubs = "9.2.1"
+
 [tool.poe.tasks]
 _ruff_check = "ruff check"
 _ruff_diff = "ruff format --diff"

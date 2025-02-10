@@ -146,6 +146,17 @@ files = [
 ]
 
 [[package]]
+name = "circuitpython-stubs"
+version = "9.2.1"
+description = "PEP 561 type stubs for CircuitPython"
+optional = false
+python-versions = "*"
+files = [
+    {file = "circuitpython_stubs-9.2.1-py3-none-any.whl", hash = "sha256:a4406645412e159dbeb996d02b50def59ad3442975409d76ff1dd151de1d97da"},
+    {file = "circuitpython_stubs-9.2.1.tar.gz", hash = "sha256:f7b711df9e808de3741b2bd443cd082274087205ccd2c2ce8f1bc5672b82558a"},
+]
+
+[[package]]
 name = "circup"
 version = "2.1.1"
 description = "A tool to manage/update libraries on CircuitPython devices."
@@ -499,4 +510,4 @@ tests = ["pytest"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "a63a0c4fbea00a72d6e631791e27990b78ee86eba2e4c863202c6f5a841e41ec"
+content-hash = "1c32b25886b36ec3b597287d36a5808a4c605421149cc8650560b6db69b20ecc"
