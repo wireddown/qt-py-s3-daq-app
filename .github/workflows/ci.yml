@@ -106,15 +106,23 @@ jobs:
       if: always()
 
     - name: Build package
-      run: poetry build --verbose --format sdist
+      run: poetry build --verbose
       if: always()
 
-    - name: Upload package
-      id: upload-package
+    - name: Upload source package
+      id: upload-source-package
       uses: actions/upload-artifact@v4
       with:
-        name: qtpy_datalogger for Python ${{ matrix.python_version }} on ${{ runner.os }}
+        name: qtpy_datalogger-py${{ matrix.python_version }}-${{ runner.os }}-source
         path: dist/*.tar.gz
+      if: always()
+
+    - name: Upload wheel package
+      id: upload-wheel-package
+      uses: actions/upload-artifact@v4
+      with:
+        name: qtpy_datalogger-py${{ matrix.python_version }}-${{ runner.os }}-wheel
+        path: dist/*.whl
       if: always()
 
     - name: Write workflow summary
