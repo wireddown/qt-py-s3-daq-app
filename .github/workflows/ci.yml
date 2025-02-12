@@ -129,5 +129,5 @@ jobs:
       run: |
         echo "## :test_tube: [Combined results](https://github.com/${{github.repository}}/runs/$($env:REPORT_ID)?check_suite_focus=true) :small_blue_diamond: ${{ steps.result-report.outputs.passed }} :white_check_mark: :small_blue_diamond: ${{ steps.result-report.outputs.failed }} :x: :small_blue_diamond: ${{ steps.result-report.outputs.skipped }} :next_track_button:" >> $env:GITHUB_STEP_SUMMARY
         echo '' >> $env:GITHUB_STEP_SUMMARY
-        echo '## :arrow_heading_down: [Download](${{ steps.upload-package.outputs.artifact-url }})' >> $env:GITHUB_STEP_SUMMARY
+        echo '## :arrow_heading_down: [Download](${{ steps.upload-wheel-package.outputs.artifact-url }})' >> $env:GITHUB_STEP_SUMMARY
       if: always()
