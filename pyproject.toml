@@ -15,16 +15,24 @@ qtpy-datalogger = "qtpy_datalogger.__main__:main"
 python = "^3.11"
 click = "^8.1.8"
 pyserial = "^3.5"
-
+wmi = "^1.5.1"
+circup = "^2.1.1"
+findimports = "^2.5.2"
+packaging = "^24.2"
+beautifulsoup4 = "^4.13.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
 ruff = "^0.9.4"
 pyright = "^1.1.393"
 
+[tool.poetry.group.circup.dependencies]
+circuitpython-stubs = "9.2.1"
+adafruit-circuitpython-neopixel = "^6.3.15"
+adafruit-circuitpython-adxl37x = "^1.2.2"
 
-[tool.poetry.group.windows.dependencies]
-wmi = "^1.5.1"
+[tool.poe.poetry_hooks]
+pre_build = "prebuild_tasks"
 
 [tool.poe.tasks]
 _ruff_check = "ruff check"
@@ -40,6 +48,9 @@ fix.sequence = ["_ruff_check_fix", "_ruff_format"]
 fix.ignore_fail = "return_zero"
 test.help = "Run the tests for the package."
 test.cmd = "pytest"
+_generate_notice = "poetry run qtpy-datalogger --verbose --generate-notice ./src/qtpy_datalogger/sensor_node/snsr/notice.toml"
+prebuild_tasks.sequence = ["_generate_notice"]
+prebuild_tasks.help = "[automated] Run the hooks attached to 'poetry build'."
 
 [tool.pytest.ini_options]
 addopts = "--showlocals"
@@ -50,6 +61,10 @@ verboseOutput = true
 exclude = [
     ".venv",
     "docs/legacy",
+]
+executionEnvironments = [
+    { root = "src/qtpy_datalogger/sensor_node", reportMissingModuleSource = "information", reportAttributeAccessIssue = "information" },
+    { root = "." },
 ]
 
 [tool.ruff]

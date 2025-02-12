@@ -2,7 +2,7 @@
 
 import pytest
 
-from qtpy_sensor_node.snsr.pysh.linebuffer import LineBuffer
+from qtpy_datalogger.sensor_node.snsr.pysh.linebuffer import LineBuffer
 
 
 @pytest.mark.parametrize(

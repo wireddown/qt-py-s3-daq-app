@@ -1,0 +1,4 @@
+comment = "Generated with 'qtpy-datalogger --generate-notice' during 'poetry build'"
+version = "(unknown)"
+commit = "(unknown)"
+timestamp = 0001-01-01T01:01:01+00:00

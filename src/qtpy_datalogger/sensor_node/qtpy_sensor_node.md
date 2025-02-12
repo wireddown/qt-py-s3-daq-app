@@ -1,13 +1,23 @@
-# QTPy Sensor Node
+# QT Py Sensor Node
 
 This folder and its subfolders are an overlay for a CircuitPython device.
 The code adds functions to perform data logging from analog channels and I2C devices.
 
-See the source code at https://github.com/wireddown/qt-py-s3-daq-app.
+- Homepage: https://github.com/wireddown/qt-py-s3-daq-app/wiki
+- Source code: https://github.com/wireddown/qt-py-s3-daq-app/tree/main/src/qtpy_datalogger/sensor_node
+
+## Quick start
+
+1. Install the `qtpy_datalogger` package into a Python environment
+1. Install the sensor node bundle onto the QT Py ESP32-S3
+   ```pwsh
+   # Use the equip command to install or upgrade
+   qtpy-datalogger equip
+   ```
 
 ## Manual bringup
 
-1. Copy this folder and its subfolders to the QT Py S3
+1. Copy this folder and its subfolders to the QT Py ESP32-S3
 1. Update `code.py` to use the new code
 
 ### Terminal shell
