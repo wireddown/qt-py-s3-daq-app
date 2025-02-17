@@ -7,6 +7,7 @@ import click
 
 from . import discovery, tracelog
 from . import equip as _equip
+from . import server as _server
 
 logger = logging.getLogger(__name__)
 
@@ -138,6 +139,27 @@ def equip(behavior: str, root: pathlib.Path | None) -> None:
     """Install the QT Py Sensor Node runtime on a CircuitPython device."""
     equip_behavior = _equip.Behavior(behavior)
     _equip.handle_equip(equip_behavior, root)
+
+
+@cli.command(epilog=f"Help and home page: {_equip._HOMEPAGE_URL}")
+@click.option(
+    "--describe",
+    "behavior",
+    flag_value=_server.Behavior.Describe,
+    default=True,
+    help="Behavior: [default] Show the current status of the service.",
+)
+@click.option(
+    "--observe",
+    "behavior",
+    flag_value=_server.Behavior.Observe,
+    help="Behavior: Monitor the service and print published messages, Ctrl-C to quit.",
+)
+@click.help_option()
+def server(behavior: str) -> None:
+    """Query and control the MQTT server."""
+    server_behavior = _server.Behavior(behavior)
+    _server.handle_server(server_behavior)
 
 
 def get_logging_level(quiet: bool, verbose: bool) -> int:
