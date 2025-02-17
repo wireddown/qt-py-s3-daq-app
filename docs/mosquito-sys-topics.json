@@ -1,0 +1,192 @@
+{
+    "tst": "2025-02-16T14:37:16.088000-0800",
+    "topic": "$SYS/broker/uptime",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 13,
+    "payload": "94781 seconds"
+}
+{
+    "tst": "2025-02-16T14:37:16.088000-0800",
+    "topic": "$SYS/broker/load/messages/received/1min",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 4,
+    "payload": "0.97"
+}
+{
+    "tst": "2025-02-16T14:37:16.088000-0800",
+    "topic": "$SYS/broker/load/messages/sent/1min",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 5,
+    "payload": "37.49"
+}
+{
+    "tst": "2025-02-16T14:37:16.088000-0800",
+    "topic": "$SYS/broker/load/publish/sent/1min",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 5,
+    "payload": "31.57"
+}
+{
+    "tst": "2025-02-16T14:37:16.088000-0800",
+    "topic": "$SYS/broker/load/bytes/received/1min",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 4,
+    "payload": "9.54"
+}
+{
+    "tst": "2025-02-16T14:37:16.088000-0800",
+    "topic": "$SYS/broker/load/bytes/sent/1min",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 6,
+    "payload": "947.39"
+}
+{
+    "tst": "2025-02-16T14:37:16.088000-0800",
+    "topic": "$SYS/broker/load/sockets/1min",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 4,
+    "payload": "0.20"
+}
+{
+    "tst": "2025-02-16T14:37:16.088000-0800",
+    "topic": "$SYS/broker/load/connections/1min",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 4,
+    "payload": "0.20"
+}
+{
+    "tst": "2025-02-16T14:37:16.088000-0800",
+    "topic": "$SYS/broker/load/messages/received/5min",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 4,
+    "payload": "0.98"
+}
+{
+    "tst": "2025-02-16T14:37:16.088000-0800",
+    "topic": "$SYS/broker/load/messages/sent/5min",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 5,
+    "payload": "32.41"
+}
+{
+    "tst": "2025-02-16T14:37:16.088000-0800",
+    "topic": "$SYS/broker/load/publish/sent/5min",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 5,
+    "payload": "28.57"
+}
+{
+    "tst": "2025-02-16T14:37:16.088000-0800",
+    "topic": "$SYS/broker/load/bytes/received/5min",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 5,
+    "payload": "15.23"
+}
+{
+    "tst": "2025-02-16T14:37:16.089000-0800",
+    "topic": "$SYS/broker/load/bytes/sent/5min",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 6,
+    "payload": "953.46"
+}
+{
+    "tst": "2025-02-16T14:37:16.089000-0800",
+    "topic": "$SYS/broker/load/sockets/5min",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 4,
+    "payload": "0.35"
+}
+{
+    "tst": "2025-02-16T14:37:16.089000-0800",
+    "topic": "$SYS/broker/load/connections/5min",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 4,
+    "payload": "0.35"
+}
+{
+    "tst": "2025-02-16T14:37:16.089000-0800",
+    "topic": "$SYS/broker/load/messages/sent/15min",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 5,
+    "payload": "15.68"
+}
+{
+    "tst": "2025-02-16T14:37:16.089000-0800",
+    "topic": "$SYS/broker/load/publish/sent/15min",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 5,
+    "payload": "13.91"
+}
+{
+    "tst": "2025-02-16T14:37:16.089000-0800",
+    "topic": "$SYS/broker/load/bytes/received/15min",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 4,
+    "payload": "8.53"
+}
+{
+    "tst": "2025-02-16T14:37:16.089000-0800",
+    "topic": "$SYS/broker/load/bytes/sent/15min",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 6,
+    "payload": "471.83"
+}
+{
+    "tst": "2025-02-16T14:37:16.089000-0800",
+    "topic": "$SYS/broker/store/messages/bytes",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 3,
+    "payload": "199"
+}
+{
+    "tst": "2025-02-16T14:37:16.089000-0800",
+    "topic": "$SYS/broker/messages/sent",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 3,
+    "payload": "729"
+}
+{
+    "tst": "2025-02-16T14:37:16.089000-0800",
+    "topic": "$SYS/broker/publish/messages/sent",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 3,
+    "payload": "720"
+}
+{
+    "tst": "2025-02-16T14:37:16.089000-0800",
+    "topic": "$SYS/broker/bytes/sent",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 5,
+    "payload": "29461"
+}
+{
+    "tst": "2025-02-16T14:37:16.089000-0800",
+    "topic": "$SYS/broker/publish/bytes/sent",
+    "qos": 0,
+    "retain": 0,
+    "payloadlen": 4,
+    "payload": "3271"
+}
