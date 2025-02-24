@@ -204,7 +204,7 @@ def _query_mqtt_broker_information_from_wmi() -> MqttBrokerInformation | None:
         server_runmode=mqtt_broker.State,
         server_health=mqtt_broker.Status,
         server_startmode=mqtt_broker.StartMode,
-        server_executable=broker_executable,
+        server_executable=broker_executable_path,
         server_configuration=server_config,
         firewall_rules=matching_port_rules,
     )
