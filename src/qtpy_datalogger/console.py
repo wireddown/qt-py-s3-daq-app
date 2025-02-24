@@ -12,9 +12,12 @@ from . import server as _server
 logger = logging.getLogger(__name__)
 
 
+DEFAULT_HELP_URL = _equip._HOMEPAGE_URL
+
+
 @click.group(
     invoke_without_command=True,
-    epilog=f"Help and home page: {_equip._HOMEPAGE_URL}",
+    epilog=f"Help and home page: {DEFAULT_HELP_URL}",
 )
 @click.option(
     "--generate-notice",
@@ -72,7 +75,7 @@ def cli(
         cli(["--help"])
 
 
-@cli.command(epilog=f"Help and home page: {_equip._HOMEPAGE_URL}")
+@cli.command(epilog=f"Help and home page: {DEFAULT_HELP_URL}")
 @click.option(
     "--auto-connect",
     "behavior",
@@ -94,14 +97,14 @@ def connect(behavior: str, port: str) -> None:
     discovery.handle_connect(discovery_behavior, port)
 
 
-@cli.command(epilog=f"Help and home page: {_equip._HOMEPAGE_URL}")
+@cli.command(epilog=f"Help and home page: {DEFAULT_HELP_URL}")
 @click.help_option()
 def run() -> None:
     """Stub entry point for 'run' command."""
     logger.warning("this is a stub command")
 
 
-@cli.command(epilog=f"Help and home page: {_equip._HOMEPAGE_URL}")
+@cli.command(epilog=f"Help and home page: {DEFAULT_HELP_URL}")
 @click.option(
     "--upgrade",
     "behavior",
