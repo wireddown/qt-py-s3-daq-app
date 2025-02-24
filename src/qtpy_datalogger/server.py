@@ -10,6 +10,14 @@ from enum import StrEnum
 logger = logging.getLogger(__name__)
 
 
+HELP_URL = "https://github.com/wireddown/qt-py-s3-daq-app/wiki/Walkthrough-5-MQTT"
+
+_EXIT_SUCCESS = 0
+_EXIT_SERVER_MISSING_FAILURE = 61
+_EXIT_SERVER_OFFLINE_FAILURE = 62
+_EXIT_SERVER_INACCESSIBLE_FAILURE = 63
+
+
 class Behavior(StrEnum):
     """Supported behaviors for server interaction."""
 

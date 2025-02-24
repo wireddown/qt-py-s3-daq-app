@@ -144,7 +144,7 @@ def equip(behavior: str, root: pathlib.Path | None) -> None:
     _equip.handle_equip(equip_behavior, root)
 
 
-@cli.command(epilog=f"Help and home page: {_equip._HOMEPAGE_URL}")
+@cli.command(epilog=f"Detailed help online\n\n{_server.HELP_URL}")
 @click.option(
     "--describe",
     "behavior",
