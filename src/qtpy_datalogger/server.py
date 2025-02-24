@@ -2,10 +2,12 @@
 
 import logging
 import pathlib
+import re
 import subprocess
 import sys
 import textwrap
 from enum import StrEnum
+from typing import Callable, NamedTuple
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +25,52 @@ class Behavior(StrEnum):
 
     Describe = "Describe"
     Observe = "Observe"
+    Restart = "Restart"
+
+
+class BrokerOption(NamedTuple):
+    """Represents an option name and value for an MQTT broker."""
+
+    name: str
+    value: str
+
+
+class FirewallRule(NamedTuple):
+    """Represents the settings for a firewall rule."""
+
+    name: str
+    enabled: str
+    local_port: str
+    remote_ip: str
+    action: str
+
+
+class MqttBrokerInformation(NamedTuple):
+    """Holds details about the MQTT broker's service, configuration, and firewall status."""
+
+    description: str
+    server_runmode: str
+    server_health: str
+    server_startmode: str
+    server_executable: pathlib.Path
+    server_configuration: list[BrokerOption]
+    firewall_rules: list[FirewallRule]
+
+    @property
+    def server_options(self) -> dict[str, str]:
+        """Return server_configuration as a dictionary with (name, value) entries."""
+        options = {option.name: option.value for option in self.server_configuration}
+        return options
+
+    @property
+    def has_enabled_firewall_rules(self) -> bool:
+        """Return True if the system has firewall rules enabled for the MQTT broker service."""
+        return any(rule.enabled == "Yes" for rule in self.firewall_rules)
+
+    @property
+    def has_allowed_firewall_rules(self) -> bool:
+        """Return True if the system's firewall rules for the MQTT broker service allow external connections."""
+        return any(rule.action == "Allow" for rule in self.firewall_rules)
 
 
 def handle_server(behavior: Behavior) -> None:
@@ -34,17 +82,72 @@ def handle_server(behavior: Behavior) -> None:
         return
 
     if behavior == Behavior.Describe:
-        message_lines = textwrap.dedent(
-            f"""
-            {mqtt_broker_information[0]}
-            {"State":>12}  {mqtt_broker_information[1]}
-            {"Status":>12}  {mqtt_broker_information[2]}
-            {"Startup":>12}  {mqtt_broker_information[3]}
-            {"Executable":>12}  {mqtt_broker_information[4]}
-            """
-        ).splitlines()
-        _ = [logger.info(line) for line in message_lines]
-        return
+        message_lines_with_level = []
+        running_line = f"{'State':>12}  {mqtt_broker_information.server_runmode}"
+        running_level = logging.INFO
+        if mqtt_broker_information.server_runmode != "Running":
+            logger.warning("MQTT broker is not running!")
+            logger.warning("  Try 'qtpy-datalogger server --restart'")
+            running_level = logging.WARNING
+
+        server_options = mqtt_broker_information.server_options
+        server_level = logging.INFO
+        if not server_options:
+            mqtt_conf_message = "Unconfigured"
+            server_level = logging.WARNING
+            logger.warning("MQTT broker is not configured to listen for connections!")
+            logger.warning("  Update the configuration file to listen on port 1883 and restart the service")
+        else:
+            mqtt_conf_message = f"Listening on port {server_options['listener']}"
+        server_line = f"{'Server':>12}  {mqtt_conf_message}"
+
+        # Evaluate firewall rules by increasing severity
+        firewall_message = "Open on port 1883"
+        firewall_level = logging.INFO
+        if not mqtt_broker_information.has_allowed_firewall_rules:
+            firewall_message = "Blocked"
+            firewall_level = logging.WARNING
+            logger.warning("All firewall rules for MQTT connections do not allow connections!")
+            logger.warning("  Try 'wf.msc' to allow with Administrator privileges")
+        if not mqtt_broker_information.has_enabled_firewall_rules:
+            firewall_message = "Disabled"
+            firewall_level = logging.WARNING
+            logger.warning("All firewall rules for MQTT connections are disabled!")
+            logger.warning("  Try 'wf.msc' to enable with Administrator privileges")
+        if not mqtt_broker_information.firewall_rules:
+            firewall_message = "Unconfigured"
+            firewall_level = logging.WARNING
+            logger.warning("This computer's firewall does not allow connections on port 1883!")
+            logger.warning("  Run the following in a terminal with Administrator privileges")
+            firewall_rule_command = _get_firewall_rule_for_windows()
+            logger.info("")
+            logger.info(firewall_rule_command)
+            logger.info("")
+        firewall_line = f"{'Firewall':>12}  {firewall_message}"
+
+        message_lines_with_level.append((mqtt_broker_information.description, logging.INFO))
+        message_lines_with_level.append((running_line, running_level))
+        message_lines_with_level.append((f"{'Status':>12}  {mqtt_broker_information.server_health}", logging.INFO))
+        message_lines_with_level.append((f"{'Startup':>12}  {mqtt_broker_information.server_startmode}", logging.INFO))
+        message_lines_with_level.append((f"{'Executable':>12}  {mqtt_broker_information.server_executable!s}", logging.INFO))
+        message_lines_with_level.append((server_line, server_level))
+        message_lines_with_level.append((firewall_line, firewall_level))
+
+        logger.info("")
+        did_warn = False
+        for line_and_level in message_lines_with_level:
+            line = line_and_level[0]
+            level = line_and_level[-1]
+            did_warn |= level >= logging.WARNING
+            logger.log(level, line)
+        logger.info("")
+
+        exit_status = SystemExit(_EXIT_SUCCESS)
+        if did_warn:
+            exit_message = f"MQTT server is not configured correctly. Visit {HELP_URL} to learn more."
+            logger.error(exit_message)
+            exit_status = SystemExit(_EXIT_SERVER_INACCESSIBLE_FAILURE)
+        raise(exit_status)
 
     if behavior == Behavior.Observe:
         mqtt_home = mqtt_broker_information[4].parent
@@ -67,26 +170,151 @@ def handle_server(behavior: Behavior) -> None:
         result = subprocess.run(subscribe_command, stdout=sys.stdout, stderr=subprocess.STDOUT, check=False)  # noqa: S603 -- command is well-formed and user cannot execute arbitrary code
 
 
-def _query_mqtt_broker_information_from_wmi():
+def _query_mqtt_broker_information_from_wmi() -> MqttBrokerInformation | None:
+    """Query the system for information about the MQTT broker service, configuration, and relevant firewall rules."""
     from wmi import WMI
 
     host_pc = WMI()
     matching_services = sorted(host_pc.Win32_Service(Name="mosquitto"))
-    if matching_services:
-        mqtt_broker = matching_services[0]
-        broker_description = mqtt_broker.Description
-        broker_state = mqtt_broker.State
-        broker_status = mqtt_broker.Status
-        broker_startup = mqtt_broker.StartMode
-        broker_executable = _get_service_executable(mqtt_broker.PathName)
-        return (broker_description, broker_state, broker_status, broker_startup, broker_executable)
-    return None
+    if not matching_services:
+        return None
 
+    mqtt_broker = matching_services[0]
 
-def _get_service_executable(wmi_pathname: str) -> pathlib.Path:
     # Paths that have spaces use double-quotes, typically for the "Program Files" segment
     #   No-space  'C:\\WINDOWS\\System32\\svchost.exe -k LocalSystemNetworkRestricted -p'
     #   With-pace '"C:\\Program Files\\mosquitto\\mosquitto.exe" run'
-    path_parts = wmi_pathname.split('"')
-    executable_path = path_parts[0].split(" ")[0] if path_parts[0] else path_parts[1]
-    return pathlib.Path(executable_path)
+    path_parts = mqtt_broker.PathName.split('"')
+    broker_executable = path_parts[0].split(" ")[0] if path_parts[0] else path_parts[1]
+    broker_executable_path = pathlib.Path(broker_executable)
+
+    server_config = _query_mqtt_broker_configuration_from_file(broker_executable_path)
+    matching_port_rules = _query_firewall_port_rules_from_netsh()
+
+    broker_information = MqttBrokerInformation(
+        description=mqtt_broker.Description,
+        server_runmode=mqtt_broker.State,
+        server_health=mqtt_broker.Status,
+        server_startmode=mqtt_broker.StartMode,
+        server_executable=broker_executable,
+        server_configuration=server_config,
+        firewall_rules=matching_port_rules,
+    )
+    return broker_information
+
+
+def _query_mqtt_broker_configuration_from_file(broker_executable: pathlib.Path) -> list[BrokerOption]:
+    """Read and parse a subset of options from the MQTT server's configuration file."""
+    broker_configuration = broker_executable.with_name("mosquitto.conf")
+    if not broker_configuration.exists():
+        logger.warning("Could not read MQTT configuration file")
+        logger.warning(f"  The file '{broker_configuration!s}' does not exist")
+        return []
+
+    # From the server configuration file, parse interesting options
+    configuration_lines = broker_configuration.read_text().splitlines()
+    interesting_options = [
+        "listener",
+        "allow_anonymous",
+    ]
+    found_options = []
+    for line in configuration_lines:
+        if any(line.startswith(option) for option in interesting_options):
+            name_value_pair = [cell.strip() for cell in line.split(" ")]
+            option = BrokerOption(
+                name=name_value_pair[0],
+                value=name_value_pair[1]
+            )
+            found_options.append(option)
+            logger.debug(line)
+    return found_options
+
+
+def _query_firewall_port_rules_from_netsh(port_to_match:int = 1883) -> list[FirewallRule]:
+    """Query and parse firewall rules on the system that control MQTT broker port 1883."""
+    get_all_firewall_rules = [
+        "netsh",
+        "advfirewall",
+        "firewall",
+        "show",
+        "rule",
+        "name=all",
+    ]
+    result = subprocess.run(get_all_firewall_rules, capture_output=True, check=False)  # noqa: S603 -- command is well-formed and user cannot execute arbitrary code
+    if result.returncode != 0:
+        logger.warning("Could not query for firewall settings")
+        _ = [logger.warning(line) for line in result.stderr.decode("UTF-8")]
+        return []
+
+    # The output is very large, so quickly identify the LocalPort lines with a regex match
+    line_with_port_pattern = re.compile(rf"LocalPort:\s+{port_to_match}")
+    full_report = result.stdout.decode("UTF-8").splitlines()
+    matching_port_indexes = []
+    for index, line in enumerate(full_report):
+        if line_with_port_pattern.match(line):
+            matching_port_indexes.append(index)
+
+    # Using the LocalPort line as a reference point, select the preceding and following lines that describe the entire rule
+    matching_rule_line_groups = []
+    for matching_port_index in matching_port_indexes:
+        first_line = matching_port_index - 9
+        last_line = matching_port_index + 4
+        rule_lines = full_report[first_line:last_line]
+        _ = rule_lines.pop(1)  # Remove the "-------" title-details separator line
+        matching_rule_line_groups.append(rule_lines)
+
+    # From each rule, parse interesting fields that describe the firewall rule
+    rules = []
+    interesting_fields = [
+        "Rule Name",
+        "Enabled",
+        "LocalPort",
+        "RemoteIP",
+        "Action",
+    ]
+    for rule_line_group in matching_rule_line_groups:
+        rule_info = {}
+        for line in rule_line_group:
+            logger.debug(line)
+            if any(line.startswith(field) for field in interesting_fields):
+                name_value_pair = [cell.strip() for cell in line.split(":")]
+                field_name = name_value_pair[0]
+                field_value = name_value_pair[1]
+                rule_info[field_name] = field_value
+        logger.debug("")
+        rule = FirewallRule(
+            name=rule_info["Rule Name"],
+            enabled=rule_info["Enabled"],
+            local_port=rule_info["LocalPort"],
+            remote_ip=rule_info["RemoteIP"],
+            action=rule_info["Action"],
+        )
+        rules.append(rule)
+
+    _ = [logger.debug(rule) for rule in rules]
+    return rules
+
+
+def _get_firewall_rule_for_windows() -> str:
+    """Return the netsh command that adds a firewall rule to allow inbound connections on port 1883 from the local subnet."""
+    command_as_list = [
+        "netsh",
+        "advfirewall",
+        "firewall",
+        "add",
+        "rule",
+        "name='Mosquitto MQTT: allow inbound on port 1883 from local subnet'",
+        "program='%ProgramFiles%\\mosquitto\\mosquitto.exe'",
+        "dir=in",
+        "action=allow",
+        "service=any",
+        "description='This rule allows MQTT clients on the local subnet to connect to this host'",
+        "profile=private",
+        "localip=any",
+        "remoteip=localsubnet",
+        "localport=1883",
+        "remoteport=any",
+        "protocol=tcp",
+        "interfacetype=any",
+    ]
+    return " ".join(command_as_list)
