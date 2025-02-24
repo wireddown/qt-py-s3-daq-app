@@ -164,11 +164,18 @@ def equip(behavior: str, root: pathlib.Path | None) -> None:
     flag_value=_server.Behavior.Restart,
     help="Behavior: Monitor the service and print published messages, Ctrl-C to quit.",
 )
+@click.option(
+    "--publish",
+    nargs=2,
+    type=(str, str),
+    metavar="TOPIC MESSAGE",
+    help="Send a MESSAGE to the service on the specified TOPIC.",
+)
 @click.help_option()
-def server(behavior: str) -> None:
+def server(behavior: str, publish: tuple[str, str]) -> None:
     """Query and control the MQTT server."""
     server_behavior = _server.Behavior(behavior)
-    _server.handle_server(server_behavior)
+    _server.handle_server(server_behavior, publish)
 
 
 def get_logging_level(quiet: bool, verbose: bool) -> int:

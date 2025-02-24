@@ -73,7 +73,7 @@ class MqttBrokerInformation(NamedTuple):
         return any(rule.action == "Allow" for rule in self.firewall_rules)
 
 
-def handle_server(behavior: Behavior) -> None:
+def handle_server(behavior: Behavior, publish: tuple[str, str]) -> None:
     """Handle the command for server."""
     mqtt_broker_information = _query_mqtt_broker_information_from_wmi()
     if not mqtt_broker_information:
@@ -81,30 +81,27 @@ def handle_server(behavior: Behavior) -> None:
         logger.error("  Visit 'https://mosquitto.org/download/' to download it")
         raise SystemExit(_EXIT_SERVER_MISSING_FAILURE)
 
+    message_lines_with_level = _analyze_mqtt_broker(mqtt_broker_information)
+    did_warn = False
+    logger.info("")
+    for line_and_level in message_lines_with_level:
+        line = line_and_level[0]
+        level = line_and_level[1]
+        did_warn |= level >= logging.WARNING
+        logger.log(level, line)
+    logger.info("")
+
+    if behavior == Behavior.Describe and did_warn:
+        logger.error("MQTT server is not configured to support sensor nodes!")
+        logger.error(f"  Visit {HELP_URL} to learn more")
+        raise SystemExit(_EXIT_SERVER_INACCESSIBLE_FAILURE)
+
     if behavior == Behavior.Restart:
         did_restart = _restart_mqtt_broker_with_wmi(mqtt_broker_information)
         if did_restart:
             raise SystemExit(_EXIT_SUCCESS)
         logger.error("Could not restart the MQTT broker service!")
         raise SystemExit(_EXIT_SERVER_OFFLINE_FAILURE)
-
-    if behavior == Behavior.Describe:
-        message_lines_with_level = _analyze_mqtt_broker(mqtt_broker_information)
-        did_warn = False
-        logger.info("")
-        for line_and_level in message_lines_with_level:
-            line = line_and_level[0]
-            level = line_and_level[1]
-            did_warn |= level >= logging.WARNING
-            logger.log(level, line)
-        logger.info("")
-
-        exit_status = SystemExit(_EXIT_SUCCESS)
-        if did_warn:
-            exit_message = f"MQTT server is not configured correctly. Visit {HELP_URL} to learn more."
-            logger.error(exit_message)
-            exit_status = SystemExit(_EXIT_SERVER_INACCESSIBLE_FAILURE)
-        raise(exit_status)
 
     if behavior == Behavior.Observe:
         subscribe_exe = mqtt_broker_information.server_executable.with_name("mosquitto_sub.exe")
@@ -127,12 +124,33 @@ def handle_server(behavior: Behavior) -> None:
             logger.info("Attempting to restart the service")
             did_restart = _restart_mqtt_broker_with_wmi(mqtt_broker_information)
             if not did_restart:
-                logger.error("MQTT broker is not running!")
+                logger.error("Could not restart the MQTT broker service!")
                 raise SystemExit(_EXIT_SERVER_OFFLINE_FAILURE)
 
         logger.info(f"Subscribing with '{' '.join(subscribe_command)}'")
         logger.info("Use Ctrl-C to quit")
         _ = subprocess.run(subscribe_command, stdout=sys.stdout, stderr=subprocess.STDOUT, check=False)  # noqa: S603 -- command is well-formed and user cannot execute arbitrary code
+
+    if publish:
+        topic = publish[0]
+        message = publish[1]
+        publish_exe = mqtt_broker_information.server_executable.with_name("mosquitto_pub.exe")
+        publish_command = [
+            str(publish_exe),
+            "--id",
+            "qtpy-datalogger",
+            "--topic",
+            f"{topic}",
+            "--message",
+            f"{message}",
+        ]
+        logger.info(f"Publishing with '{' '.join(publish_command)}'")
+        result = subprocess.run(publish_command, stdout=sys.stdout, stderr=subprocess.STDOUT, check=False)  # noqa: S603 -- command is well-formed and user cannot execute arbitrary code
+        if result.returncode != 0:
+            logger.warning(f"Received exit code '{result.returncode}' from '{publish_exe.name}'")
+            _ = [logger.warning(line) for line in result.stderr.decode("UTF-8")]
+            raise SystemExit(result.returncode)
+        raise SystemExit(_EXIT_SUCCESS)
 
 
 def _analyze_mqtt_broker(broker_information: MqttBrokerInformation) -> list[tuple[str, int]]:
