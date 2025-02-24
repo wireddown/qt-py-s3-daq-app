@@ -87,6 +87,7 @@
 
 - mosquitto --config-file PATH --daemon --port PORT
   - https://mosquitto.org/man/mosquitto-8.html
+  - https://github.com/eclipse-mosquitto/mosquitto/blob/master/ChangeLog.txt#L651
 - mosquitto.conf
   - https://mosquitto.org/man/mosquitto-conf-5.html
 - $SYS topics
