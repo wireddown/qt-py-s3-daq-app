@@ -158,8 +158,7 @@ def handle_server(behavior: Behavior) -> None:
         raise(exit_status)
 
     if behavior == Behavior.Observe:
-        mqtt_home = mqtt_broker_information[4].parent
-        subscribe_exe = mqtt_home.joinpath("mosquitto_sub.exe")
+        subscribe_exe = mqtt_broker_information.server_executable.with_name("mosquitto_sub.exe")
         subscribe_command = [
             str(subscribe_exe),
             "--id",
@@ -173,9 +172,18 @@ def handle_server(behavior: Behavior) -> None:
             "-F",
             "%j",
         ]
+        mqtt_broker_runmode = mqtt_broker_information.server_runmode
+        if mqtt_broker_runmode != "Running":
+            logger.warning(f"Cannot observe: MQTT broker state is '{mqtt_broker_runmode}'")
+            logger.info("Attempting to restart the service")
+            did_restart = _restart_mqtt_broker_with_wmi(mqtt_broker_information)
+            if not did_restart:
+                logger.error("MQTT broker is not running!")
+                raise SystemExit(_EXIT_SERVER_OFFLINE_FAILURE)
+
         logger.info(f"Subscribing with '{' '.join(subscribe_command)}'")
         logger.info("Use Ctrl-C to quit")
-        result = subprocess.run(subscribe_command, stdout=sys.stdout, stderr=subprocess.STDOUT, check=False)  # noqa: S603 -- command is well-formed and user cannot execute arbitrary code
+        _ = subprocess.run(subscribe_command, stdout=sys.stdout, stderr=subprocess.STDOUT, check=False)  # noqa: S603 -- command is well-formed and user cannot execute arbitrary code
 
 
 def _query_mqtt_broker_information_from_wmi() -> MqttBrokerInformation | None:
