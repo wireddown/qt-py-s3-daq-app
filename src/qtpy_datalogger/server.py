@@ -77,9 +77,9 @@ def handle_server(behavior: Behavior) -> None:
     """Handle the command for server."""
     mqtt_broker_information = _query_mqtt_broker_information_from_wmi()
     if not mqtt_broker_information:
-        logger.warning("MQTT broker is not a registered service. Is it installed?")
-        logger.warning("Visit 'https://mosquitto.org/download/' to download it.")
-        return
+        logger.error("MQTT broker is not a registered service. Is it installed?")
+        logger.error("  Visit 'https://mosquitto.org/download/' to download it")
+        raise SystemExit(_EXIT_SERVER_MISSING_FAILURE)
 
     if behavior == Behavior.Describe:
         message_lines_with_level = []
