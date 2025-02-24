@@ -158,6 +158,12 @@ def equip(behavior: str, root: pathlib.Path | None) -> None:
     flag_value=_server.Behavior.Observe,
     help="Behavior: Monitor the service and print published messages, Ctrl-C to quit.",
 )
+@click.option(
+    "--restart",
+    "behavior",
+    flag_value=_server.Behavior.Restart,
+    help="Behavior: Monitor the service and print published messages, Ctrl-C to quit.",
+)
 @click.help_option()
 def server(behavior: str) -> None:
     """Query and control the MQTT server."""
