@@ -5,7 +5,6 @@ import pathlib
 import re
 import subprocess
 import sys
-import textwrap
 import time
 from enum import StrEnum
 from typing import Callable, NamedTuple
@@ -125,7 +124,7 @@ def handle_server(behavior: Behavior) -> None:
         if not mqtt_broker_information.firewall_rules:
             firewall_message = "Unconfigured"
             firewall_level = logging.WARNING
-            logger.warning("This computer's firewall does not allow connections on port 1883!")
+            logger.warning("This computer's firewall has no rules that support MQTT connections!")
             logger.warning("  Run the following in a terminal with Administrator privileges")
             firewall_rule_command = _get_firewall_rule_for_windows()
             logger.info("")
