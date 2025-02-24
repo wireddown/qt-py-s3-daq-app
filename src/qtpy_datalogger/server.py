@@ -89,62 +89,12 @@ def handle_server(behavior: Behavior) -> None:
         raise SystemExit(_EXIT_SERVER_OFFLINE_FAILURE)
 
     if behavior == Behavior.Describe:
-        message_lines_with_level = []
-        running_line = f"{'State':>12}  {mqtt_broker_information.server_runmode}"
-        running_level = logging.INFO
-        if mqtt_broker_information.server_runmode != "Running":
-            logger.warning("MQTT broker is not running!")
-            logger.warning("  Try 'qtpy-datalogger server --restart'")
-            running_level = logging.WARNING
-
-        server_options = mqtt_broker_information.server_options
-        server_level = logging.INFO
-        if not server_options:
-            mqtt_conf_message = "Unconfigured"
-            server_level = logging.WARNING
-            logger.warning("MQTT broker is not configured to listen for connections!")
-            logger.warning("  Update the configuration file to listen on port 1883 and restart the service")
-        else:
-            mqtt_conf_message = f"Listening on port {server_options['listener']}"
-        server_line = f"{'Server':>12}  {mqtt_conf_message}"
-
-        # Evaluate firewall rules by increasing severity
-        firewall_message = "Open on port 1883"
-        firewall_level = logging.INFO
-        if not mqtt_broker_information.has_allowed_firewall_rules:
-            firewall_message = "Blocked"
-            firewall_level = logging.WARNING
-            logger.warning("All firewall rules for MQTT connections do not allow connections!")
-            logger.warning("  Try 'wf.msc' to allow with Administrator privileges")
-        if not mqtt_broker_information.has_enabled_firewall_rules:
-            firewall_message = "Disabled"
-            firewall_level = logging.WARNING
-            logger.warning("All firewall rules for MQTT connections are disabled!")
-            logger.warning("  Try 'wf.msc' to enable with Administrator privileges")
-        if not mqtt_broker_information.firewall_rules:
-            firewall_message = "Unconfigured"
-            firewall_level = logging.WARNING
-            logger.warning("This computer's firewall has no rules that support MQTT connections!")
-            logger.warning("  Run the following in a terminal with Administrator privileges")
-            firewall_rule_command = _get_firewall_rule_for_windows()
-            logger.info("")
-            logger.info(firewall_rule_command)
-            logger.info("")
-        firewall_line = f"{'Firewall':>12}  {firewall_message}"
-
-        message_lines_with_level.append((mqtt_broker_information.description, logging.INFO))
-        message_lines_with_level.append((running_line, running_level))
-        message_lines_with_level.append((f"{'Status':>12}  {mqtt_broker_information.server_health}", logging.INFO))
-        message_lines_with_level.append((f"{'Startup':>12}  {mqtt_broker_information.server_startmode}", logging.INFO))
-        message_lines_with_level.append((f"{'Executable':>12}  {mqtt_broker_information.server_executable!s}", logging.INFO))
-        message_lines_with_level.append((server_line, server_level))
-        message_lines_with_level.append((firewall_line, firewall_level))
-
-        logger.info("")
+        message_lines_with_level = _analyze_mqtt_broker(mqtt_broker_information)
         did_warn = False
+        logger.info("")
         for line_and_level in message_lines_with_level:
             line = line_and_level[0]
-            level = line_and_level[-1]
+            level = line_and_level[1]
             did_warn |= level >= logging.WARNING
             logger.log(level, line)
         logger.info("")
@@ -183,6 +133,61 @@ def handle_server(behavior: Behavior) -> None:
         logger.info(f"Subscribing with '{' '.join(subscribe_command)}'")
         logger.info("Use Ctrl-C to quit")
         _ = subprocess.run(subscribe_command, stdout=sys.stdout, stderr=subprocess.STDOUT, check=False)  # noqa: S603 -- command is well-formed and user cannot execute arbitrary code
+
+
+def _analyze_mqtt_broker(broker_information: MqttBrokerInformation) -> list[tuple[str, int]]:
+    """Analyze the availability and accessibility of the MQTT broker service."""
+    running_line = f"{'State':>12}  {broker_information.server_runmode}"
+    running_level = logging.INFO
+    if broker_information.server_runmode != "Running":
+        logger.warning("MQTT broker is not running!")
+        logger.warning("  Try 'qtpy-datalogger server --restart'")
+        running_level = logging.WARNING
+
+    server_level = logging.INFO
+    server_options = broker_information.server_options
+    if not server_options:
+        mqtt_conf_message = "Unconfigured"
+        server_level = logging.WARNING
+        logger.warning("MQTT broker is not configured to listen for connections!")
+        logger.warning("  Update the configuration file to listen on port 1883 and restart the service")
+    else:
+        mqtt_conf_message = f"Listening on port {server_options['listener']}"
+    server_line = f"{'Server':>12}  {mqtt_conf_message}"
+
+    # Evaluate firewall rules by increasing severity
+    firewall_message = "Open on port 1883"
+    firewall_level = logging.INFO
+    if not broker_information.has_allowed_firewall_rules:
+        firewall_message = "Blocked"
+        firewall_level = logging.WARNING
+        logger.warning("All firewall rules for MQTT connections do not allow connections!")
+        logger.warning("  Try 'wf.msc' to allow with Administrator privileges")
+    if not broker_information.has_enabled_firewall_rules:
+        firewall_message = "Disabled"
+        firewall_level = logging.WARNING
+        logger.warning("All firewall rules for MQTT connections are disabled!")
+        logger.warning("  Try 'wf.msc' to enable with Administrator privileges")
+    if not broker_information.firewall_rules:
+        firewall_message = "Unconfigured"
+        firewall_level = logging.WARNING
+        logger.warning("This computer's firewall has no rules that support MQTT connections!")
+        logger.warning("  Run the following in a terminal with Administrator privileges")
+        firewall_rule_command = _get_firewall_rule_for_windows()
+        logger.info("")
+        logger.info(firewall_rule_command)
+        logger.info("")
+    firewall_line = f"{'Firewall':>12}  {firewall_message}"
+
+    return [
+        (broker_information.description, logging.INFO),
+        (running_line, running_level),
+        (f"{'Status':>12}  {broker_information.server_health}", logging.INFO),
+        (f"{'Startup':>12}  {broker_information.server_startmode}", logging.INFO),
+        (f"{'Executable':>12}  {broker_information.server_executable!s}", logging.INFO),
+        (server_line, server_level),
+        (firewall_line, firewall_level),
+    ]
 
 
 def _query_mqtt_broker_information_from_wmi() -> MqttBrokerInformation | None:
