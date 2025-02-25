@@ -14,6 +14,7 @@ def read_one_uart_line() -> str:
         serial = usb_cdc.data
 
     line = prompt(message="[uart] ", in_stream=serial, out_stream=serial)  # type: ignore -- CircuitPython Serial objects have no parents
+    _ = serial.read(serial.in_waiting)
     return line
 
 
