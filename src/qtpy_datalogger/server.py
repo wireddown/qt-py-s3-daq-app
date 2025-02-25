@@ -108,7 +108,7 @@ def handle_server(behavior: Behavior, publish: tuple[str, str]) -> None:
         subscribe_command = [
             str(subscribe_exe),
             "--id",
-            "qtpy-datalogger",
+            "qtpy-datalogger-sub",
             "--topic",
             "$SYS/#",
             "--unsubscribe",
@@ -138,7 +138,7 @@ def handle_server(behavior: Behavior, publish: tuple[str, str]) -> None:
         publish_command = [
             str(publish_exe),
             "--id",
-            "qtpy-datalogger",
+            "qtpy-datalogger-pub",
             "--topic",
             f"{topic}",
             "--message",
