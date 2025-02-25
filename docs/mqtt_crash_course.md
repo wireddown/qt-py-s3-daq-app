@@ -29,6 +29,7 @@
 <-- PUBACK
 
 ## QoS controls whether and how messages are retained by broker for glitchy clients
+
 - QoS 0 - Default and doesn’t guarantee message delivery.
 - QoS 1 - Guarantees message delivery but could get duplicates.
 - QoS 2 - Guarantees message delivery with no duplicates.
@@ -57,6 +58,54 @@
 - base topic/connected/device_id
 - protocol_prefix / src_id / dest_id / message_id / extra_properties
   - https://stackoverflow.com/a/48414867
+
+## Topic decisions
+
+snsr/$INDEX
+snsr/v1/$INDEX
+snsr/v1/connected
+snsr/v1/connected/$FORMAT
+snsr/v1/connected/add
+snsr/v1/connected/remove
+
+snsr/v1/centrifuge/$EVENT
+snsr/v1/centrifuge/$LOG
+
+snsr/v1/centrifuge/broadcast
+snsr/v1/centrifuge/nodeID/$DESCRIPTOR
+snsr/v1/centrifuge/nodeID/command
+snsr/v1/centrifuge/nodeID/result
+
+snsr/v1/centrifuge/hostID
+
+- A `device-id` segment must be in the topic to support 1:1 controller-to-node commands-with-responses
+- A `senderapp`/`app-id` segment pair must be in the topic to support unrelated MQTT use cases and individual instances of the same use case
+- A `message-name` segment must be in the topic to support specific commands
+- A `v1` segment for API versions
+
+## Topics
+
+- connected / add | remove
+- topic index / format
+- payload schema
+- use `$` as metadata / reflection, like `$descriptor`
+  - possible entries: "supported apps", "descriptor version/timestamp", name of device, type of device,
+- use a `log` action for device-to-server logging
+- which are retained?
+- use an `event` topic for alerts / alarms / notifications
+- use a `broadcast` topic for fanning out messages to a group of clients
+
+snsr/
+  clients/connect/add
+  clients/connect/remove
+  clients/list
+  topics/list
+
+## Payload decisions
+
+- format is JSON because it's designed for serializing objects for network transfer
+- `device-id`
+- `last-changed` timestamp
 
 # Windows broker
 
