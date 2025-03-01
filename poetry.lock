@@ -337,13 +337,13 @@ files = [
 
 [[package]]
 name = "circup"
-version = "2.1.1"
+version = "2.1.2"
 description = "A tool to manage/update libraries on CircuitPython devices."
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "circup-2.1.1-py3-none-any.whl", hash = "sha256:42aa94f3ccd7b4d0834b3c4faa531b5f163f420806d1cbe091496e77a1a6f05f"},
-    {file = "circup-2.1.1.tar.gz", hash = "sha256:a1a5c2b33b6e169647a602945d4ca7823d6dc4708db5af8a9ce111504178290f"},
+    {file = "circup-2.1.2-py3-none-any.whl", hash = "sha256:3f77bd2496b51df7750dd5d9920c680f0057abddadcadf69b868129a5b41674c"},
+    {file = "circup-2.1.2.tar.gz", hash = "sha256:b6ffdbe4ff54a2be7b505b89dfc844446d2953813103acd678e136a42c2a5ebe"},
 ]
 
 [package.dependencies]
@@ -728,4 +728,4 @@ tests = ["pytest"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "ad10578b1c3398975542629b69246948136719c28899feb2ea14dfe89f4838fe"
+content-hash = "da5dbc8f1f641638dc36eeeb8d4a8b2367024130c33a6dcf845443130f0e457c"
