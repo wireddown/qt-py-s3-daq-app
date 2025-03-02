@@ -308,23 +308,27 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
     my_bundle = comparison_information["runtime bundle"]
 
     logger.info(f"Installing sensor_node v{my_bundle.notice.version} to '{device_main_folder}'")
-    logger.info("  Copying snsr bundle")
     my_main_folder = my_bundle.device_files[0]
     device_snsr_root = device_main_folder.joinpath(_SNSR_ROOT_FOLDER)
 
     ignore_patterns = {"*.pyc", "__pycache__"}
     if behavior == Behavior.OnlyNewerFiles:
         runtime_freshness = _compare_file_trees(comparison_information["runtime bundle"].device_files, comparison_information["device bundle"].device_files)
+        older_files = set()
+        newer_files = set()
         for path, freshness in runtime_freshness.items():
             full_path = comparison_information["runtime bundle"].device_files[0].joinpath(path)
             if not full_path.is_file():
                 continue
             if freshness == "newer":
-                if path.name in ignore_patterns:
-                    ignore_patterns.remove(path.name)
+                logger.info(f"  Newer: {path}")
+                newer_files.add(path.name)
                 continue
-            ignore_patterns.add(path.name)
+            older_files.add(path.name)
+        ignored_files = older_files - newer_files
+        ignore_patterns.update(ignored_files)
     elif device_snsr_root.exists():
+        logger.info("  Copying snsr bundle")
         shutil.rmtree(device_snsr_root)
 
     shutil.copytree(
