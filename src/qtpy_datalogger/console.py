@@ -131,6 +131,13 @@ def run() -> None:
     help="Behavior: Force the installation of the sensor_node bundle on the device.",
 )
 @click.option(
+    "--only-newer-files",
+    "behavior",
+    flag_value=_equip.Behavior.OnlyNewerFiles,
+    help="Behavior: Only update sensor_node bundle files that are newer, skip installing CircuitPython support libraries.",
+)
+
+@click.option(
     "-r",
     "--root",
     type=click.Path(exists=True, file_okay=False, writable=True, resolve_path=True, path_type=pathlib.Path),

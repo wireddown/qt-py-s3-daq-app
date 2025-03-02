@@ -46,6 +46,7 @@ class Behavior(StrEnum):
     Compare = "Compare"
     Describe = "Describe"
     Force = "Force"
+    OnlyNewerFiles = "OnlyNewerFiles"
 
 
 class SnsrNotice(NamedTuple):
@@ -275,7 +276,10 @@ def _should_install(behavior: Behavior, comparison_information: dict[str, SnsrNo
         device_snsr_version = packaging.version.Version(device_bundle.notice.version)
         device_snsr_timestamp = device_bundle.notice.timestamp
         my_timestamp = my_bundle.notice.timestamp
-        if my_version > device_snsr_version:
+        if behavior == Behavior.OnlyNewerFiles:
+            logger.info("Forcing installation of newer files")
+            should_install = True
+        elif my_version > device_snsr_version:
             logger.info("Upgrading version")
             logger.info(f"  Device is version  '{device_snsr_version}'")
             logger.info(f"  Runtime is version '{my_version}'")
@@ -307,18 +311,36 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
     logger.info("  Copying snsr bundle")
     my_main_folder = my_bundle.device_files[0]
     device_snsr_root = device_main_folder.joinpath(_SNSR_ROOT_FOLDER)
-    if device_snsr_root.exists():
+
+    ignore_patterns = {"*.pyc", "__pycache__"}
+    if behavior == Behavior.OnlyNewerFiles:
+        runtime_freshness = _compare_file_trees(comparison_information["runtime bundle"].device_files, comparison_information["device bundle"].device_files)
+        for path, freshness in runtime_freshness.items():
+            full_path = comparison_information["runtime bundle"].device_files[0].joinpath(path)
+            if not full_path.is_file():
+                continue
+            if freshness == "newer":
+                if path.name in ignore_patterns:
+                    ignore_patterns.remove(path.name)
+                continue
+            ignore_patterns.add(path.name)
+    elif device_snsr_root.exists():
         shutil.rmtree(device_snsr_root)
+
     shutil.copytree(
         src=my_main_folder,
         dst=device_main_folder,
-        ignore=shutil.ignore_patterns("*.pyc", "__pycache__"),
+        ignore=shutil.ignore_patterns(*ignore_patterns),
         dirs_exist_ok=True,
     )
 
     notice_file = device_main_folder.joinpath(_SNSR_ROOT_FOLDER, _SNSR_NOTICE_FILE)
     notice_contents = _create_notice_file_contents(allow_dev_version=True)
     notice_file.write_text(notice_contents)
+
+    if behavior == Behavior.OnlyNewerFiles:
+        logger.info("Bundle files updated")
+        return
 
     circup_packages = my_bundle.circuitpy_dependencies
     return_code = _EXIT_SUCCESS
@@ -422,6 +444,26 @@ def _collect_file_list(folder: pathlib.Path) -> list[pathlib.Path]:
             folder_contents.extend(subfolder_list)
         return sorted(folder_contents)
     return [folder]
+
+
+def _compare_file_trees(tree1: list[pathlib.Path], tree2: list[pathlib.Path]) -> dict[pathlib.Path, str]:
+    """Compare two lists of paths, identifying newer or unique files."""
+    set1 = {path.relative_to(tree1[0]) for path in tree1}
+    set2 = {path.relative_to(tree2[0]) for path in tree2}
+    unique_to_1 = set1 - set2
+    unique_to_2 = set2 - set1
+    shared_in_both = set1 & set2
+    tree1_file_ages = {}
+    for path in shared_in_both:
+        modification_time1 = tree1[0].joinpath(path).stat().st_mtime
+        modification_time2 = tree2[0].joinpath(path).stat().st_mtime
+        age = "equal"
+        if modification_time1 > modification_time2:
+            age = "newer"
+        if modification_time1 < modification_time2:
+            age = "older"
+        tree1_file_ages[path] = age
+    return tree1_file_ages
 
 
 def _get_circuitpython_dependencies(device_files: list[pathlib.Path], device_id: str, log_info: bool) -> list[str]:
