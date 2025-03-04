@@ -1,18 +1,17 @@
 """Classes and functions for control communication over MQTT."""
 
-import adafruit_connection_manager
-import adafruit_minimqtt.adafruit_minimqtt as MQTT
 import os
-import time
-import wifi
 
+import adafruit_connection_manager
+import adafruit_minimqtt.adafruit_minimqtt as minimqtt
+import wifi
 
 _BROKER_IP_ADDRESS = "192.168.0.167"
 
 
 def connect_to_wifi() -> wifi.Radio:
     """Connect to the SSID from settings.toml and return the radio instance."""
-    wifi.radio.connect(os.getenv('CIRCUITPY_WIFI_SSID'), os.getenv('CIRCUITPY_WIFI_PASSWORD'))
+    wifi.radio.connect(os.getenv("CIRCUITPY_WIFI_SSID"), os.getenv("CIRCUITPY_WIFI_PASSWORD"))
     print("Connected to WiFi")
 
     print()
@@ -70,12 +69,11 @@ def message(client, topic, message):
         client.publish(result_topic, result_message)
 
 
-def create_mqtt_client(radio, node_group: str, node_identifier: str) -> MQTT.MQTT:
+def create_mqtt_client(radio, node_group: str, node_identifier: str) -> minimqtt.MQTT:
     """Create an MQTT client and set its callback functions."""
-
     # Set up a MiniMQTT Client
     pool = adafruit_connection_manager.get_radio_socketpool(radio)
-    mqtt_client = MQTT.MQTT(
+    mqtt_client = minimqtt.MQTT(
         broker=_BROKER_IP_ADDRESS,
         socket_pool=pool,
         user_data={
