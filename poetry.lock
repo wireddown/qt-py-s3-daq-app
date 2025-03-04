@@ -80,6 +80,22 @@ files = [
 Adafruit-Blinka = "*"
 
 [[package]]
+name = "adafruit-circuitpython-minimqtt"
+version = "7.11.5"
+description = "MQTT client library for CircuitPython"
+optional = false
+python-versions = "*"
+files = [
+    {file = "adafruit_circuitpython_minimqtt-7.11.5-py3-none-any.whl", hash = "sha256:964f51d4aef51660ee59c83fd09eedb791c36583a08faecb882340dd141659ab"},
+    {file = "adafruit_circuitpython_minimqtt-7.11.5.tar.gz", hash = "sha256:7cb0a08b466f783c01fb881099acbae492c73c94e0fee4cc6bf5f680d403e570"},
+]
+
+[package.dependencies]
+Adafruit-Blinka = "*"
+Adafruit-Circuitpython-ConnectionManager = "*"
+adafruit-circuitpython-ticks = "*"
+
+[[package]]
 name = "adafruit-circuitpython-neopixel"
 version = "6.3.15"
 description = "CircuitPython library for NeoPixel LEDs."
@@ -125,6 +141,20 @@ Adafruit-Circuitpython-ConnectionManager = "*"
 
 [package.extras]
 optional = ["requests"]
+
+[[package]]
+name = "adafruit-circuitpython-ticks"
+version = "1.1.2"
+description = "Work with intervals and deadlines in milliseconds"
+optional = false
+python-versions = "*"
+files = [
+    {file = "adafruit_circuitpython_ticks-1.1.2-py3-none-any.whl", hash = "sha256:b780421d0037ec18733bbeef1937d8e67f6905c49e269dcf1ac91d5962bf71f4"},
+    {file = "adafruit_circuitpython_ticks-1.1.2.tar.gz", hash = "sha256:f9e88cf26f4b4c90f149cabf4798dda4047d020a05067888d8203a8dd2873664"},
+]
+
+[package.dependencies]
+Adafruit-Blinka = "*"
 
 [[package]]
 name = "adafruit-circuitpython-typing"
@@ -337,13 +367,13 @@ files = [
 
 [[package]]
 name = "circup"
-version = "2.1.1"
+version = "2.1.2"
 description = "A tool to manage/update libraries on CircuitPython devices."
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "circup-2.1.1-py3-none-any.whl", hash = "sha256:42aa94f3ccd7b4d0834b3c4faa531b5f163f420806d1cbe091496e77a1a6f05f"},
-    {file = "circup-2.1.1.tar.gz", hash = "sha256:a1a5c2b33b6e169647a602945d4ca7823d6dc4708db5af8a9ce111504178290f"},
+    {file = "circup-2.1.2-py3-none-any.whl", hash = "sha256:3f77bd2496b51df7750dd5d9920c680f0057abddadcadf69b868129a5b41674c"},
+    {file = "circup-2.1.2.tar.gz", hash = "sha256:b6ffdbe4ff54a2be7b505b89dfc844446d2953813103acd678e136a42c2a5ebe"},
 ]
 
 [package.dependencies]
@@ -728,4 +758,4 @@ tests = ["pytest"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "a89971d237e5758d0b4e74ba241837a66eba6d0d314202a027d9957e3c6267ff"
+content-hash = "bf31556b58c240e1866dd183b7fe508ef61c6c3ec7a356b0db4f9f9647cc1fde"
