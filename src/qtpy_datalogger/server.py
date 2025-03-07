@@ -1,4 +1,4 @@
-"""Code that is under development and experimentation."""
+"""Functions to interact with the MQTT broker that handles the network communication."""
 
 import logging
 import pathlib
