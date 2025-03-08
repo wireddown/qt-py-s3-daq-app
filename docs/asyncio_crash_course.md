@@ -31,16 +31,27 @@ Using `sleep(0)` provides an optimized path to allow other tasks to run, useful 
 ## Interesting APIs
 
 - run()
+  - Create event loop, run a coroutine, close the loop, and return any results
 - create_task()
+  - Start an asyncio Task, then return it for later await-ing
+- timeout()
+  - Run a task with a timeout
 - shield()
+  - Shield from cancellation
 - to_thread()
-- run_in_executor()
+  - Move a synchronous blocking call from an async function to the thread pool
+- sleep()
+  - Yield execution back to the async runloop
 - run_coroutine_threadsafe()
+  - Schedule a task from a synchronous call into an asyncio loop
 - PriorityQueue()
-- ~~create_subprocess_exec()~~
+  - A Queue that retrieves entries in priority order (lowest first).
+- create_subprocess_exec()
   - On Windows, subprocesses are provided by `ProactorEventLoop` only (default), `SelectorEventLoop` has no subprocess support
   - https://docs.python.org/3.11/library/asyncio-platforms.html#windows
   - `aiomqtt` requires `SelectorEventLoop`
 - Event
+  - Notify multiple asyncio tasks that some event has happened.
 - Condition
+  - Wait for some event to happen and then get exclusive access to a shared resource.
 - get_running_loop()
