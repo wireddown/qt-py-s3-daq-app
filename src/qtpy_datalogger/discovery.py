@@ -18,6 +18,8 @@ import click
 import serial
 from serial.tools import miniterm as mt
 
+from . import network
+
 logger = logging.getLogger(__name__)
 
 _EXIT_SUCCESS = 0
@@ -56,7 +58,15 @@ def handle_connect(behavior: Behavior, port: str) -> None:
             formatted_lines = _format_port_table(qtpy_devices)
             _ = [logger.info(line) for line in formatted_lines]
         else:
-            logger.warning("No QT Py devices found!")
+            # And it may be on the network as a sensor_node
+            logger.warning("No USB-connected QT Py devices found!")
+            logger.info("Discovering sensor_node devices on the network")
+            discovered_nodes = network.query_nodes_from_mqtt()
+            if discovered_nodes:
+                logger.info(f"Found {len(discovered_nodes)} node on the network")
+                _ = [logger.info(f"  ID: {node}") for node in discovered_nodes]
+            else:
+                logger.info("No nodes online")
         raise SystemExit(_EXIT_SUCCESS)
 
     if not port:
