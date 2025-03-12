@@ -60,13 +60,15 @@ def message(client, topic, message):
     topic_parts = topic.split("/")
     last_part = topic_parts[-1]
     if last_part == "broadcast":
+        from .core import get_descriptor_payload
         descriptor_topic = f"qtpy/v1/{client.user_data['node_group']}/{client.user_data['node_identifier']}/$DESCRIPTOR"
-        descriptor_message = f"{client.user_data}"
+        descriptor_message = get_descriptor_payload()
         client.publish(descriptor_topic, descriptor_message)
     elif last_part == "command":
+        from .core import get_command_payload
         result_topic = f"qtpy/v1/{client.user_data['node_group']}/{client.user_data['node_identifier']}/result"
-        result_message = "ok"
-        client.publish(result_topic, result_message)
+        command_information = get_command_payload(message)
+        client.publish(result_topic, f"{command_information.as_dict()}")
 
 
 def create_mqtt_client(radio, node_group: str, node_identifier: str) -> minimqtt.MQTT:
