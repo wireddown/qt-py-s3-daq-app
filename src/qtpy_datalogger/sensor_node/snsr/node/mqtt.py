@@ -3,12 +3,17 @@
 
 def get_mqtt_topics(group_id: str, node_id: str) -> dict[str, str]:
     return {
+        "acquired_data": f"qtpy/v1/{group_id}/acquired_data",
         "broadcast": f"qtpy/v1/{group_id}/broadcast",
         "command": f"qtpy/v1/{group_id}/{node_id}/command",
         "descriptor": f"qtpy/v1/{group_id}/{node_id}/$DESCRIPTOR",
         "log": f"qtpy/v1/{group_id}/log",
         "result": f"qtpy/v1/{group_id}/{node_id}/result",
     }
+
+
+def get_acquired_data_topic(group_id: str) -> str:
+    return f"qtpy/v1/{group_id}/acquired_data"
 
 
 def get_broadcast_topic(group_id: str) -> str:
