@@ -9,6 +9,8 @@ from typing import Any
 
 import gmqtt
 
+from .equip import _get_package_notice_info
+from .sensor_node.snsr.node import classes as node_classes
 from .sensor_node.snsr.node import mqtt as node_mqtt
 
 logger = logging.getLogger(__name__)
@@ -64,8 +66,7 @@ async def _query_nodes_from_mqtt() -> dict[str, dict[str, str]]:
         """Handle a message on topic with payload."""
         payload_string = payload.decode("UTF-8")
         logger.debug(f"Received '{payload_string}' on '{topic}' with qos='{qos}' properties='{properties}'")
-        if payload_string.startswith("{"):
-            await data_queue.put(payload_string)
+        await data_queue.put(payload_string)
 
     def on_disconnect(client, packet) -> None:
         """Handle disconnection from the MQTT broker."""
@@ -89,9 +90,63 @@ async def _query_nodes_from_mqtt() -> dict[str, dict[str, str]]:
         client.subscribe(all_descriptors_in_group_topic)
         await asyncio.sleep(0.2)  # Wait long enough to receive the subscription acknowledgements
 
-    client.publish(descriptor_topic, "from cli")
+    snsr_notice = _get_package_notice_info(allow_dev_version=True)
+    descriptor_payload = node_classes.DescriptorPayload(
+        descriptor=node_classes.DescriptorInformation(
+            node_id="mux",
+            hardware_name="pc_host",
+            system_name="windows11",
+            python_implementation="3.11.3",
+            ip_address="hardwired",
+            notice=node_classes.NoticeInformation(
+                comment=snsr_notice.comment,
+                version=snsr_notice.version,
+                commit=snsr_notice.commit,
+                timestamp=snsr_notice.timestamp.isoformat(),
+            ),
+        ),
+        sender=node_classes.SenderInformation(
+            descriptor_topic=descriptor_topic,
+            sent_at="host-time",
+            status=node_classes.StatusInformation(
+                used_memory="host-used",
+                free_memory="host-free",
+                cpu_temperature="host-cpu-temp",
+            ),
+        )
+    )
+    client.publish(descriptor_topic, json.dumps(descriptor_payload.as_dict()))
 
-    client.publish(broadcast_topic, "identify")
+    sender_information = node_classes.SenderInformation(
+        descriptor_topic=descriptor_topic,
+        sent_at="host-time",
+        status=node_classes.StatusInformation(
+            used_memory="host-used",
+            free_memory="host-free",
+            cpu_temperature="host-cpu-temp",
+        ),
+    )
+    identify_command = node_classes.ActionPayload(
+        action=node_classes.ActionInformation(
+            command="identify",
+            parameters={},
+            message_id="identify-1",
+        ),
+        sender=sender_information,
+    )
+    client.publish(broadcast_topic, json.dumps(identify_command.as_dict()))
+
+    action_command = node_classes.ActionPayload(
+        action=node_classes.ActionInformation(
+            command="custom",
+            parameters={
+                "input": "command line interface parameters",
+            },
+            message_id="action-1"
+        ),
+        sender=sender_information,
+    )
+    client.publish("qtpy/v1/centrifuge/node-42cea4d12c8b/command", json.dumps(action_command.as_dict()))
     try:
         timeout = 0.5
         async with asyncio.timeout(timeout):
@@ -108,7 +163,17 @@ async def _query_nodes_from_mqtt() -> dict[str, dict[str, str]]:
     discovered_sensor_nodes = {}
     while not data_queue.empty():
         response_json = await data_queue.get()
-        response = json.loads(response_json.replace("'", '"'))
-        discovered_sensor_nodes[response["node_identifier"]] = response["node_group"]
+        try:
+            response = json.loads(response_json)
+            if "action" in response:
+                action = node_classes.ActionPayload.from_dict(response)
+                pass
+            elif "descriptor" in response:
+                descriptor = node_classes.DescriptorPayload.from_dict(response)
+                pass
+            pass
+        except json.JSONDecodeError:
+            pass
+        # discovered_sensor_nodes[response["node_identifier"]] = response["node_group"]
         data_queue.task_done()
     return discovered_sensor_nodes
