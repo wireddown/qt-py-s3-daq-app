@@ -223,8 +223,19 @@ async def _query_nodes_from_mqtt() -> dict[str, dict[str, str]]:
     controller.broadcast_identify_command()
     await _yield_async_event_loop(0.5)
     discovered_sensor_nodes = await controller.collect_identify_responses()
+    node_information = {
+        node.descriptor.node_id: {
+            "hardware_name": node.descriptor.hardware_name,
+            "system_name": node.descriptor.system_name,
+            "python_implementation": node.descriptor.python_implementation,
+            "version": node.descriptor.notice_information.version,
+            "commit": node.descriptor.notice_information.commit,
+            "timestamp": node.descriptor.notice_information.timestamp,
+        }
+        for node in discovered_sensor_nodes
+    }
 
-    return discovered_sensor_nodes
+    return node_information
 
 
 def _get_sender_information(descriptor_topic: str) -> node_classes.SenderInformation:
