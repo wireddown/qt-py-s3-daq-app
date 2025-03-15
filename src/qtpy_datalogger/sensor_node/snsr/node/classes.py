@@ -79,6 +79,7 @@ class DescriptorInformation:
     def __init__(
         self: "DescriptorInformation",
         node_id: str,
+        serial_number: str,
         hardware_name: str,
         system_name: str,
         python_implementation: str,
@@ -87,6 +88,7 @@ class DescriptorInformation:
     ):
         self.information = {
             "node_id": node_id,
+            "serial_number": serial_number,
             "hardware_name": hardware_name,
             "system_name": system_name,
             "python_implementation": python_implementation,
@@ -98,6 +100,7 @@ class DescriptorInformation:
     def from_dict(dictionary: dict) -> "DescriptorInformation":
         return DescriptorInformation(
             dictionary["node_id"],
+            dictionary["serial_number"],
             dictionary["hardware_name"],
             dictionary["system_name"],
             dictionary["python_implementation"],
@@ -112,6 +115,11 @@ class DescriptorInformation:
     def node_id(self) -> str:
         """The node_id for the sensor_node."""
         return self.information["node_id"]
+
+    @property
+    def serial_number(self) -> str:
+        """The serial_number for the sensor_node."""
+        return self.information["serial_number"]
 
     @property
     def hardware_name(self) -> str:

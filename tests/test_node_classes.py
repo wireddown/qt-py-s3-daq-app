@@ -14,6 +14,7 @@ def reference_descriptor_payload() -> str:
         {
             "descriptor": {
                 "node_id": "host-12ab34cd56ef-1213",
+                "serial_number": "12ab34cd56ef",
                 "hardware_name": "AMD64",
                 "system_name": "Windows-10.0.22631",
                 "python_implementation": "CPython-3.11.9",
@@ -73,6 +74,7 @@ def test_descriptor_serialize() -> None:
     descriptor = node_classes.DescriptorPayload(
         descriptor=node_classes.DescriptorInformation(
             node_id="test_node",
+            serial_number="test_serial_number",
             hardware_name="test_hardware_name",
             system_name="test_system_name",
             python_implementation="test_python_implementation",
