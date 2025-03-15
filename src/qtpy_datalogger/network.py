@@ -7,7 +7,7 @@ import logging
 import os
 import platform
 from collections.abc import Generator
-from typing import Any
+from typing import Any, NamedTuple
 
 import gmqtt
 
@@ -16,6 +16,13 @@ from .sensor_node.snsr.node import classes as node_classes
 from .sensor_node.snsr.node import mqtt as node_mqtt
 
 logger = logging.getLogger(__name__)
+
+
+class MqttMessage(NamedTuple):
+    """A class that holds an MQTT message and its topic."""
+
+    topic: str
+    message: str
 
 
 class MqttClientWithContext(gmqtt.Client):
@@ -70,7 +77,7 @@ class QTPyController:
         self.all_descriptors_in_group_topic = node_mqtt.get_descriptor_topic(group_id, node_id="+")
 
         self.named_counter = NamedCounter()
-        self.data_queue = asyncio.Queue()
+        self.message_queue: asyncio.Queue[MqttMessage] = asyncio.Queue()
 
         # Define these at runtime because
         #   we cannot change their parameters and make them instance methods (ie we cannot add 'self')
@@ -83,7 +90,7 @@ class QTPyController:
             """Handle a message on topic with payload."""
             payload_string = payload.decode("UTF-8")
             logger.debug(f"Received '{payload_string}' on '{topic}' with qos='{qos}' properties='{properties}'")
-            await client.context.data_queue.put(payload_string)
+            await client.context.message_queue.put(MqttMessage(topic, payload_string))
 
         def on_mqtt_disconnect(client, packet) -> None:
             """Handle disconnection from the MQTT broker."""
@@ -138,21 +145,20 @@ class QTPyController:
     async def collect_identify_responses(self) -> list[node_classes.DescriptorPayload]:
         """Get the messages sent by sensor_nodes in response to the identify command."""
         identify_responses = []
-        while not self.data_queue.empty():
-            response_json = await self.data_queue.get()
+        other_messages = []
+        while not self.message_queue.empty():
+            topic_and_message: MqttMessage = await self.message_queue.get()
+            response_json = topic_and_message.message
             response = json.loads(response_json)
-            if "action" in response:
-                # Retain commands elsewhere?
-                action = node_classes.ActionPayload.from_dict(response)
-                pass
-            elif "descriptor" in response:
+            if "descriptor" in response:
                 descriptor = node_classes.DescriptorPayload.from_dict(response)
                 identify_responses.append(descriptor)
-                pass
             else:
-                # Retain others elsewhere?
-                pass
-            self.data_queue.task_done()
+                logger.debug(f"Requeueing response '{topic_and_message}'")
+                other_messages.append(topic_and_message)
+            self.message_queue.task_done()
+        for other_message in other_messages:
+            self.message_queue.put_nowait(other_message)
         return identify_responses
 
     def send_command(self, node_id: str) -> None:
