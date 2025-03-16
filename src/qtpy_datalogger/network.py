@@ -228,6 +228,7 @@ async def _query_nodes_from_mqtt() -> dict[str, dict[str, str]]:
     node_information = {
         node.descriptor.node_id: {
             "hardware_name": node.descriptor.hardware_name,
+            "serial_number": node.descriptor.serial_number,
             "system_name": node.descriptor.system_name,
             "python_implementation": node.descriptor.python_implementation,
             "version": node.descriptor.notice_information.version,
