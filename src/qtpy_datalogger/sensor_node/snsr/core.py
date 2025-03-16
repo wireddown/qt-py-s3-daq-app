@@ -48,9 +48,7 @@ def get_system_info() -> dict[str, str]:
 
 
 def get_notice_info() -> dict:
-    """Return a json representation of the notice.toml file."""
-    import json
-
+    """Return a serializable representation of the notice.toml file."""
     notice_contents = []
     with open("/snsr/notice.toml", "r") as notice_toml:
         notice_contents = notice_toml.read().splitlines()
