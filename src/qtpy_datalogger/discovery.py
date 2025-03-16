@@ -59,14 +59,7 @@ def handle_connect(behavior: Behavior, port: str) -> None:
             _ = [logger.info(line) for line in formatted_lines]
         else:
             # And it may be on the network as a sensor_node
-            logger.warning("No USB-connected QT Py devices found!")
-            logger.info("Discovering sensor_node devices on the network")
-            discovered_nodes = network.query_nodes_from_mqtt()
-            if discovered_nodes:
-                logger.info(f"Found {len(discovered_nodes)} node on the network")
-                _ = [logger.info(f"  ID: {node}") for node in discovered_nodes]
-            else:
-                logger.info("No nodes online")
+            logger.warning("No QT Py devices found!")
         raise SystemExit(_EXIT_SUCCESS)
 
     if not port:
@@ -108,6 +101,10 @@ def discover_qtpy_devices() -> list[dict[str, str]]:
     logger.info("Discovering disk volumes")
     discovered_disk_volumes = _query_volumes_from_wmi()
 
+    # And its network MAC address uses the same serial number
+    logger.info("Discovering sensor_node devices on the network")
+    discovered_nodes = network.query_nodes_from_mqtt()
+
     logger.info("Identifying QT Py devices")
     qtpy_devices = []
     for drive_info in discovered_disk_volumes.values():
@@ -122,11 +119,25 @@ def discover_qtpy_devices() -> list[dict[str, str]]:
                         _INFO_KEY_drive_letter: drive_info[_INFO_KEY_drive_letter],
                         _INFO_KEY_drive_label: drive_info[_INFO_KEY_drive_label],
                         _INFO_KEY_disk_description: drive_info[_INFO_KEY_disk_description],
-                        _INFO_KEY_serial_number: drive_info[_INFO_KEY_serial_number],
+                        _INFO_KEY_serial_number: drive_info[_INFO_KEY_serial_number].lower(),
                         _INFO_KEY_com_port: port_info[_INFO_KEY_com_port],
                         _INFO_KEY_com_id: port_info[_INFO_KEY_com_id],
+                        "node_id": "(not on network)",
+                        "version": "",
+                        "python_implementation": "",
+                        "ip_address": "",
                     }
                 )
+
+    for qtpy_device in qtpy_devices:
+        serial_number = qtpy_device[_INFO_KEY_serial_number]
+        for node_id, sensor_node in discovered_nodes.items():
+            if sensor_node["serial_number"] == serial_number:
+                qtpy_device["node_id"] = node_id
+                qtpy_device["version"] = sensor_node["version"]
+                qtpy_device["python_implementation"] = sensor_node["python_implementation"]
+                qtpy_device["ip_address"] = sensor_node["ip_address"]
+
     logger.debug(qtpy_devices)
     return qtpy_devices
 
@@ -392,12 +403,12 @@ def _format_port_table(qtpy_devices: list[dict[str, str]]) -> list[str]:
     """Return a list of text lines that present a table of the specified qtpy_devices."""
     lines = []
     lines.append("")
-    lines.append("      {:5}  {:5}  {:35}".format("Port", "Drive", "QT Py device"))
-    lines.append("      {:5}  {:5}  {:35}".format("-" * 5, "-" * 5, "-" * 35))
+    lines.append("      {:5}  {:5}  {:35}  {:20}".format("Port", "Drive", "QT Py device", "Node ID"))
+    lines.append("      {:5}  {:5}  {:35}  {:20}".format("-" * 5, "-" * 5, "-" * 35, "-" * 20))
     for index, qtpy_device in enumerate(qtpy_devices):
         drive_letter = f"{qtpy_device[_INFO_KEY_drive_letter]}\\"
         lines.append(
-            f"{index + 1:3}:  {qtpy_device[_INFO_KEY_com_port]:5}  {drive_letter:5}  {qtpy_device[_INFO_KEY_disk_description]:35}"
+            f"{index + 1:3}:  {qtpy_device[_INFO_KEY_com_port]:5}  {drive_letter:5}  {qtpy_device[_INFO_KEY_disk_description]:35}  {qtpy_device['node_id']:20}"
         )
     lines.append("")
     return lines
