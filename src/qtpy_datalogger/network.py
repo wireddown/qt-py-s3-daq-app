@@ -6,6 +6,8 @@ import json
 import logging
 import os
 import platform
+import socket
+import uuid
 from collections.abc import Generator
 from typing import Any, NamedTuple
 
@@ -60,17 +62,17 @@ class NamedCounter:
 class QTPyController:
     """Class for controlling QT Py nodes."""
 
-    def __init__(self, broker_host: str, group_id: str, mac_address: str, pid: int, hardware_name: str, ip_address: str) -> None:
+    def __init__(self, broker_host: str, group_id: str, mac_address: str, ip_address: str) -> None:
         """Return a QTPyController."""
         self.broker_host = broker_host
         self.group_id = group_id
-        self.mac_address = mac_address
-        self.pid = pid
-        self.hardware_name = hardware_name
-        self.ip_address = ip_address
-        self.mqtt_client_id = f"host-{self.mac_address}-{self.pid}"
+        self.descriptor = _build_descriptor_information(
+            role="host",
+            serial_number=mac_address,
+            ip_address=ip_address,
+        )
 
-        all_topics = node_mqtt.get_mqtt_topics(self.group_id, self.mqtt_client_id)
+        all_topics = node_mqtt.get_mqtt_topics(self.group_id, self.descriptor.node_id)
         self.broadcast_topic = all_topics["broadcast"]
         self.command_topic = all_topics["command"]
         self.descriptor_topic = all_topics["descriptor"]
@@ -100,7 +102,7 @@ class QTPyController:
             """Handle subscription from the MQTT broker."""
             logger.debug(f"Subscribed with mid='{mid}' qos='{qos}' properties='{properties}'")
 
-        self.client = MqttClientWithContext(self.mqtt_client_id, self)
+        self.client = MqttClientWithContext(self.descriptor.node_id, self)
         self.client.on_connect = on_mqtt_connect
         self.client.on_message = on_mqtt_message
         self.client.on_disconnect = on_mqtt_disconnect
@@ -124,8 +126,8 @@ class QTPyController:
     def publish_descriptor(self) -> None:
         """Publish the descriptor to the topic for this controller."""
         descriptor_payload = node_classes.DescriptorPayload(
-            descriptor=_get_descriptor_information(self.mqtt_client_id, self.hardware_name, self.ip_address),
-            sender=_get_sender_information(self.descriptor_topic),
+            descriptor=self.descriptor,
+            sender=_build_sender_information(self.descriptor_topic),
         )
         self.client.publish(self.descriptor_topic, json.dumps(descriptor_payload.as_dict()))
 
@@ -138,7 +140,7 @@ class QTPyController:
                 parameters={},
                 message_id=self._format_message_id(command_name),
             ),
-            sender=_get_sender_information(self.descriptor_topic),
+            sender=_build_sender_information(self.descriptor_topic),
         )
         self.client.publish(self.broadcast_topic, json.dumps(identify_command.as_dict()))
 
@@ -172,7 +174,7 @@ class QTPyController:
                 },
                 message_id=self._format_message_id(command_name)
             ),
-            sender=_get_sender_information(self.descriptor_topic),
+            sender=_build_sender_information(self.descriptor_topic),
         )
         command_topic = node_mqtt.get_command_topic(self.group_id, node_id)
         self.client.publish(command_topic, json.dumps(action_command.as_dict()))
@@ -210,13 +212,13 @@ def query_nodes_from_mqtt() -> dict[str, dict[str, str]]:
 
 
 async def _query_nodes_from_mqtt() -> dict[str, dict[str, str]]:
+    mac_address = hex(uuid.getnode())[2:]
+    ip_address = socket.gethostbyname(socket.gethostname())
     controller = QTPyController(
         broker_host="localhost",
         group_id="centrifuge",
-        mac_address="00:00:00:00:00",
-        pid=3333,
-        hardware_name="mux",
-        ip_address="ip-address"
+        mac_address=mac_address,
+        ip_address=ip_address
     )
 
     await controller.connect_and_subscribe()
@@ -238,7 +240,7 @@ async def _query_nodes_from_mqtt() -> dict[str, dict[str, str]]:
     return node_information
 
 
-def _get_sender_information(descriptor_topic: str) -> node_classes.SenderInformation:
+def _build_sender_information(descriptor_topic: str) -> node_classes.SenderInformation:
     """Return a SenderInformation instance describing the system's current state."""
     return node_classes.SenderInformation(
         descriptor_topic=descriptor_topic,
@@ -251,14 +253,15 @@ def _get_sender_information(descriptor_topic: str) -> node_classes.SenderInforma
     )
 
 
-def _get_descriptor_information(node_id: str, hardware_name: str, ip_address: str) -> node_classes.DescriptorInformation:
+def _build_descriptor_information(role: str, serial_number: str, ip_address: str) -> node_classes.DescriptorInformation:
     """Return a DescriptorInformation instance describing the client's current state."""
     snsr_notice = _get_package_notice_info(allow_dev_version=True)
     return node_classes.DescriptorInformation(
-            node_id=node_id,
-            hardware_name=hardware_name,
-            system_name=os.name,
-            python_implementation=f"{platform.python_implementation()} {platform.python_version()}",
+            node_id=node_mqtt.format_mqtt_client_id(role, serial_number, os.getpid()),
+            serial_number=serial_number,
+            hardware_name=platform.machine(),
+            system_name=f"{platform.system()}-{platform.version()}",
+            python_implementation=f"{platform.python_implementation()}-{platform.python_version()}",
             ip_address=ip_address,
             notice=node_classes.NoticeInformation(
                 comment=snsr_notice.comment,
