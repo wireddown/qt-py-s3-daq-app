@@ -234,6 +234,7 @@ async def _query_nodes_from_mqtt() -> dict[str, dict[str, str]]:
             "version": node.descriptor.notice_information.version,
             "commit": node.descriptor.notice_information.commit,
             "timestamp": node.descriptor.notice_information.timestamp,
+            "ip_address": node.descriptor.ip_address,
         }
         for node in discovered_sensor_nodes
     }
