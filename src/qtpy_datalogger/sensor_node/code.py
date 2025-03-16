@@ -23,6 +23,9 @@ connect_and_subscribe(mqtt_client, mqtt_topics)
 
 response = ""
 while response.lower() not in ["exit", "quit"]:
+    paint_uart_line("   Poll UART     [ Poll MQTT ]")
+    mqtt_client.loop()
+
     paint_uart_line(" [ Poll UART ]     Poll MQTT  ")
     sleep(0.2)
     if runtime.usb_connected and runtime.serial_connected and runtime.serial_bytes_available > 0:
@@ -32,8 +35,5 @@ while response.lower() not in ["exit", "quit"]:
             response = read_one_uart_line()
         used_kB, free_kB = get_memory_info()
         print(f"Received '{response}' with {used_kB} / {free_kB}  (used/free)")
-
-    paint_uart_line("   Poll UART     [ Poll MQTT ]")
-    mqtt_client.loop()
 
 unsubscribe_and_disconnect(mqtt_client, mqtt_topics)
