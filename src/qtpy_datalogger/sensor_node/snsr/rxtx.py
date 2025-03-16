@@ -60,9 +60,12 @@ def message(client, topic, message):
     topic_parts = topic.split("/")
     last_part = topic_parts[-1]
     if last_part == "broadcast":
+        from microcontroller import cpu
+        from wifi import radio
+
         from .core import get_descriptor_payload
         descriptor_topic = f"qtpy/v1/{client.user_data['node_group']}/{client.user_data['node_identifier']}/$DESCRIPTOR"
-        descriptor_message = get_descriptor_payload()
+        descriptor_message = get_descriptor_payload("node", cpu.uid.hex().lower(), str(radio.ipv4_address))
         client.publish(descriptor_topic, descriptor_message)
     elif last_part == "command":
         from .core import get_command_payload
