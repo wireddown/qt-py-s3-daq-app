@@ -10,7 +10,7 @@ from usb_cdc import console
 radio = connect_to_wifi()
 
 node_group = "centrifuge"
-node_identifier = f"node-{cpu.uid.hex().lower()}"  # Matches boot_out.txt
+node_identifier = f"node-{cpu.uid.hex().lower()}-0"  # Matches boot_out.txt
 mqtt_topics = [
     f"qtpy/v1/{node_group}/broadcast",
     f"qtpy/v1/{node_group}/{node_identifier}/command",
