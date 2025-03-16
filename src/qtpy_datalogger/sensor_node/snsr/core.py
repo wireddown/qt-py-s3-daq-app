@@ -61,22 +61,88 @@ def get_notice_info() -> dict:
     return notice_info
 
 
-def get_descriptor_payload():
-    import json
+def build_descriptor_information(role: str, serial_number: str, ip_address: str):
+    from os import uname
+    from sys import implementation, version_info
 
-    from snsr.node.classes import (
-        DescriptorInformation,
-        DescriptorPayload,
-        NoticeInformation,
-        SenderInformation,
-        StatusInformation,
-    )
+    from board import board_id
 
+    from snsr.node.classes import NoticeInformation
+
+    pid = 0
+    system_info = uname()
+    micropython_base = ".".join([f"{version_number}" for version_number in version_info])
+    python_implementation = f"{implementation.name}-{system_info.release}"
     notice_info = get_notice_info()
     notice = NoticeInformation(**notice_info)
-    descriptor = DescriptorInformation(node_id="me", hardware_name="esp", system_name="cpy", python_implementation="9.2.1", ip_address="wifi", notice=notice)
-    status = StatusInformation(used_memory="xx kB", free_memory="yy kB", cpu_temperature="zz C")
-    sender = SenderInformation(descriptor_topic="qtpy/v1/....", sent_at="now", status=status)
+
+    descriptor = _build_descriptor(
+        role=role,
+        serial_number=serial_number,
+        pid=pid,
+        hardware_name=board_id,
+        micropython_base=micropython_base,
+        python_implementation=python_implementation,
+        ip_address=ip_address,
+        notice=notice,
+    )
+    return descriptor
+
+
+def _build_descriptor(role, serial_number, pid, hardware_name, micropython_base, python_implementation, ip_address, notice):
+    from snsr.node.classes import DescriptorInformation
+    from snsr.node.mqtt import format_mqtt_client_id
+
+    descriptor = DescriptorInformation(
+        node_id=format_mqtt_client_id(role, serial_number, pid),
+        serial_number=serial_number,
+        hardware_name=hardware_name,
+        system_name=micropython_base,
+        python_implementation=python_implementation,
+        ip_address=ip_address,
+        notice=notice,
+    )
+    return descriptor
+
+
+def build_sender_information(descriptor_topic: str):
+    import gc
+    from time import monotonic
+
+    from microcontroller import cpu
+
+    from snsr.node.classes import SenderInformation, StatusInformation
+
+    used_bytes = gc.mem_alloc()
+    free_bytes = gc.mem_free()
+    cpu_celsius = cpu.temperature
+    monotonic_time = monotonic()
+    status = StatusInformation(
+        used_memory=str(used_bytes),
+        free_memory=str(free_bytes),
+        cpu_temperature=str(cpu_celsius)
+    )
+    sender = SenderInformation(
+        descriptor_topic=descriptor_topic,
+        sent_at=str(monotonic_time),
+        status=status
+    )
+    return sender
+
+
+def get_descriptor_payload(role: str, serial_number: str, ip_address: str) -> str:
+    import json
+
+    from snsr.node.classes import DescriptorPayload
+    from snsr.node.mqtt import format_mqtt_client_id, get_descriptor_topic
+
+    pid = 0
+    group_id = "centrifuge"
+
+    descriptor = build_descriptor_information(role, serial_number, ip_address)
+    client_id = format_mqtt_client_id(role, serial_number, pid)
+    descriptor_topic = get_descriptor_topic(group_id, client_id)
+    sender = build_sender_information(descriptor_topic)
     response = DescriptorPayload(descriptor=descriptor, sender=sender)
     return json.dumps(response.as_dict())
 
