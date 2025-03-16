@@ -129,14 +129,31 @@ def discover_qtpy_devices() -> list[dict[str, str]]:
                     }
                 )
 
-    for qtpy_device in qtpy_devices:
-        serial_number = qtpy_device[_INFO_KEY_serial_number]
+    if qtpy_devices:
+        for qtpy_device in qtpy_devices:
+            serial_number = qtpy_device[_INFO_KEY_serial_number]
+            for node_id, sensor_node in discovered_nodes.items():
+                if sensor_node["serial_number"] == serial_number:
+                    qtpy_device["node_id"] = node_id
+                    qtpy_device["version"] = sensor_node["version"]
+                    qtpy_device["python_implementation"] = sensor_node["python_implementation"]
+                    qtpy_device["ip_address"] = sensor_node["ip_address"]
+    else:
         for node_id, sensor_node in discovered_nodes.items():
-            if sensor_node["serial_number"] == serial_number:
-                qtpy_device["node_id"] = node_id
-                qtpy_device["version"] = sensor_node["version"]
-                qtpy_device["python_implementation"] = sensor_node["python_implementation"]
-                qtpy_device["ip_address"] = sensor_node["ip_address"]
+            qtpy_devices.append(
+                {
+                    _INFO_KEY_drive_letter: "",
+                    _INFO_KEY_drive_label: "",
+                    _INFO_KEY_disk_description: sensor_node["hardware_name"],
+                    _INFO_KEY_serial_number: sensor_node["serial_number"],
+                    _INFO_KEY_com_port: "",
+                    _INFO_KEY_com_id: "",
+                    "node_id": node_id,
+                    "version": sensor_node["version"],
+                    "python_implementation": sensor_node["python_implementation"],
+                    "ip_address": sensor_node["ip_address"],
+                }
+            )
 
     logger.debug(qtpy_devices)
     return qtpy_devices
@@ -406,7 +423,9 @@ def _format_port_table(qtpy_devices: list[dict[str, str]]) -> list[str]:
     lines.append("      {:5}  {:5}  {:35}  {:20}".format("Port", "Drive", "QT Py device", "Node ID"))
     lines.append("      {:5}  {:5}  {:35}  {:20}".format("-" * 5, "-" * 5, "-" * 35, "-" * 20))
     for index, qtpy_device in enumerate(qtpy_devices):
-        drive_letter = f"{qtpy_device[_INFO_KEY_drive_letter]}\\"
+        drive_letter = ""
+        if qtpy_device[_INFO_KEY_drive_letter]:
+            drive_letter = f"{qtpy_device[_INFO_KEY_drive_letter]}\\"
         lines.append(
             f"{index + 1:3}:  {qtpy_device[_INFO_KEY_com_port]:5}  {drive_letter:5}  {qtpy_device[_INFO_KEY_disk_description]:35}  {qtpy_device['node_id']:20}"
         )
