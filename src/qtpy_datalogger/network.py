@@ -227,6 +227,7 @@ async def _query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
         for node in discovered_sensor_nodes
     }
 
+    await controller.disconnect()
     return node_information
 
 
