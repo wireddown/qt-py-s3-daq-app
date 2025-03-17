@@ -196,6 +196,7 @@ def query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
 
 def open_session_on_node(node_id: str) -> None:
     """Open a terminal connection to the specified sensor_node."""
+    asyncio.run(_open_session_on_node(node_id))
     logger.warning("MQTT connection not implemented")
 
 
@@ -229,6 +230,21 @@ async def _query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
 
     await controller.disconnect()
     return node_information
+
+
+async def _open_session_on_node(node_id: str) -> None:
+    mac_address = hex(uuid.getnode())[2:]
+    ip_address = socket.gethostbyname(socket.gethostname())
+    controller = QTPyController(
+        broker_host="localhost",
+        group_id="centrifuge",
+        mac_address=mac_address,
+        ip_address=ip_address
+    )
+
+    await controller.connect_and_subscribe()
+    # do the thing
+    await controller.disconnect()
 
 
 def _build_sender_information(descriptor_topic: str) -> node_classes.SenderInformation:
