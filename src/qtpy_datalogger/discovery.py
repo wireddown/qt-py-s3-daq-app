@@ -18,13 +18,9 @@ import click
 import serial
 from serial.tools import miniterm as mt
 
-from . import network
+from .datatypes import DetailKey, ExitCode, SnsrNotice, SnsrPath
 
 logger = logging.getLogger(__name__)
-
-_EXIT_SUCCESS = 0
-_EXIT_DISCOVERY_FAILURE = 41
-_EXIT_COM1_FAILURE = 42
 
 _INFO_KEY_drive_letter = "drive_letter"
 _INFO_KEY_drive_label = "drive_label"
@@ -60,14 +56,14 @@ def handle_connect(behavior: Behavior, port: str) -> None:
         else:
             # And it may be on the network as a sensor_node
             logger.warning("No QT Py devices found!")
-        raise SystemExit(_EXIT_SUCCESS)
+        raise SystemExit(ExitCode.Success)
 
     if not port:
         qtpy_device = discover_and_select_qtpy()
         if not qtpy_device:
             logger.error("No QT Py devices found!")
-            raise SystemExit(_EXIT_DISCOVERY_FAILURE)
         port = qtpy_device[_INFO_KEY_com_port]
+            raise SystemExit(ExitCode.Discovery_Failure)
 
     if not port.startswith("COM"):
         logger.error("Format for --port argument is '--port COM#' where # is a number.")
@@ -76,7 +72,7 @@ def handle_connect(behavior: Behavior, port: str) -> None:
 
     if port == "COM1":
         logger.error(f"Opening '{port}' is not supported.")
-        raise SystemExit(_EXIT_COM1_FAILURE)
+        raise SystemExit(ExitCode.COM1_Failure)
 
     open_session_on_port(port)
 
@@ -103,7 +99,7 @@ def discover_qtpy_devices() -> list[dict[str, str]]:
 
     # And its network MAC address uses the same serial number
     logger.info("Discovering sensor_node devices on the network")
-    discovered_nodes = network.query_nodes_from_mqtt()
+    discovered_nodes = query_nodes_from_mqtt()
 
     logger.info("Identifying QT Py devices")
     qtpy_devices = []
