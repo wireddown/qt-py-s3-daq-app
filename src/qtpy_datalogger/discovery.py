@@ -21,7 +21,7 @@ import serial
 import toml
 from serial.tools import miniterm as mt
 
-from .datatypes import DetailKey, ExitCode, SnsrNotice, SnsrPath
+from .datatypes import ConnectionTransport, DetailKey, ExitCode, SnsrNotice, SnsrPath
 from .network import query_nodes_from_mqtt
 
 logger = logging.getLogger(__name__)
@@ -239,7 +239,7 @@ def open_session_on_port(port: str) -> None:
     logger.info(f"Reconnect with 'qtpy-datalogger connect --port {port}'")
 
 
-def discover_and_select_qtpy() -> tuple[QTPyDevice | None, str]:
+def discover_and_select_qtpy() -> tuple[QTPyDevice | None, ConnectionTransport | None]:
     """
     Scan for QT Py devices and return a tuple of the selected device and its communication transport.
 
@@ -247,7 +247,7 @@ def discover_and_select_qtpy() -> tuple[QTPyDevice | None, str]:
     """
     qtpy_devices = discover_qtpy_devices()
     if not qtpy_devices:
-        return (None, "")
+        return (None, None)
 
     selectable_devices = sorted(qtpy_devices.keys())
     selected_device = qtpy_devices[selectable_devices[0]]
@@ -262,7 +262,7 @@ def discover_and_select_qtpy() -> tuple[QTPyDevice | None, str]:
             text="Enter a device number",
             type=choices,
             default="1",
-            show_default=True,
+            show_default=False,
         )
         selected_index = int(user_input) - 1
         selected_device = qtpy_devices[selectable_devices[selected_index]]
@@ -270,17 +270,13 @@ def discover_and_select_qtpy() -> tuple[QTPyDevice | None, str]:
 
     has_uart = len(selected_device.com_port) > 0
     has_mqtt = len(selected_device.node_id) > 0
-    uart_transport = "UART (serial)"
-    mqtt_transport = "MQTT (WiFi)"
-    transports = [
-        uart_transport,
-        mqtt_transport,
-    ]
+
+    selectable_transports = sorted(ConnectionTransport)
     if all([has_uart, has_mqtt]):
         logger.info(f"QT Py device '{selected_device.device_description}' has UART and MQTT available, select a connection transport to continue")
-        _ = [print(f"  {index + 1}:  {entry}") for index, entry in enumerate(transports)]  # noqa: T201 -- use direct IO for user
+        _ = [print(f"  {index + 1}:  {entry}") for index, entry in enumerate(selectable_transports)]  # noqa: T201 -- use direct IO for user
 
-        choices = click.Choice([f"{index + 1}" for index in range(len(transports))])
+        choices = click.Choice([f"{index + 1}" for index in range(len(selectable_transports))])
         user_input = click.prompt(
             text="Enter a transport number",
             type=choices,
@@ -288,14 +284,14 @@ def discover_and_select_qtpy() -> tuple[QTPyDevice | None, str]:
             show_default=False,
         )
         selected_index = int(user_input) - 1
-        selected_transport = transports[selected_index]
+        selected_transport = selectable_transports[selected_index]
         selected_reason = "User-selected"
     elif has_uart:
-        selected_transport = uart_transport
+        selected_transport = ConnectionTransport.UART_Serial
     else:
-        selected_transport = mqtt_transport
+        selected_transport = ConnectionTransport.MQTT_WiFi
 
-    if selected_transport == uart_transport:
+    if selected_transport == ConnectionTransport.UART_Serial:
         transport_message = f"port '{selected_device.com_port}' on '{selected_device.drive_root}\\'"
     else:
         transport_message =  f"MQTT node '{selected_device.node_id}' on '{selected_device.ip_address}'"
