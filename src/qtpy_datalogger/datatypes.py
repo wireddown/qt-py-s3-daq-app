@@ -36,6 +36,7 @@ class ExitCode(enum.IntEnum):
 class ConnectionTransport(enum.StrEnum):
     """Supported communication types when connecting to a sensor_node."""
 
+    AutoSelect = "Auto select"
     UART_Serial = "UART  (serial)"
     MQTT_WiFi = "MQTT  (WiFi)"
 

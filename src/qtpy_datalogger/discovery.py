@@ -272,6 +272,7 @@ def discover_and_select_qtpy() -> tuple[QTPyDevice | None, ConnectionTransport |
     has_mqtt = len(selected_device.node_id) > 0
 
     selectable_transports = sorted(ConnectionTransport)
+    selectable_transports.remove(ConnectionTransport.AutoSelect)
     if all([has_uart, has_mqtt]):
         logger.info(f"QT Py device '{selected_device.device_description}' has UART and MQTT available, select a connection transport to continue")
         _ = [print(f"  {index + 1}:  {entry}") for index, entry in enumerate(selectable_transports)]  # noqa: T201 -- use direct IO for user
