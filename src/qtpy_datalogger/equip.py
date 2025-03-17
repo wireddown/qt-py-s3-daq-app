@@ -66,8 +66,8 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
         qtpy_device = discover_and_select_qtpy()
         if not qtpy_device:
             logger.error("No QT Py devices found!")
-        root = pathlib.Path(qtpy_device[discovery._INFO_KEY_drive_letter]).resolve()
             raise SystemExit(ExitCode.Discovery_Failure)
+        root = pathlib.Path(qtpy_device.drive_root).resolve()
 
     device_bundle = _detect_snsr_bundle(root)
     comparison_information = {
