@@ -78,9 +78,9 @@ class QTPyDevice:
     snsr_version: str
 
 
-def handle_connect(behavior: Behavior, port: str) -> None:
+def handle_connect(behavior: Behavior, node: str, port: str) -> None:
     """Connect to a QT Py sensor node."""
-    logger.debug(f"behavior: '{behavior}', port: '{port}'")
+    logger.debug(f"behavior: '{behavior}', node: '{node}', port: '{port}'")
 
     if os.name != "nt":
         logger.error(f"Support for {sys.platform} is not implemented.")
@@ -97,14 +97,21 @@ def handle_connect(behavior: Behavior, port: str) -> None:
             logger.warning("No QT Py devices found!")
         raise SystemExit(ExitCode.Success)
 
-    if not port:
+    communication_transport = ConnectionTransport.AutoSelect
+    if node:
+        communication_transport = ConnectionTransport.MQTT_WiFi
+    elif port:
+        communication_transport = ConnectionTransport.UART_Serial
+
+    if communication_transport == ConnectionTransport.AutoSelect:
         qtpy_device, communication_transport = discover_and_select_qtpy()
         if not qtpy_device:
             logger.error("No QT Py devices found!")
             raise SystemExit(ExitCode.Discovery_Failure)
+        node = qtpy_device.node_id
         port = qtpy_device.com_port
 
-    if not port.startswith("COM"):
+    if not port.startswith("COM") and communication_transport == ConnectionTransport.UART_Serial:
         logger.error("Format for --port argument is '--port COM#' where # is a number.")
         message = f"Cannot open a connection to '{port}'"
         raise click.BadParameter(message, param_hint="--port COM#")
@@ -113,7 +120,10 @@ def handle_connect(behavior: Behavior, port: str) -> None:
         logger.error(f"Opening '{port}' is not supported.")
         raise SystemExit(ExitCode.COM1_Failure)
 
-    open_session_on_port(port)
+    if communication_transport == ConnectionTransport.UART_Serial:
+        open_session_on_port(port)
+    elif communication_transport == ConnectionTransport.MQTT_WiFi:
+        logger.warning("MQTT connection not implemented")
 
 
 def discover_qtpy_devices() -> dict[str, QTPyDevice]:

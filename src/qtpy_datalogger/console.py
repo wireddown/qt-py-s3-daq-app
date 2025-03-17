@@ -88,14 +88,15 @@ def cli(
     "--discover-only",
     "behavior",
     flag_value=discovery.Behavior.DiscoverOnly,
-    help="Behavior: List discovered ports and exit.",
+    help="Behavior: List discovered devices and exit.",
 )
-@click.option("-p", "--port", default="", metavar="COM#", help="COM port to open for communication.")
+@click.option("-n", "--node", default="", metavar="NODE-ID", help="MQTT node to use for connection.")
+@click.option("-p", "--port", default="", metavar="COM#", help="Serial COM port to use for connection.")
 @click.help_option()
-def connect(behavior: str, port: str) -> None:
-    """Connect to a serial port, preferring a CircuitPython device."""
+def connect(behavior: str, node: str, port: str) -> None:
+    """Connect to a serial port, preferring a CircuitPython device, or to an MQTT sensor_node on the network."""
     discovery_behavior = discovery.Behavior(behavior)
-    discovery.handle_connect(discovery_behavior, port)
+    discovery.handle_connect(discovery_behavior, node, port)
 
 
 @cli.command(epilog=f"Help and home page: {DEFAULT_HELP_URL}")
