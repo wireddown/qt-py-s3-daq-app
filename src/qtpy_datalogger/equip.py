@@ -63,7 +63,7 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
         raise SystemExit(ExitCode.Success)
 
     if not root:
-        qtpy_device = discover_and_select_qtpy()
+        qtpy_device, communication_transport = discover_and_select_qtpy()
         if not qtpy_device:
             logger.error("No QT Py devices found!")
             raise SystemExit(ExitCode.Discovery_Failure)

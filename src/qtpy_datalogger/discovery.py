@@ -98,7 +98,7 @@ def handle_connect(behavior: Behavior, port: str) -> None:
         raise SystemExit(ExitCode.Success)
 
     if not port:
-        qtpy_device = discover_and_select_qtpy()
+        qtpy_device, communication_transport = discover_and_select_qtpy()
         if not qtpy_device:
             logger.error("No QT Py devices found!")
             raise SystemExit(ExitCode.Discovery_Failure)
@@ -239,38 +239,69 @@ def open_session_on_port(port: str) -> None:
     logger.info(f"Reconnect with 'qtpy-datalogger connect --port {port}'")
 
 
-def discover_and_select_qtpy() -> QTPyDevice | None:
+def discover_and_select_qtpy() -> tuple[QTPyDevice | None, str]:
     """
-    Scan for QT Py devices and return one.
+    Scan for QT Py devices and return a tuple of the selected device and its communication transport.
 
     Ask the user for input when there is more than one device available.
     """
     qtpy_devices = discover_qtpy_devices()
-    if qtpy_devices:
-        selectable_devices = sorted(qtpy_devices.keys())
-        selected_device = qtpy_devices[selectable_devices[0]]
-        selected_reason = "Auto-selected"
-        if len(selectable_devices) > 1:
-            logger.info(f"Found {len(selectable_devices)} QT Py devices, select a device to continue")
-            formatted_lines = _format_port_table(qtpy_devices)
-            _ = [print(line) for line in formatted_lines]  # noqa: T201 -- use direct IO for user
+    if not qtpy_devices:
+        return (None, "")
 
-            choices = click.Choice([f"{index + 1}" for index in range(len(selectable_devices))])
-            user_input = click.prompt(
-                text="Enter a device number",
-                type=choices,
-                default="1",
-                show_default=False,
-            )
-            selected_index = int(user_input) - 1
-            selected_device = qtpy_devices[selectable_devices[selected_index]]
-            selected_reason = "User-selected"
-        transport = f"port '{selected_device.com_port}' on {selected_device.drive_root}" if selected_device.com_port else f"MQTT node '{selected_device.node_id}' on '{selected_device.ip_address}'"
-        logger.info(
-            f"{selected_reason} '{selected_device.device_description}' with {transport}"
+    selectable_devices = sorted(qtpy_devices.keys())
+    selected_device = qtpy_devices[selectable_devices[0]]
+    selected_reason = "Auto-selected"
+    if len(selectable_devices) > 1:
+        logger.info(f"Found {len(selectable_devices)} QT Py devices, select a device to continue")
+        formatted_lines = _format_port_table(qtpy_devices)
+        _ = [print(line) for line in formatted_lines]  # noqa: T201 -- use direct IO for user
+
+        choices = click.Choice([f"{index + 1}" for index in range(len(selectable_devices))])
+        user_input = click.prompt(
+            text="Enter a device number",
+            type=choices,
+            default="1",
+            show_default=True,
         )
-        return selected_device
-    return None
+        selected_index = int(user_input) - 1
+        selected_device = qtpy_devices[selectable_devices[selected_index]]
+        selected_reason = "User-selected"
+
+    has_uart = len(selected_device.com_port) > 0
+    has_mqtt = len(selected_device.node_id) > 0
+    uart_transport = "UART (serial)"
+    mqtt_transport = "MQTT (WiFi)"
+    transports = [
+        uart_transport,
+        mqtt_transport,
+    ]
+    if all([has_uart, has_mqtt]):
+        logger.info(f"QT Py device '{selected_device.device_description}' has UART and MQTT available, select a connection transport to continue")
+        _ = [print(f"  {index + 1}:  {entry}") for index, entry in enumerate(transports)]  # noqa: T201 -- use direct IO for user
+
+        choices = click.Choice([f"{index + 1}" for index in range(len(transports))])
+        user_input = click.prompt(
+            text="Enter a transport number",
+            type=choices,
+            default="1",
+            show_default=False,
+        )
+        selected_index = int(user_input) - 1
+        selected_transport = transports[selected_index]
+        selected_reason = "User-selected"
+    elif has_uart:
+        selected_transport = uart_transport
+    else:
+        selected_transport = mqtt_transport
+
+    if selected_transport == uart_transport:
+        transport_message = f"port '{selected_device.com_port}' on '{selected_device.drive_root}\\'"
+    else:
+        transport_message =  f"MQTT node '{selected_device.node_id}' on '{selected_device.ip_address}'"
+
+    logger.info(f"{selected_reason} '{selected_device.device_description}' as {transport_message}")
+    return (selected_device, selected_transport)
 
 
 def _query_ports_from_serial() -> dict[str, dict[DetailKey, str]]:
