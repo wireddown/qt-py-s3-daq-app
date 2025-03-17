@@ -9,15 +9,9 @@ import time
 from enum import StrEnum
 from typing import Callable, NamedTuple
 
+from .datatypes import ExitCode, Links
+
 logger = logging.getLogger(__name__)
-
-
-HELP_URL = "https://github.com/wireddown/qt-py-s3-daq-app/wiki/Walkthrough-5-MQTT"
-
-_EXIT_SUCCESS = 0
-_EXIT_SERVER_MISSING_FAILURE = 61
-_EXIT_SERVER_OFFLINE_FAILURE = 62
-_EXIT_SERVER_INACCESSIBLE_FAILURE = 63
 
 
 class Behavior(StrEnum):
@@ -79,7 +73,7 @@ def handle_server(behavior: Behavior, publish: tuple[str, str]) -> None:
     if not mqtt_broker_information:
         logger.error("MQTT broker is not a registered service. Is it installed?")
         logger.error("  Visit 'https://mosquitto.org/download/' to download it")
-        raise SystemExit(_EXIT_SERVER_MISSING_FAILURE)
+        raise SystemExit(ExitCode.Server_Missing_Failure)
 
     message_lines_with_level = _analyze_mqtt_broker(mqtt_broker_information)
     did_warn = False
@@ -93,15 +87,15 @@ def handle_server(behavior: Behavior, publish: tuple[str, str]) -> None:
 
     if behavior == Behavior.Describe and did_warn:
         logger.error("MQTT server is not configured to support sensor nodes!")
-        logger.error(f"  Visit {HELP_URL} to learn more")
-        raise SystemExit(_EXIT_SERVER_INACCESSIBLE_FAILURE)
+        logger.error(f"  Visit {Links.MQTT_Walkthrough} to learn more")
+        raise SystemExit(ExitCode.Server_Inaccessible_Failure)
 
     if behavior == Behavior.Restart:
         did_restart = _restart_mqtt_broker_with_wmi(mqtt_broker_information)
         if did_restart:
-            raise SystemExit(_EXIT_SUCCESS)
+            raise SystemExit(ExitCode.Success)
         logger.error("Could not restart the MQTT broker service!")
-        raise SystemExit(_EXIT_SERVER_OFFLINE_FAILURE)
+        raise SystemExit(ExitCode.Server_Offline_Failure)
 
     if behavior == Behavior.Observe:
         subscribe_exe = mqtt_broker_information.server_executable.with_name("mosquitto_sub.exe")
@@ -125,7 +119,7 @@ def handle_server(behavior: Behavior, publish: tuple[str, str]) -> None:
             did_restart = _restart_mqtt_broker_with_wmi(mqtt_broker_information)
             if not did_restart:
                 logger.error("Could not restart the MQTT broker service!")
-                raise SystemExit(_EXIT_SERVER_OFFLINE_FAILURE)
+                raise SystemExit(ExitCode.Server_Offline_Failure)
 
         logger.info(f"Subscribing with '{' '.join(subscribe_command)}'")
         logger.info("Use Ctrl-C to quit")
@@ -150,7 +144,7 @@ def handle_server(behavior: Behavior, publish: tuple[str, str]) -> None:
             logger.warning(f"Received exit code '{result.returncode}' from '{publish_exe.name}'")
             _ = [logger.warning(line) for line in result.stderr.decode("UTF-8")]
             raise SystemExit(result.returncode)
-        raise SystemExit(_EXIT_SUCCESS)
+        raise SystemExit(ExitCode.Success)
 
 
 def _analyze_mqtt_broker(broker_information: MqttBrokerInformation) -> list[tuple[str, int]]:
