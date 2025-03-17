@@ -1,19 +1,17 @@
 """Functions for communicating with QT Py sensor nodes on the network."""
 
 import asyncio
-import contextlib
 import json
 import logging
 import os
 import platform
 import socket
 import uuid
-from collections.abc import Generator
-from typing import Any, NamedTuple
+from typing import NamedTuple
 
 import gmqtt
 
-from .equip import _get_package_notice_info
+from .datatypes import DetailKey, SnsrNotice, suppress_unless_debug
 from .sensor_node.snsr.node import classes as node_classes
 from .sensor_node.snsr.node import mqtt as node_mqtt
 
@@ -184,22 +182,7 @@ class QTPyController:
         return f"{command_name}-{self.named_counter.count(command_name)}"
 
 
-@contextlib.contextmanager
-def suppress_unless_debug() -> Generator[None, Any, None]:
-    """Suppress logger.info() messages unless logging has been set to DEBUG / --verbose."""
-    initial_log_level = logger.getEffectiveLevel()
-    should_suppress = initial_log_level > logging.DEBUG
-    if should_suppress:
-        try:
-            logging.getLogger().setLevel(logging.WARNING)
-            yield
-        finally:
-            logging.getLogger().setLevel(initial_log_level)
-    else:
-        yield
-
-
-def query_nodes_from_mqtt() -> dict[str, dict[str, str]]:
+def query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
     """
     Scan the MQTT broker on the network for sensor nodes and return a dictionary of information.
 
@@ -211,7 +194,7 @@ def query_nodes_from_mqtt() -> dict[str, dict[str, str]]:
     return discovered_nodes
 
 
-async def _query_nodes_from_mqtt() -> dict[str, dict[str, str]]:
+async def _query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
     mac_address = hex(uuid.getnode())[2:]
     ip_address = socket.gethostbyname(socket.gethostname())
     controller = QTPyController(
@@ -227,14 +210,14 @@ async def _query_nodes_from_mqtt() -> dict[str, dict[str, str]]:
     discovered_sensor_nodes = await controller.collect_identify_responses()
     node_information = {
         node.descriptor.node_id: {
-            "hardware_name": node.descriptor.hardware_name,
-            "serial_number": node.descriptor.serial_number,
-            "system_name": node.descriptor.system_name,
-            "python_implementation": node.descriptor.python_implementation,
-            "version": node.descriptor.notice_information.version,
-            "commit": node.descriptor.notice_information.commit,
-            "timestamp": node.descriptor.notice_information.timestamp,
-            "ip_address": node.descriptor.ip_address,
+            DetailKey.device_description: node.descriptor.hardware_name,
+            DetailKey.serial_number: node.descriptor.serial_number,
+            DetailKey.system_name: node.descriptor.system_name,
+            DetailKey.python_implementation: node.descriptor.python_implementation,
+            DetailKey.snsr_version: node.descriptor.notice_information.version,
+            DetailKey.snsr_commit: node.descriptor.notice_information.commit,
+            DetailKey.snsr_timestamp: node.descriptor.notice_information.timestamp,
+            DetailKey.ip_address: node.descriptor.ip_address,
         }
         for node in discovered_sensor_nodes
     }
@@ -257,7 +240,7 @@ def _build_sender_information(descriptor_topic: str) -> node_classes.SenderInfor
 
 def _build_descriptor_information(role: str, serial_number: str, ip_address: str) -> node_classes.DescriptorInformation:
     """Return a DescriptorInformation instance describing the client's current state."""
-    snsr_notice = _get_package_notice_info(allow_dev_version=True)
+    snsr_notice = SnsrNotice.get_package_notice_info(allow_dev_version=True)
     return node_classes.DescriptorInformation(
             node_id=node_mqtt.format_mqtt_client_id(role, serial_number, os.getpid()),
             serial_number=serial_number,
