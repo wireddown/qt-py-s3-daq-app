@@ -8,11 +8,12 @@ import click
 from . import discovery, tracelog
 from . import equip as _equip
 from . import server as _server
+from .datatypes import Links
 
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_HELP_URL = _equip._HOMEPAGE_URL
+DEFAULT_HELP_URL = Links.Homepage
 
 
 @click.group(
@@ -151,7 +152,7 @@ def equip(behavior: str, root: pathlib.Path | None) -> None:
     _equip.handle_equip(equip_behavior, root)
 
 
-@cli.command(epilog=f"Detailed help online\n\n{_server.HELP_URL}")
+@cli.command(epilog=f"Detailed help online\n\n{Links.MQTT_Walkthrough}")
 @click.option(
     "--describe",
     "behavior",
