@@ -194,6 +194,11 @@ def query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
     return discovered_nodes
 
 
+def open_session_on_node(node_id: str) -> None:
+    """Open a terminal connection to the specified sensor_node."""
+    logger.warning("MQTT connection not implemented")
+
+
 async def _query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
     mac_address = hex(uuid.getnode())[2:]
     ip_address = socket.gethostbyname(socket.gethostname())

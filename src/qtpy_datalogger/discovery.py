@@ -22,7 +22,7 @@ import toml
 from serial.tools import miniterm as mt
 
 from .datatypes import ConnectionTransport, DetailKey, ExitCode, SnsrNotice, SnsrPath
-from .network import query_nodes_from_mqtt
+from .network import open_session_on_node, query_nodes_from_mqtt
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +123,9 @@ def handle_connect(behavior: Behavior, node: str, port: str) -> None:
     if communication_transport == ConnectionTransport.UART_Serial:
         open_session_on_port(port)
     elif communication_transport == ConnectionTransport.MQTT_WiFi:
-        logger.warning("MQTT connection not implemented")
+        open_session_on_node(node)
+        logger.info("")
+        logger.info(f"Reconnect with 'qtpy-datalogger connect --node {node}'")
 
 
 def discover_qtpy_devices() -> dict[str, QTPyDevice]:
