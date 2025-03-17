@@ -12,6 +12,15 @@ from typing import Any, NamedTuple
 import toml
 
 
+class Links(enum.StrEnum):
+    """URLs for references and help."""
+
+    Homepage = "https://github.com/wireddown/qt-py-s3-daq-app/wiki"
+    New_Bug = "https://github.com/wireddown/qt-py-s3-daq-app/issues/new?template=bug-report.md"
+    Board_Support_Matrix = "https://docs.circuitpython.org/en/stable/shared-bindings/support_matrix.html"
+    MQTT_Walkthrough = "https://github.com/wireddown/qt-py-s3-daq-app/wiki/Walkthrough-5-MQTT"
+
+
 class ExitCode(enum.IntEnum):
     """Exit codes for commands."""
 
@@ -24,13 +33,11 @@ class ExitCode(enum.IntEnum):
     Server_Inaccessible_Failure = 63
 
 
-class Links(enum.StrEnum):
-    """URLs for references and help."""
+class ConnectionTransport(enum.StrEnum):
+    """Supported communication types when connecting to a sensor_node."""
 
-    Homepage = "https://github.com/wireddown/qt-py-s3-daq-app/wiki"
-    New_Bug = "https://github.com/wireddown/qt-py-s3-daq-app/issues/new?template=bug-report.md"
-    Board_Support_Matrix = "https://docs.circuitpython.org/en/stable/shared-bindings/support_matrix.html"
-    MQTT_Walkthrough = "https://github.com/wireddown/qt-py-s3-daq-app/wiki/Walkthrough-5-MQTT"
+    UART_Serial = "UART  (serial)"
+    MQTT_WiFi = "MQTT  (WiFi)"
 
 
 class DetailKey(enum.StrEnum):
