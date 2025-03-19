@@ -161,21 +161,77 @@ class QTPyController:
             self.message_queue.put_nowait(other_message)
         return identify_responses
 
-    def send_command(self, node_id: str) -> None:
-        """Send a command to node in the group."""
+    async def scan_for_nodes(self) -> dict[str, dict[DetailKey, str]]:
+        """Scan the group for sensor_nodes and return a dictionary of discovered devices indexed by serial_number."""
+        self.broadcast_identify_command()
+        await _yield_async_event_loop(0.5)
+        discovered_sensor_nodes = await self.collect_identify_responses()
+        node_information = {
+            node.descriptor.node_id: {
+                DetailKey.device_description: node.descriptor.hardware_name,
+                DetailKey.ip_address: node.descriptor.ip_address,
+                DetailKey.python_implementation: node.descriptor.python_implementation,
+                DetailKey.serial_number: node.descriptor.serial_number,
+                DetailKey.snsr_commit: node.descriptor.notice_information.commit,
+                DetailKey.snsr_timestamp: node.descriptor.notice_information.timestamp,
+                DetailKey.snsr_version: node.descriptor.notice_information.version,
+                DetailKey.system_name: node.descriptor.system_name,
+            }
+            for node in discovered_sensor_nodes
+        }
+        return node_information
+
+    async def send_custom_command(self, node_id: str, command: str) -> node_classes.ActionInformation:
+        """Send a command to node in the group and return the sent ActionInformation."""
         command_name = "custom"
-        action_command = node_classes.ActionPayload(
-            action=node_classes.ActionInformation(
-                command=command_name,
-                parameters={
-                    "input": "command line interface parameters",  # readline result here
-                },
-                message_id=self._format_message_id(command_name)
-            ),
+        action_command = node_classes.ActionInformation(
+            command=command_name,
+            parameters={
+                "input": command,
+            },
+            message_id=self._format_message_id(command_name)
+        )
+
+        action_payload = node_classes.ActionPayload(
+            action=action_command,
             sender=_build_sender_information(self.descriptor_topic),
         )
+
+        with suppress_unless_debug():
+            result_topic = node_mqtt.get_result_topic(self.group_id, node_id)
+            self.client.subscribe(result_topic)
+            await asyncio.sleep(0.2)  # Wait long enough to receive the subscription acknowledgements
+
         command_topic = node_mqtt.get_command_topic(self.group_id, node_id)
-        self.client.publish(command_topic, json.dumps(action_command.as_dict()))
+        self.client.publish(command_topic, json.dumps(action_payload.as_dict()))
+
+        return action_command
+
+    async def get_custom_result(self, node_id: str, action_command: node_classes.ActionInformation) -> str:
+        """Monitor the MQTT messages for a matching response to the specified custom command."""
+        custom_result_response = []
+        other_messages = []
+        command_id = action_command.message_id
+        while not custom_result_response:
+            topic_and_message: MqttMessage = await self.message_queue.get()
+            response_json = topic_and_message.message
+            response = json.loads(response_json)
+            if "action" in response:
+                payload = node_classes.ActionPayload.from_dict(response)
+                sending_node = node_mqtt.node_from_topic(payload.sender.descriptor_topic)
+                result_id = payload.action.message_id
+                if sending_node == node_id and result_id == command_id:
+                    custom_result_response.append(payload.action.parameters["output"])
+                    break
+                logger.debug(f"Requeueing response '{topic_and_message}'")
+                other_messages.append(topic_and_message)
+            else:
+                logger.debug(f"Requeueing response '{topic_and_message}'")
+                other_messages.append(topic_and_message)
+            self.message_queue.task_done()
+        for other_message in other_messages:
+            self.message_queue.put_nowait(other_message)
+        return custom_result_response[0]
 
     def _format_message_id(self, command_name: str) -> str:
         """Return a unique message ID for the command_name."""
@@ -197,53 +253,47 @@ def query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
 def open_session_on_node(node_id: str) -> None:
     """Open a terminal connection to the specified sensor_node."""
     asyncio.run(_open_session_on_node(node_id))
-    logger.warning("MQTT connection not implemented")
 
 
 async def _query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
+    broker_host = "localhost"
+    group_id = "centrifuge"
     mac_address = hex(uuid.getnode())[2:]
     ip_address = socket.gethostbyname(socket.gethostname())
     controller = QTPyController(
-        broker_host="localhost",
-        group_id="centrifuge",
+        broker_host=broker_host,
+        group_id=group_id,
         mac_address=mac_address,
         ip_address=ip_address
     )
 
     await controller.connect_and_subscribe()
-    controller.broadcast_identify_command()
-    await _yield_async_event_loop(0.5)
-    discovered_sensor_nodes = await controller.collect_identify_responses()
-    node_information = {
-        node.descriptor.node_id: {
-            DetailKey.device_description: node.descriptor.hardware_name,
-            DetailKey.serial_number: node.descriptor.serial_number,
-            DetailKey.system_name: node.descriptor.system_name,
-            DetailKey.python_implementation: node.descriptor.python_implementation,
-            DetailKey.snsr_version: node.descriptor.notice_information.version,
-            DetailKey.snsr_commit: node.descriptor.notice_information.commit,
-            DetailKey.snsr_timestamp: node.descriptor.notice_information.timestamp,
-            DetailKey.ip_address: node.descriptor.ip_address,
-        }
-        for node in discovered_sensor_nodes
-    }
-
+    node_information = await controller.scan_for_nodes()
     await controller.disconnect()
+
     return node_information
 
 
 async def _open_session_on_node(node_id: str) -> None:
+    broker_host = "localhost"
+    group_id = "centrifuge"
     mac_address = hex(uuid.getnode())[2:]
     ip_address = socket.gethostbyname(socket.gethostname())
     controller = QTPyController(
-        broker_host="localhost",
-        group_id="centrifuge",
+        broker_host=broker_host,
+        group_id=group_id,
         mac_address=mac_address,
         ip_address=ip_address
     )
 
     await controller.connect_and_subscribe()
-    # do the thing
+    # - confirm node online
+    user_input = ""
+    while user_input not in ["exit", "quit"]:
+        user_input = input("qtpy > ")
+        command = await controller.send_custom_command(node_id, user_input)
+        response = await controller.get_custom_result(node_id, command)
+        print(response)
     await controller.disconnect()
 
 
