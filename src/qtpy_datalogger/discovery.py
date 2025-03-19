@@ -310,7 +310,7 @@ def discover_and_select_qtpy(transport: ConnectionTransport = ConnectionTranspor
     elif transport == ConnectionTransport.MQTT_WiFi and has_mqtt:
         selected_transport = ConnectionTransport.MQTT_WiFi
     else:
-        return (None, None)
+        return (selected_device, None)
 
     if selected_transport == ConnectionTransport.UART_Serial:
         transport_message = f"port '{selected_device.com_port}' on '{selected_device.drive_root}\\'"
