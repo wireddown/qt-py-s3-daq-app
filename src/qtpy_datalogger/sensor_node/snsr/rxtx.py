@@ -68,10 +68,27 @@ def message(client, topic, message):
         descriptor_message = get_descriptor_payload("node", cpu.uid.hex().lower(), str(radio.ipv4_address))
         client.publish(descriptor_topic, descriptor_message)
     elif last_part == "command":
-        from .core import get_command_payload
+        from json import dumps, loads
+
+        from .core import build_sender_information
+        from .node.classes import ActionInformation, ActionPayload
         result_topic = f"qtpy/v1/{client.user_data['node_group']}/{client.user_data['node_identifier']}/result"
-        command_information = get_command_payload(message)
-        client.publish(result_topic, f"{command_information.as_dict()}")
+        action_payload_information = loads(message)
+        action_payload = ActionPayload.from_dict(action_payload_information)
+        action = action_payload.action
+        sender = build_sender_information(f"qtpy/v1/{client.user_data['node_group']}/{client.user_data['node_identifier']}/$DESCRIPTOR")
+        result_payload = ActionPayload(
+            action=ActionInformation(
+                command=action.command,
+                parameters={
+                    "output": f"received: {action.parameters['input']}",
+                    "complete": True,
+                },
+                message_id=action.message_id,
+            ),
+            sender=sender
+        )
+        client.publish(result_topic, dumps(result_payload.as_dict()))
 
 
 def create_mqtt_client(radio, node_group: str, node_identifier: str) -> minimqtt.MQTT:

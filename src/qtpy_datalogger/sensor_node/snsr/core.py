@@ -145,12 +145,3 @@ def get_descriptor_payload(role: str, serial_number: str, ip_address: str) -> st
     sender = build_sender_information(descriptor_topic)
     response = DescriptorPayload(descriptor=descriptor, sender=sender)
     return json.dumps(response.as_dict())
-
-
-def get_command_payload(message: str) -> dict[str, str]:
-    import json
-
-    from snsr.node.classes import ActionPayload
-
-    action_payload = ActionPayload.from_dict(json.loads(message))
-    return action_payload
