@@ -290,7 +290,7 @@ async def _open_session_on_node(node_id: str) -> None:
     # - confirm node online
     user_input = ""
     while user_input not in ["exit", "quit"]:
-        user_input = input("qtpy > ")
+        user_input = input(f"{node_id} > ")
         command = await controller.send_custom_command(node_id, user_input)
         response = await controller.get_custom_result(node_id, command)
         print(response)
