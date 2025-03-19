@@ -25,6 +25,7 @@ class ExitCode(enum.IntEnum):
     """Exit codes for commands."""
 
     Success = 0
+    Equip_Without_USB_Failure = 31
     Discovery_Failure = 41
     COM1_Failure = 42
     Board_Lookup_Failure = 51

@@ -251,7 +251,7 @@ def open_session_on_port(port: str) -> None:
     logger.info(f"Reconnect with 'qtpy-datalogger connect --port {port}'")
 
 
-def discover_and_select_qtpy() -> tuple[QTPyDevice | None, ConnectionTransport | None]:
+def discover_and_select_qtpy(transport: ConnectionTransport = ConnectionTransport.AutoSelect) -> tuple[QTPyDevice | None, ConnectionTransport | None]:
     """
     Scan for QT Py devices and return a tuple of the selected device and its communication transport.
 
@@ -283,26 +283,34 @@ def discover_and_select_qtpy() -> tuple[QTPyDevice | None, ConnectionTransport |
     has_uart = len(selected_device.com_port) > 0
     has_mqtt = len(selected_device.node_id) > 0
 
-    selectable_transports = sorted(ConnectionTransport)
-    selectable_transports.remove(ConnectionTransport.AutoSelect)
-    if all([has_uart, has_mqtt]):
-        logger.info(f"QT Py device '{selected_device.device_description}' has UART and MQTT available, select a connection transport to continue")
-        _ = [print(f"  {index + 1}:  {entry}") for index, entry in enumerate(selectable_transports)]  # noqa: T201 -- use direct IO for user
+    if transport == ConnectionTransport.AutoSelect:
+        if all([has_uart, has_mqtt]):
+            logger.info(f"QT Py device '{selected_device.device_description}' has UART and MQTT available, select a connection transport to continue")
+            selectable_transports = sorted(ConnectionTransport)
+            selectable_transports.remove(ConnectionTransport.AutoSelect)
 
-        choices = click.Choice([f"{index + 1}" for index in range(len(selectable_transports))])
-        user_input = click.prompt(
-            text="Enter a transport number",
-            type=choices,
-            default="1",
-            show_default=False,
-        )
-        selected_index = int(user_input) - 1
-        selected_transport = selectable_transports[selected_index]
-        selected_reason = "User-selected"
-    elif has_uart:
+            _ = [print(f"  {index + 1}:  {entry}") for index, entry in enumerate(selectable_transports)]  # noqa: T201 -- use direct IO for user
+
+            choices = click.Choice([f"{index + 1}" for index in range(len(selectable_transports))])
+            user_input = click.prompt(
+                text="Enter a transport number",
+                type=choices,
+                default="1",
+                show_default=False,
+            )
+            selected_index = int(user_input) - 1
+            selected_transport = selectable_transports[selected_index]
+            selected_reason = "User-selected"
+        elif has_uart:
+            selected_transport = ConnectionTransport.UART_Serial
+        else:
+            selected_transport = ConnectionTransport.MQTT_WiFi
+    elif transport == ConnectionTransport.UART_Serial and has_uart:
         selected_transport = ConnectionTransport.UART_Serial
-    else:
+    elif transport == ConnectionTransport.MQTT_WiFi and has_mqtt:
         selected_transport = ConnectionTransport.MQTT_WiFi
+    else:
+        return (None, None)
 
     if selected_transport == ConnectionTransport.UART_Serial:
         transport_message = f"port '{selected_device.com_port}' on '{selected_device.drive_root}\\'"
