@@ -36,5 +36,13 @@ def get_result_topic(group_id: str, node_id: str) -> str:
     return f"qtpy/v1/{group_id}/{node_id}/result"
 
 
+def node_from_topic(topic: str) -> str:
+    parts = topic.split("/")
+    if len(parts) < 5:
+        # Group-level topic like 'qtpy/v1/{group_id}/broadcast'
+        return ""
+    return parts[3]
+
+
 def format_mqtt_client_id(role: str, mac_address: str, pid: int) -> str:
     return f"{role}-{mac_address}-{pid}"
