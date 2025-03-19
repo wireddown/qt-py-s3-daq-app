@@ -225,7 +225,7 @@ class ActionInformation:
     def __init__(
         self: "ActionInformation",
         command: str,
-        parameters: dict[str, str],
+        parameters: dict,
         message_id: str,
     ):
         self.information = {
