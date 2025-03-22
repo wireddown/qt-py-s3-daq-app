@@ -138,7 +138,7 @@ def test_host_build_descriptor() -> None:
     assert descriptor
 
 
-def test_node_build_descriptor(monkeypatch) -> None:
+def test_node_build_descriptor(monkeypatch: pytest.MonkeyPatch) -> None:
     """Does the node-side usage match the shared classes' definitions?"""
     from qtpy_datalogger.datatypes import SnsrNotice
     from qtpy_datalogger.sensor_node.snsr.core import _build_descriptor as node_build_descriptor
