@@ -7,8 +7,10 @@ import shutil
 import pytest
 import toml
 
-from qtpy_datalogger import equip
+from qtpy_datalogger import discovery, equip
 from qtpy_datalogger.datatypes import ExitCode, SnsrNotice, SnsrPath
+
+from .test_discovery import one_mqtt_qtpy_device
 
 
 def create_test_device_folder(tmp_folder: pathlib.Path) -> None:
@@ -94,6 +96,20 @@ def test_compare(tmp_path: pathlib.Path) -> None:
     exception_type = type(exception)
     assert exception_type is SystemExit
     assert exception.code == ExitCode.Success
+
+
+def test_cannot_install_with_mqtt(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Does it exit with error when the device only has MQTT transport?"""
+    monkeypatch.setattr(discovery, "discover_qtpy_devices", one_mqtt_qtpy_device)
+
+    with pytest.raises(SystemExit) as excinfo:
+        equip.handle_equip(behavior=equip.Behavior.Upgrade, root=None)
+
+    assert excinfo
+    exception = excinfo.value
+    exception_type = type(exception)
+    assert exception_type is SystemExit
+    assert exception.code == ExitCode.Equip_Without_USB_Failure
 
 
 def test_install_new(tmp_path: pathlib.Path) -> None:
