@@ -191,7 +191,7 @@ def _analyze_mqtt_broker(broker_information: MqttBrokerInformation) -> list[tupl
         logger.info("")
     firewall_line = f"{'Firewall':>12}  {firewall_message}"
 
-    return [
+    broker_analysis = [
         (broker_information.description, logging.INFO),
         (running_line, running_level),
         (f"{'Status':>12}  {broker_information.server_health}", logging.INFO),
@@ -200,6 +200,7 @@ def _analyze_mqtt_broker(broker_information: MqttBrokerInformation) -> list[tupl
         (server_line, server_level),
         (firewall_line, firewall_level),
     ]
+    return broker_analysis
 
 
 def _query_mqtt_broker_information_from_wmi() -> MqttBrokerInformation | None:
@@ -232,6 +233,7 @@ def _query_mqtt_broker_information_from_wmi() -> MqttBrokerInformation | None:
         server_configuration=server_config,
         firewall_rules=matching_port_rules,
     )
+    logger.debug(broker_information)
     return broker_information
 
 
