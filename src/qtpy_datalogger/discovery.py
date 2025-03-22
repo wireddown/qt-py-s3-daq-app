@@ -42,7 +42,7 @@ class Behavior(StrEnum):
 #  > )
 # because
 # - type checkers treat 'QTPyDevice' as a variable and not a class
-# - it adds some unwanted properties like 'drive_partition' and 'system_name'
+# - it adds some unwanted properties like 'drive_partition' and 'snsr_timestamp'
 @dataclasses.dataclass
 class QTPyDevice:
     """

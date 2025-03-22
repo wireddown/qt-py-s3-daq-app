@@ -453,3 +453,10 @@ def test_windows_discovery(monkeypatch: pytest.MonkeyPatch) -> None:
     assert mqtt_only_serial_number in devices
     assert not devices[mqtt_only_serial_number].com_port
     assert devices[mqtt_only_serial_number].node_id
+
+
+def test_QTPyDevice_uses_DetailKeys() -> None:
+    """Do the properties in QTPyDevice match DetailKey names?"""
+    DetailKey_names = sorted(DetailKey.__members__)
+    instance_property_names = sorted(discovery.QTPyDevice.__annotations__)
+    assert set(DetailKey_names) > set(instance_property_names)
