@@ -295,7 +295,7 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
                 newer_files.add(path.name)
                 continue
             older_files.add(path.name)
-        if not newer_files and behavior == Behavior.OnlyNewerFiles:
+        if not newer_files:
             logger.info("All files up to date with the host")
             return
         ignored_files = older_files - newer_files
