@@ -21,8 +21,9 @@ import serial
 import toml
 from serial.tools import miniterm as mt
 
+from qtpy_datalogger import network
+
 from .datatypes import ConnectionTransport, DetailKey, ExitCode, SnsrNotice, SnsrPath
-from .network import open_session_on_node, query_nodes_from_mqtt
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +124,7 @@ def handle_connect(behavior: Behavior, node: str, port: str) -> None:
     if communication_transport == ConnectionTransport.UART_Serial:
         open_session_on_port(port)
     elif communication_transport == ConnectionTransport.MQTT_WiFi:
-        open_session_on_node(node)
+        network.open_session_on_node(node)
         logger.info("")
         logger.info(f"Reconnect with 'qtpy-datalogger connect --node {node}'")
 
@@ -140,7 +141,7 @@ def discover_qtpy_devices() -> dict[str, QTPyDevice]:
 
     # And its network MAC address uses the same serial number
     logger.info("Discovering sensor_node devices on the network")
-    discovered_nodes = query_nodes_from_mqtt()
+    discovered_nodes = network.query_nodes_from_mqtt()
 
     logger.info("Identifying QT Py devices")
     qtpy_devices: dict[str, QTPyDevice] = {}

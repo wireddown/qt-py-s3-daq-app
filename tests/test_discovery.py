@@ -4,8 +4,86 @@ import click
 import pytest
 import serial
 
-from qtpy_datalogger import discovery
+from qtpy_datalogger import discovery, network
 from qtpy_datalogger.datatypes import ExitCode
+
+usb_qtpy_1 = discovery.QTPyDevice(
+    com_id="USB VID:PID=239A:811A SER=00AA00AA00AA LOCATION=1-7:x.0",
+    com_port="COMxx",
+    device_description="Adafruit QT Py ESP32S3 no PSRAM",
+    drive_label="CIRCUITPY",
+    drive_root="Q:",
+    ip_address="",
+    node_id="",
+    python_implementation="9.2.1",
+    serial_number="00aa00aa00aa",
+    snsr_version="1.2.3",
+)
+
+mqtt_qtpy_1 = discovery.QTPyDevice(
+    com_id="",
+    com_port="",
+    device_description="adafruit_qtpy_esp32s3_nopsram",
+    drive_label="",
+    drive_root="",
+    ip_address="192.168.0.0",
+    node_id="node-00aa00aa00aa-0",
+    python_implementation="circuitpython-9.2.1",
+    serial_number="00aa00aa00aa",
+    snsr_version="1.2.3",
+)
+
+dual_mode_qtpy_1 = discovery.QTPyDevice(
+    com_id="USB VID:PID=239A:811A SER=00AA00AA00AA LOCATION=1-7:x.0",
+    com_port="COMxx",
+    device_description="Adafruit QT Py ESP32S3 no PSRAM",
+    drive_label="CIRCUITPY",
+    drive_root="Q:",
+    ip_address="192.168.0.0",
+    node_id="node-00aa00aa00aa-0",
+    python_implementation="circuitpython-9.2.1",
+    serial_number="00aa00aa00aa",
+    snsr_version="1.2.3",
+)
+
+usb_qtpy_2 = discovery.QTPyDevice(
+    com_id="USB VID:PID=239A:8144 SER=11CC11CC11CC LOCATION=1-8:x.0",
+    com_port="COMyy",
+    device_description="Adafruit QT Py ESP32S3 2MB PSRAM",
+    drive_label="CIRCUITPY",
+    drive_root="T:",
+    ip_address="",
+    node_id="",
+    python_implementation="9.2.1",
+    serial_number="11cc11cc11cc",
+    snsr_version="1.1.0",
+)
+
+mqtt_qtpy_2 = discovery.QTPyDevice(
+    com_id="",
+    com_port="",
+    device_description="adafruit_qtpy_esp32s3_4mbflash_2mbpsram",
+    drive_label="",
+    drive_root="",
+    ip_address="172.16.0.0",
+    node_id="node-11cc11cc11cc-0",
+    python_implementation="circuitpython-9.2.1",
+    serial_number="11cc11cc11cc",
+    snsr_version="1.1.0",
+)
+
+dual_mode_qtpy_2 = discovery.QTPyDevice(
+    com_id="USB VID:PID=239A:8144 SER=11CC11CC11CC LOCATION=1-8:x.0",
+    com_port="COMyy",
+    device_description="Adafruit QT Py ESP32S3 2MB PSRAM",
+    drive_label="CIRCUITPY",
+    drive_root="T:",
+    ip_address="172.16.0.0",
+    node_id="node-11cc11cc11cc-0",
+    python_implementation="circuitpython-9.2.1",
+    serial_number="11cc11cc11cc",
+    snsr_version="1.1.0",
+)
 
 
 def no_qtpy_devices() -> dict[str, discovery.QTPyDevice]:
@@ -16,49 +94,36 @@ def no_qtpy_devices() -> dict[str, discovery.QTPyDevice]:
 def one_usb_qtpy_device() -> dict[str, discovery.QTPyDevice]:
     """Override discovery.discover_qtpy_devices() to return one result."""
     return {
-        "00AA00AA00AA": discovery.QTPyDevice(
-            com_id="USB VID:PID=239A:811A SER=00AA00AA00AA LOCATION=1-7:x.0",
-            com_port="COMxx",
-            device_description="Adafruit QT Py ESP32S3 no PSRAM",
-            drive_label="CIRCUITPY",
-            drive_root="Q:",
-            ip_address="",
-            node_id="",
-            python_implementation="9.2.1",
-            serial_number="00AA00AA00AA",
-            snsr_version="1.2.3",
-        ),
+        usb_qtpy_1.serial_number: usb_qtpy_1,
     }
 
 
 def two_usb_qtpy_devices() -> dict[str, discovery.QTPyDevice]:
     """Override discovery.discover_qtpy_devices() to return two results."""
     return {
-        "00AA00AA00AA": discovery.QTPyDevice(
-            com_id="USB VID:PID=239A:811A SER=00AA00AA00AA LOCATION=1-7:x.0",
-            com_port="COMxx",
-            device_description="Adafruit QT Py ESP32S3 no PSRAM",
-            drive_label="CIRCUITPY",
-            drive_root="Q:",
-            ip_address="",
-            node_id="",
-            python_implementation="9.2.1",
-            serial_number="00AA00AA00AA",
-            snsr_version="1.2.3",
-        ),
-        "11CC11CC11CC": discovery.QTPyDevice(
-            com_id="USB VID:PID=239A:8144 SER=11CC11CC11CC LOCATION=1-8:x.0",
-            com_port="COMyy",
-            device_description="Adafruit QT Py ESP32S3 2MB PSRAM",
-            drive_label="CIRCUITPY",
-            drive_root="T:",
-            ip_address="",
-            node_id="",
-            python_implementation="9.2.1",
-            serial_number="11CC11CC11CC",
-            snsr_version="1.1.0",
-        ),
+        usb_qtpy_1.serial_number: usb_qtpy_1,
+        usb_qtpy_2.serial_number: usb_qtpy_2,
     }
+
+
+def one_mqtt_qtpy_device() -> dict[str, discovery.QTPyDevice]:
+    """Override discovery.discover_qtpy_devices() to return one result."""
+    return {
+        mqtt_qtpy_1.serial_number: mqtt_qtpy_1,
+    }
+
+
+def two_dual_mode_qtpy_devices() -> dict[str, discovery.QTPyDevice]:
+    """Override discovery.discover_qtpy_devices() to return two results."""
+    return {
+        dual_mode_qtpy_1.serial_number: dual_mode_qtpy_1,
+        dual_mode_qtpy_2.serial_number: dual_mode_qtpy_2,
+    }
+
+
+def select_first_from_prompt(text: str, type: click.Choice, default: str, show_default: bool) -> str:  # noqa: A002 -- we must hide 'type' to match the click API
+    """Override click.prompt() to select the first item from the type parameter."""
+    return type.choices[0]
 
 
 def select_last_from_prompt(text: str, type: click.Choice, default: str, show_default: bool) -> str:  # noqa: A002 -- we must hide 'type' to match the click API
@@ -66,14 +131,24 @@ def select_last_from_prompt(text: str, type: click.Choice, default: str, show_de
     return type.choices[-1]
 
 
+def raise_exception(exception_type:type, message: str) -> None:
+    """Throw a new excepion of the specified type with the specified message."""
+    raise exception_type(message)
+
+
 # These cases are always true for connect() no matter how many devices have been discovered, 0 to many
-universal_test_cases = [
+universal_discover_test_cases = [
     # Arguments:      behavior,     node,  port,   raised_exception,   expected_exit_code
     # Using --discover-only always exits successfully because both --node and --port are ignored
     (discovery.Behavior.DiscoverOnly, "", "", SystemExit, ExitCode.Success),
     (discovery.Behavior.DiscoverOnly, "", "COM2", SystemExit, ExitCode.Success),
     (discovery.Behavior.DiscoverOnly, "", "COM1", SystemExit, ExitCode.Success),
     (discovery.Behavior.DiscoverOnly, "", "99", SystemExit, ExitCode.Success),
+    (discovery.Behavior.DiscoverOnly, "node-bb88bb88bb88-0", "", SystemExit, ExitCode.Success),
+]
+
+universal_usb_test_cases = [
+    # Arguments:      behavior,     node,  port,   raised_exception,   expected_exit_code
     # Using '--port COM1' always exits with error because it is not supported
     (discovery.Behavior.AutoConnect, "", "COM1", SystemExit, ExitCode.COM1_Failure),
     # Using a name for --port that doesn't start with 'COM' always exits with error because only Windows is supported
@@ -96,14 +171,15 @@ def assert_universal_test_cases(excinfo: pytest.ExceptionInfo, expected_exit_cod
 @pytest.mark.parametrize(
     ("behavior", "node", "port", "raised_exception", "expected_exit_code"),
     [
-        *universal_test_cases,
+        *universal_discover_test_cases,
+        *universal_usb_test_cases,
         (
             discovery.Behavior.AutoConnect,
             "",
             "",
             SystemExit,
             ExitCode.Discovery_Failure,
-        ),  # This exception means connect() failed because no serial ports were discovered
+        ),  # This exception means connect() failed because no QT Py devices were discovered
     ],
 )
 def test_handle_connect_with_no_devices(
@@ -127,7 +203,8 @@ def test_handle_connect_with_no_devices(
 @pytest.mark.parametrize(
     ("behavior", "node", "port", "raised_exception", "expected_exit_code"),
     [
-        *universal_test_cases,
+        *universal_discover_test_cases,
+        *universal_usb_test_cases,
         (
             discovery.Behavior.AutoConnect,
             "",
@@ -137,7 +214,7 @@ def test_handle_connect_with_no_devices(
         ),  # This exception means connect() tried to correctly open the (monkeypatched) port
     ],
 )
-def test_handle_connect_with_one_device(
+def test_handle_connect_with_one_usb_device(
     monkeypatch: pytest.MonkeyPatch,
     behavior: discovery.Behavior,
     node: str,
@@ -165,7 +242,8 @@ def test_handle_connect_with_one_device(
 @pytest.mark.parametrize(
     ("behavior", "node", "port", "raised_exception", "expected_exit_code"),
     [
-        *universal_test_cases,
+        *universal_discover_test_cases,
+        *universal_usb_test_cases,
         (
             discovery.Behavior.AutoConnect,
             "",
@@ -175,7 +253,7 @@ def test_handle_connect_with_one_device(
         ),  # This exception means connect() tried to correctly open the (monkeypatched) port
     ],
 )
-def test_handle_connect_with_two_devices(
+def test_handle_connect_with_two_usb_devices(
     monkeypatch: pytest.MonkeyPatch,
     behavior: discovery.Behavior,
     node: str,
@@ -185,7 +263,7 @@ def test_handle_connect_with_two_devices(
 ) -> None:
     """Does it correctly handle connect() when there are two QT Py devices?"""
     monkeypatch.setattr(discovery, "discover_qtpy_devices", two_usb_qtpy_devices)
-    monkeypatch.setattr(click, "prompt", select_last_from_prompt)
+    monkeypatch.setattr(click, "prompt", select_last_from_prompt)  # Choose second device to exercise the user-choice
     discovered_devices = discovery.discover_qtpy_devices()
     selected_device = sorted(discovered_devices)[-1]
     selected_port = discovered_devices[selected_device].com_port
@@ -201,3 +279,85 @@ def test_handle_connect_with_two_devices(
             excinfo.value.args[0]
             == f"could not open port '{expected_port}': FileNotFoundError(2, 'The system cannot find the file specified.', None, 2)"
         )
+
+
+@pytest.mark.parametrize(
+    ("behavior", "node", "port", "raised_exception", "expected_exit_code"),
+    [
+        *universal_discover_test_cases,
+        (
+            discovery.Behavior.AutoConnect,
+            "",
+            "",
+            RuntimeError,
+            0,
+        ),  # This exception means connect() tried to correctly open the (monkeypatched) node
+        (
+            discovery.Behavior.AutoConnect,
+            "node-00aa00aa00aa-0",
+            "",
+            RuntimeError,
+            0,
+        ),  # This exception means connect() tried to correctly open the (monkeypatched) node
+    ],
+)
+def test_handle_connect_with_one_mqtt_device(
+    monkeypatch: pytest.MonkeyPatch,
+    behavior: discovery.Behavior,
+    node: str,
+    port: str,
+    raised_exception: type,
+    expected_exit_code: int,
+) -> None:
+    """Does it correctly handle connect() when there is only one QT Py device?"""
+    monkeypatch.setattr(discovery, "discover_qtpy_devices", one_mqtt_qtpy_device)
+    exception_message = "connect() tried to correctly open the (monkeypatched) node"
+    monkeypatch.setattr(network, "open_session_on_node", lambda e: raise_exception(raised_exception, exception_message))
+    discovered_node = discovery.discover_qtpy_devices().popitem()[1].node_id
+    expected_node = node if node else discovered_node
+
+    with pytest.raises(raised_exception) as excinfo:
+        discovery.handle_connect(behavior, node, port)
+
+    assert_universal_test_cases(excinfo, expected_exit_code, expected_node)
+    if excinfo.value is RuntimeError:
+        assert excinfo.value.args[0] == exception_message
+
+
+@pytest.mark.parametrize(
+    ("behavior", "node", "port", "raised_exception", "expected_exit_code"),
+    [
+        *universal_discover_test_cases,
+        (
+            discovery.Behavior.AutoConnect,
+            "",
+            "",
+            RuntimeError,
+            0,
+        ),  # This exception means connect() tried to correctly open the (monkeypatched) node
+    ]
+)
+def test_handle_connect_with_two_dual_mode_devices(
+    monkeypatch: pytest.MonkeyPatch,
+    behavior: discovery.Behavior,
+    node: str,
+    port: str,
+    raised_exception: type,
+    expected_exit_code: int,
+) -> None:
+    """Does it correctly handle connect() when there are two QT Py devices with both USB and WiFi?"""
+    monkeypatch.setattr(discovery, "discover_qtpy_devices", two_dual_mode_qtpy_devices)
+    exception_message = "connect() tried to correctly open the (monkeypatched) node"
+    monkeypatch.setattr(network, "open_session_on_node", lambda e: raise_exception(raised_exception, exception_message))
+    monkeypatch.setattr(click, "prompt", select_first_from_prompt)  # Choose WiFi connection
+    discovered_devices = discovery.discover_qtpy_devices()
+    selected_device = sorted(discovered_devices)[-1]
+    selected_node = discovered_devices[selected_device].node_id
+    expected_node = node if node else selected_node
+
+    with pytest.raises(raised_exception) as excinfo:
+        discovery.handle_connect(behavior, node, port)
+
+    assert_universal_test_cases(excinfo, expected_exit_code, expected_node)
+    if excinfo.value is RuntimeError:
+        assert excinfo.value.args[0] == exception_message
