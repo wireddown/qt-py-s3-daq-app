@@ -167,29 +167,28 @@ def discover_qtpy_devices() -> dict[str, QTPyDevice]:
                     snsr_version=snsr_version,
                 )
 
-    if qtpy_devices:
-        for serial_number, qtpy_device in qtpy_devices.items():
-            for node_id, sensor_node in discovered_nodes.items():
-                if serial_number == sensor_node[DetailKey.serial_number]:
-                    qtpy_device.node_id = node_id
-                    qtpy_device.snsr_version = sensor_node[DetailKey.snsr_version]
-                    qtpy_device.ip_address = sensor_node[DetailKey.ip_address]
-    else:
-        for node_id, sensor_node in discovered_nodes.items():
-            serial_number = sensor_node[DetailKey.serial_number]
-            device_description = sensor_node[DetailKey.device_description]
-            qtpy_devices[serial_number] = QTPyDevice(
-                com_id="",
-                com_port="",
-                device_description=device_description,
-                drive_label="",
-                drive_root="",
-                ip_address=sensor_node[DetailKey.ip_address],
-                node_id=node_id,
-                python_implementation=sensor_node[DetailKey.python_implementation],
-                serial_number=serial_number,
-                snsr_version=sensor_node[DetailKey.snsr_version]
-            )
+    dual_mode_devices = set(qtpy_devices) & set(discovered_nodes)
+    for dual_mode_device in dual_mode_devices:
+        qtpy_devices[dual_mode_device].ip_address = discovered_nodes[dual_mode_device][DetailKey.ip_address]
+        qtpy_devices[dual_mode_device].node_id = discovered_nodes[dual_mode_device][DetailKey.node_id]
+        qtpy_devices[dual_mode_device].snsr_version = discovered_nodes[dual_mode_device][DetailKey.snsr_version]
+
+    mqtt_only_devices = set(discovered_nodes) - set(qtpy_devices)
+    for mqtt_only_device in [discovered_nodes[n] for n in mqtt_only_devices]:
+        serial_number = mqtt_only_device[DetailKey.serial_number]
+        device_description = mqtt_only_device[DetailKey.device_description]
+        qtpy_devices[serial_number] = QTPyDevice(
+            com_id="",
+            com_port="",
+            device_description=device_description,
+            drive_label="",
+            drive_root="",
+            ip_address=mqtt_only_device[DetailKey.ip_address],
+            node_id=mqtt_only_device[DetailKey.node_id],
+            python_implementation=mqtt_only_device[DetailKey.python_implementation],
+            serial_number=serial_number,
+            snsr_version=mqtt_only_device[DetailKey.snsr_version]
+        )
 
     logger.debug(qtpy_devices)
     return qtpy_devices
@@ -346,7 +345,7 @@ def _query_ports_from_serial() -> dict[str, dict[DetailKey, str]]:
     return discovered_comports
 
 
-def _query_volumes_from_wmi() -> dict[str, dict[str, str]]:
+def _query_volumes_from_wmi() -> dict[str, dict[DetailKey, str]]:
     """
     Scan the system for disk volumes and return a dictionary of information.
 

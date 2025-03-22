@@ -167,9 +167,10 @@ class QTPyController:
         await _yield_async_event_loop(0.5)
         discovered_sensor_nodes = await self.collect_identify_responses()
         node_information = {
-            node.descriptor.node_id: {
+            node.descriptor.serial_number: {
                 DetailKey.device_description: node.descriptor.hardware_name,
                 DetailKey.ip_address: node.descriptor.ip_address,
+                DetailKey.node_id: node.descriptor.node_id,
                 DetailKey.python_implementation: node.descriptor.python_implementation,
                 DetailKey.serial_number: node.descriptor.serial_number,
                 DetailKey.snsr_commit: node.descriptor.notice_information.commit,
