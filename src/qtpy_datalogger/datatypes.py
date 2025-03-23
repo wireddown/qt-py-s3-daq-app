@@ -1,4 +1,8 @@
-"""Shared constants and classes."""
+"""
+Shared constants and classes used by the host.
+
+This module uses CPython features not available in the CircuitPython implementation.
+"""
 
 import contextlib
 import datetime
