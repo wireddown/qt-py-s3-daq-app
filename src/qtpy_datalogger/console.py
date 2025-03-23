@@ -170,7 +170,7 @@ def equip(behavior: str, root: pathlib.Path | None) -> None:
     "--restart",
     "behavior",
     flag_value=_server.Behavior.Restart,
-    help="Behavior: Monitor the service and print published messages, Ctrl-C to quit.",
+    help="Behavior: Restart the service, requires Administrator privileges.",
 )
 @click.option(
     "--publish",
