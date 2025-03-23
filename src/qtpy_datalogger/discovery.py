@@ -268,7 +268,7 @@ def discover_and_select_qtpy(
     if len(selectable_devices) > 1:
         logger.info(f"Found {len(selectable_devices)} QT Py devices, select a device to continue")
         formatted_lines = _format_port_table(qtpy_devices)
-        _ = [print(line) for line in formatted_lines]  # noqa: T201 -- use direct IO for user
+        _ = [print(line) for line in formatted_lines]  # noqa: T201 -- use direct IO for user prompt
 
         choices = click.Choice([f"{index + 1}" for index in range(len(selectable_devices))])
         user_input = click.prompt(
@@ -291,7 +291,7 @@ def discover_and_select_qtpy(
             )
             selectable_transports = sorted(ConnectionTransport)
             selectable_transports.remove(ConnectionTransport.AutoSelect)
-            _ = [print(f"  {index + 1}:  {entry}") for index, entry in enumerate(selectable_transports)]  # noqa: T201 -- use direct IO for user
+            _ = [print(f"  {index + 1}:  {entry}") for index, entry in enumerate(selectable_transports)]  # noqa: T201 -- use direct IO for user prompt
 
             choices = click.Choice([f"{index + 1}" for index in range(len(selectable_transports))])
             user_input = click.prompt(
