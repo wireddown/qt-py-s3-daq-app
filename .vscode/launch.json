@@ -13,7 +13,10 @@
             // Update the arugments to match the debug case
             "args": [
                 // "--verbose",
-                "server",
+                "connect",
+                "--discover-only",
+                // "equip",
+                // "--compare",
                 // "--help",
             ],
             // Useful options to enable in some situations
