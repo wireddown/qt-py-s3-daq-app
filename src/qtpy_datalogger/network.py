@@ -190,7 +190,7 @@ class QTPyController:
             parameters={
                 "input": command,
             },
-            message_id=self._format_message_id(command_name)
+            message_id=self._format_message_id(command_name),
         )
 
         action_payload = node_classes.ActionPayload(
@@ -265,7 +265,7 @@ async def _query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
         broker_host=broker_host,
         group_id=group_id,
         mac_address=mac_address,
-        ip_address=ip_address
+        ip_address=ip_address,
     )
 
     await controller.connect_and_subscribe()
@@ -284,7 +284,7 @@ async def _open_session_on_node(node_id: str) -> None:
         broker_host=broker_host,
         group_id=group_id,
         mac_address=mac_address,
-        ip_address=ip_address
+        ip_address=ip_address,
     )
 
     await controller.connect_and_subscribe()
@@ -315,19 +315,19 @@ def _build_descriptor_information(role: str, serial_number: str, ip_address: str
     """Return a DescriptorInformation instance describing the client's current state."""
     snsr_notice = SnsrNotice.get_package_notice_info(allow_dev_version=True)
     return node_classes.DescriptorInformation(
-            node_id=node_mqtt.format_mqtt_client_id(role, serial_number, os.getpid()),
-            serial_number=serial_number,
-            hardware_name=platform.machine(),
-            system_name=f"{platform.system()}-{platform.version()}",
-            python_implementation=f"{platform.python_implementation()}-{platform.python_version()}",
-            ip_address=ip_address,
-            notice=node_classes.NoticeInformation(
-                comment=snsr_notice.comment,
-                version=snsr_notice.version,
-                commit=snsr_notice.commit,
-                timestamp=snsr_notice.timestamp.isoformat(),
-            ),
-        )
+        node_id=node_mqtt.format_mqtt_client_id(role, serial_number, os.getpid()),
+        serial_number=serial_number,
+        hardware_name=platform.machine(),
+        system_name=f"{platform.system()}-{platform.version()}",
+        python_implementation=f"{platform.python_implementation()}-{platform.python_version()}",
+        ip_address=ip_address,
+        notice=node_classes.NoticeInformation(
+            comment=snsr_notice.comment,
+            version=snsr_notice.version,
+            commit=snsr_notice.commit,
+            timestamp=snsr_notice.timestamp.isoformat(),
+        ),
+    )
 
 
 async def _yield_async_event_loop(timeout: float) -> None:

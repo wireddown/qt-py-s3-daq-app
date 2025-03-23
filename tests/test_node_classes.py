@@ -161,6 +161,6 @@ def test_node_build_descriptor(monkeypatch: pytest.MonkeyPatch) -> None:
             version=snsr_notice.version,
             commit=snsr_notice.commit,
             timestamp=snsr_notice.timestamp.isoformat(),
-        )
+        ),
     )
     assert descriptor

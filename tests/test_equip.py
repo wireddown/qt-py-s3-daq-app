@@ -181,12 +181,16 @@ def test_force_install(tmp_path: pathlib.Path) -> None:
     assert tmp_path.joinpath("lib").exists()
 
 
-def test_only_newer_files(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+def test_only_newer_files(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
     """Does it skip circup packages for Behavior.OnlyNewerFiles?"""
     create_test_device_folder(tmp_path)
     newer_files = []
 
-    def override_file_freshness(tree1: list[pathlib.Path], tree2: list[pathlib.Path], newer_files: list[pathlib.Path] = newer_files) -> dict[pathlib.Path, str]:
+    def override_file_freshness(
+        tree1: list[pathlib.Path], tree2: list[pathlib.Path], newer_files: list[pathlib.Path] = newer_files
+    ) -> dict[pathlib.Path, str]:
         """Override equip._compare_file_trees() to make the bundle newer than than device."""
         set1 = {path.relative_to(tree1[0]) for path in tree1}
         set2 = {path.relative_to(tree2[0]) for path in tree2}

@@ -26,6 +26,7 @@ def connect_to_wifi() -> wifi.Radio:
 
     return wifi.radio
 
+
 # Define callback methods which are called when events occur
 def connect(mqtt_client, userdata, flags, rc):
     # This function will be called when the mqtt_client is connected
@@ -64,6 +65,7 @@ def message(client, topic, message):
         from wifi import radio
 
         from .core import get_descriptor_payload
+
         descriptor_topic = f"qtpy/v1/{client.user_data['node_group']}/{client.user_data['node_identifier']}/$DESCRIPTOR"
         descriptor_message = get_descriptor_payload("node", cpu.uid.hex().lower(), str(radio.ipv4_address))
         client.publish(descriptor_topic, descriptor_message)
@@ -72,11 +74,14 @@ def message(client, topic, message):
 
         from .core import build_sender_information
         from .node.classes import ActionInformation, ActionPayload
+
         result_topic = f"qtpy/v1/{client.user_data['node_group']}/{client.user_data['node_identifier']}/result"
         action_payload_information = loads(message)
         action_payload = ActionPayload.from_dict(action_payload_information)
         action = action_payload.action
-        sender = build_sender_information(f"qtpy/v1/{client.user_data['node_group']}/{client.user_data['node_identifier']}/$DESCRIPTOR")
+        sender = build_sender_information(
+            f"qtpy/v1/{client.user_data['node_group']}/{client.user_data['node_identifier']}/$DESCRIPTOR"
+        )
         result_payload = ActionPayload(
             action=ActionInformation(
                 command=action.command,
@@ -86,7 +91,7 @@ def message(client, topic, message):
                 },
                 message_id=action.message_id,
             ),
-            sender=sender
+            sender=sender,
         )
         client.publish(result_topic, dumps(result_payload.as_dict()))
 
@@ -101,7 +106,7 @@ def create_mqtt_client(radio, node_group: str, node_identifier: str) -> minimqtt
         user_data={
             "node_group": node_group,
             "node_identifier": node_identifier,
-        }
+        },
     )
 
     # Connect callback handlers to mqtt_client

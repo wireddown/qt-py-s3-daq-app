@@ -283,7 +283,9 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
 
     ignore_patterns = {"*.pyc", "__pycache__"}
     if behavior == Behavior.OnlyNewerFiles:
-        runtime_freshness = _compare_file_trees(comparison_information["runtime bundle"].device_files, comparison_information["device bundle"].device_files)
+        runtime_freshness = _compare_file_trees(
+            comparison_information["runtime bundle"].device_files, comparison_information["device bundle"].device_files
+        )
         older_files = set()
         newer_files = set()
         for path, freshness in runtime_freshness.items():

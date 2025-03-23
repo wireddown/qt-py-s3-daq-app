@@ -187,7 +187,7 @@ def discover_qtpy_devices() -> dict[str, QTPyDevice]:
             node_id=mqtt_only_device[DetailKey.node_id],
             python_implementation=mqtt_only_device[DetailKey.python_implementation],
             serial_number=serial_number,
-            snsr_version=mqtt_only_device[DetailKey.snsr_version]
+            snsr_version=mqtt_only_device[DetailKey.snsr_version],
         )
 
     logger.debug(qtpy_devices)
@@ -251,7 +251,9 @@ def open_session_on_port(port: str) -> None:
     logger.info(f"Reconnect with 'qtpy-datalogger connect --port {port}'")
 
 
-def discover_and_select_qtpy(transport: ConnectionTransport = ConnectionTransport.AutoSelect) -> tuple[QTPyDevice | None, ConnectionTransport | None]:
+def discover_and_select_qtpy(
+    transport: ConnectionTransport = ConnectionTransport.AutoSelect,
+) -> tuple[QTPyDevice | None, ConnectionTransport | None]:
     """
     Scan for QT Py devices and return a tuple of the selected device and its communication transport.
 
@@ -285,7 +287,9 @@ def discover_and_select_qtpy(transport: ConnectionTransport = ConnectionTranspor
 
     if transport == ConnectionTransport.AutoSelect:
         if all([has_uart, has_mqtt]):
-            logger.info(f"QT Py device '{selected_device.device_description}' has UART and MQTT available, select a connection transport to continue")
+            logger.info(
+                f"QT Py device '{selected_device.device_description}' has UART and MQTT available, select a connection transport to continue"
+            )
             selectable_transports = sorted(ConnectionTransport)
             selectable_transports.remove(ConnectionTransport.AutoSelect)
 
@@ -315,7 +319,7 @@ def discover_and_select_qtpy(transport: ConnectionTransport = ConnectionTranspor
     if selected_transport == ConnectionTransport.UART_Serial:
         transport_message = f"port '{selected_device.com_port}' on '{selected_device.drive_root}\\'"
     else:
-        transport_message =  f"MQTT node '{selected_device.node_id}' on '{selected_device.ip_address}'"
+        transport_message = f"MQTT node '{selected_device.node_id}' on '{selected_device.ip_address}'"
 
     logger.info(f"{selected_reason} '{selected_device.device_description}' as {transport_message}")
     return (selected_device, selected_transport)
@@ -516,7 +520,7 @@ def _parse_boot_out_file(main_folder: pathlib.Path) -> dict[DetailKey, str]:
 
     return {
         DetailKey.python_implementation: circuitpy_version,
-        DetailKey.device_description: board_id
+        DetailKey.device_description: board_id,
     }
 
 

@@ -131,7 +131,7 @@ def select_last_from_prompt(text: str, type: click.Choice, default: str, show_de
     return type.choices[-1]
 
 
-def raise_exception(exception_type:type, message: str) -> None:
+def raise_exception(exception_type: type, message: str) -> None:
     """Throw a new exception of the specified type with the specified message."""
     raise exception_type(message)
 
@@ -335,7 +335,7 @@ def test_handle_connect_with_one_mqtt_device(
             RuntimeError,
             0,
         ),  # This exception means connect() tried to correctly open the (monkeypatched) node
-    ]
+    ],
 )
 def test_handle_connect_with_two_dual_mode_devices(
     monkeypatch: pytest.MonkeyPatch,
@@ -365,6 +365,7 @@ def test_handle_connect_with_two_dual_mode_devices(
 
 def test_windows_discovery(monkeypatch: pytest.MonkeyPatch) -> None:
     """Does it correctly identify dual-mode and MQTT-only devices?"""
+
     def override_ports_from_serial() -> dict[str, dict[DetailKey, str]]:
         """Return hardcoded details for Windows serial ports."""
         return {
@@ -387,7 +388,7 @@ def test_windows_discovery(monkeypatch: pytest.MonkeyPatch) -> None:
                 DetailKey.drive_root: "B:",
                 DetailKey.drive_label: "TestWindows",
                 DetailKey.serial_number: "BD64_1379.",
-                DetailKey.device_description: "MSI M371"
+                DetailKey.device_description: "MSI M371",
             },
             "X:": {
                 DetailKey.drive_root: "P:",

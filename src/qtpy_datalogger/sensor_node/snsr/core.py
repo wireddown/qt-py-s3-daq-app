@@ -89,7 +89,9 @@ def build_descriptor_information(role: str, serial_number: str, ip_address: str)
     return descriptor
 
 
-def _build_descriptor(role, serial_number, pid, hardware_name, micropython_base, python_implementation, ip_address, notice):
+def _build_descriptor(
+    role, serial_number, pid, hardware_name, micropython_base, python_implementation, ip_address, notice
+):
     from snsr.node.classes import DescriptorInformation
     from snsr.node.mqtt import format_mqtt_client_id
 
@@ -118,15 +120,9 @@ def build_sender_information(descriptor_topic: str):
     cpu_celsius = cpu.temperature
     monotonic_time = monotonic()
     status = StatusInformation(
-        used_memory=str(used_bytes),
-        free_memory=str(free_bytes),
-        cpu_temperature=str(cpu_celsius)
+        used_memory=str(used_bytes), free_memory=str(free_bytes), cpu_temperature=str(cpu_celsius)
     )
-    sender = SenderInformation(
-        descriptor_topic=descriptor_topic,
-        sent_at=str(monotonic_time),
-        status=status
-    )
+    sender = SenderInformation(descriptor_topic=descriptor_topic, sent_at=str(monotonic_time), status=status)
     return sender
 
 

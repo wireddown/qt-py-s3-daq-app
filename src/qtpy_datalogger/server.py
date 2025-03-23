@@ -247,7 +247,11 @@ def _restart_mqtt_broker_with_wmi(broker_information: MqttBrokerInformation) -> 
     if not matching_services:
         return did_anything
 
-    def _call_service_control_function(service_control_function: Callable, active_runmode: str, desired_runmode: str) -> str:
+    def _call_service_control_function(
+        service_control_function: Callable,
+        active_runmode: str,
+        desired_runmode: str,
+    ) -> str:
         """Call and handle exit codes from service_control_function() and return the updated runmode of the service."""
         service_runmode = active_runmode
         result = service_control_function()
@@ -260,7 +264,9 @@ def _restart_mqtt_broker_with_wmi(broker_information: MqttBrokerInformation) -> 
             logger.warning("Cannot control any services from a user account!")
             logger.warning("  Try 'services.msc' to use Administrator privileges")
         else:
-            logger.warning(f"Received exit code '{return_code}' from 'Win32_Service.{str(service_control_function.__doc__).split(' ')[0]}()'")
+            logger.warning(
+                f"Received exit code '{return_code}' from 'Win32_Service.{str(service_control_function.__doc__).split(' ')[0]}()'"
+            )
         return service_runmode
 
     mqtt_broker = matching_services[0]
@@ -310,14 +316,14 @@ def _query_mqtt_broker_configuration_from_file(broker_executable: pathlib.Path) 
             name_value_pair = [cell.strip() for cell in line.split(" ")]
             option = BrokerOption(
                 name=name_value_pair[0],
-                value=name_value_pair[1]
+                value=name_value_pair[1],
             )
             found_options.append(option)
             logger.debug(line)
     return found_options
 
 
-def _query_firewall_port_rules_from_netsh(port_to_match:int = 1883) -> list[FirewallRule]:
+def _query_firewall_port_rules_from_netsh(port_to_match: int = 1883) -> list[FirewallRule]:
     """Query and parse firewall rules on the system that control MQTT broker port 1883."""
     get_all_firewall_rules = [
         "netsh",

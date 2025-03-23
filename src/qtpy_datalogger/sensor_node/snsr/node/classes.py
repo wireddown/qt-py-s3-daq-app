@@ -5,6 +5,7 @@
 # Manifests as
 #   TypeError: can't convert SnsrNotice to json
 
+
 class StatusInformation:
     def __init__(
         self: "StatusInformation",
@@ -154,7 +155,7 @@ class SenderInformation:
         self: "SenderInformation",
         descriptor_topic: str,
         sent_at: str,
-        status: StatusInformation
+        status: StatusInformation,
     ):
         self.information = {
             "descriptor_topic": descriptor_topic,

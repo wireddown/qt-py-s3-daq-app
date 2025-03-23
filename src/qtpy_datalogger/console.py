@@ -138,7 +138,6 @@ def run() -> None:
     flag_value=_equip.Behavior.OnlyNewerFiles,
     help="Behavior: Only update sensor_node bundle files that are newer, skip installing CircuitPython support libraries.",
 )
-
 @click.option(
     "-r",
     "--root",
