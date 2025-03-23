@@ -7,12 +7,15 @@
 
 
 class StatusInformation:
+    """A class that describes the status of a node in a sensor_node group."""
+
     def __init__(
         self: "StatusInformation",
         used_memory: str,
         free_memory: str,
         cpu_temperature: str,
-    ):
+    ) -> None:
+        """Initialize a new StatusInformation with the specified values."""
         self.information = {
             "used_memory": used_memory,
             "free_memory": free_memory,
@@ -21,14 +24,14 @@ class StatusInformation:
 
     @staticmethod
     def from_dict(dictionary: dict) -> "StatusInformation":
+        """Return a new StatusInformation from the specified dictionary."""
         return StatusInformation(**dictionary)
 
     def as_dict(self) -> dict:
+        """Return a dictionary representation."""
         return self.information
 
 
-# SnsrNotice = namedtuple("SnsrNotice", tuple_keys)
-# how to add as_ and from_dict ?
 class NoticeInformation:
     """A serializable class for the notice.toml file."""
 
@@ -38,7 +41,8 @@ class NoticeInformation:
         version: str,
         commit: str,
         timestamp: str,
-    ):
+    ) -> None:
+        """Initialize a new NoticeInformation with the specified values."""
         self.information = {
             "comment": comment,
             "version": version,
@@ -48,9 +52,11 @@ class NoticeInformation:
 
     @staticmethod
     def from_dict(dictionary: dict) -> "NoticeInformation":
+        """Return a new NoticeInformation from the specified dictionary."""
         return NoticeInformation(**dictionary)
 
     def as_dict(self) -> dict:
+        """Return a dictionary representation."""
         return self.information
 
     @property
@@ -65,7 +71,7 @@ class NoticeInformation:
 
     @property
     def commit(self) -> str:
-        """The commit from notice.toml."""
+        """The commit ID from notice.toml."""
         return self.information["commit"]
 
     @property
@@ -77,7 +83,7 @@ class NoticeInformation:
 class DescriptorInformation:
     """A class that describes a sensor_node's hardware, software, network, and version details."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 -- allow more than 5 parameters
         self: "DescriptorInformation",
         node_id: str,
         serial_number: str,
@@ -86,7 +92,8 @@ class DescriptorInformation:
         python_implementation: str,
         ip_address: str,
         notice: NoticeInformation,
-    ):
+    ) -> None:
+        """Initialize a new DescriptorInformation with the specified values."""
         self.information = {
             "node_id": node_id,
             "serial_number": serial_number,
@@ -99,6 +106,7 @@ class DescriptorInformation:
 
     @staticmethod
     def from_dict(dictionary: dict) -> "DescriptorInformation":
+        """Return a new DescriptorInformation from the specified dictionary."""
         return DescriptorInformation(
             dictionary["node_id"],
             dictionary["serial_number"],
@@ -110,6 +118,7 @@ class DescriptorInformation:
         )
 
     def as_dict(self) -> dict:
+        """Return a dictionary representation."""
         return self.information
 
     @property
@@ -156,7 +165,8 @@ class SenderInformation:
         descriptor_topic: str,
         sent_at: str,
         status: StatusInformation,
-    ):
+    ) -> None:
+        """Initialize a new SenderInformation with the specified values."""
         self.information = {
             "descriptor_topic": descriptor_topic,
             "sent_at": sent_at,
@@ -165,10 +175,12 @@ class SenderInformation:
 
     @staticmethod
     def from_dict(dictionary: dict) -> "SenderInformation":
+        """Return a new SenderInformation from the specified dictionary."""
         status_information = StatusInformation.from_dict(dictionary["status"])
         return SenderInformation(dictionary["descriptor_topic"], dictionary["sent_at"], status_information)
 
     def as_dict(self) -> dict:
+        """Return a dictionary representation."""
         return self.information
 
     @property
@@ -194,7 +206,8 @@ class DescriptorPayload:
         self: "DescriptorPayload",
         descriptor: DescriptorInformation,
         sender: SenderInformation,
-    ):
+    ) -> None:
+        """Initialize a new DescriptorPayload with the specified values."""
         self.information = {
             "descriptor": descriptor.as_dict(),
             "sender": sender.as_dict(),
@@ -202,11 +215,13 @@ class DescriptorPayload:
 
     @staticmethod
     def from_dict(dictionary: dict) -> "DescriptorPayload":
+        """Return a new DescriptorPayload from the specified dictionary."""
         descriptor_information = DescriptorInformation.from_dict(dictionary["descriptor"])
         sender_information = SenderInformation.from_dict(dictionary["sender"])
         return DescriptorPayload(descriptor_information, sender_information)
 
     def as_dict(self) -> dict:
+        """Return a dictionary representation."""
         return self.information
 
     @property
@@ -228,7 +243,8 @@ class ActionInformation:
         command: str,
         parameters: dict,
         message_id: str,
-    ):
+    ) -> None:
+        """Initialize a new ActionInformation with the specified values."""
         self.information = {
             "command": command,
             "parameters": parameters,
@@ -237,9 +253,11 @@ class ActionInformation:
 
     @staticmethod
     def from_dict(dictionary: dict) -> "ActionInformation":
+        """Return a new ActionInformation from the specified dictionary."""
         return ActionInformation(**dictionary)
 
-    def as_dict(self):
+    def as_dict(self) -> dict:
+        """Return a dictionary representation."""
         return self.information
 
     @property
@@ -265,7 +283,8 @@ class ActionPayload:
         self: "ActionPayload",
         action: ActionInformation,
         sender: SenderInformation,
-    ):
+    ) -> None:
+        """Initialize a new ActionPayload with the specified values."""
         self.information = {
             "action": action.as_dict(),
             "sender": sender.as_dict(),
@@ -273,11 +292,13 @@ class ActionPayload:
 
     @staticmethod
     def from_dict(dictionary: dict) -> "ActionPayload":
+        """Return a new ActionPayload from the specified dictionary."""
         action_information = ActionInformation.from_dict(dictionary["action"])
         sender_information = SenderInformation.from_dict(dictionary["sender"])
         return ActionPayload(action_information, sender_information)
 
     def as_dict(self) -> dict:
+        """Return a dictionary representation."""
         return self.information
 
     @property
