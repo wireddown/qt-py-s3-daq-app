@@ -86,7 +86,9 @@ class QTPyController:
             """Handle connection to the MQTT broker."""
             logger.debug(f"Connected with flags='{flags}' rc='{rc}' properties='{properties}'")
 
-        async def on_mqtt_message(client: MqttClientWithContext, topic: str, payload: bytes, qos: int, properties: dict) -> None:
+        async def on_mqtt_message(
+            client: MqttClientWithContext, topic: str, payload: bytes, qos: int, properties: dict
+        ) -> None:
             """Handle a message on topic with payload."""
             payload_string = payload.decode("UTF-8")
             logger.debug(f"Received '{payload_string}' on '{topic}' with qos='{qos}' properties='{properties}'")
