@@ -69,7 +69,7 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
             logger.error("No QT Py devices found!")
             raise SystemExit(ExitCode.Discovery_Failure)
         if not communication_transport:
-            logger.error(f"Cannot equip '{qtpy_device.node_id}' with MQTT connection.")
+            logger.error(f"Cannot compare or equip '{qtpy_device.node_id}' with MQTT connection.")
             raise SystemExit(ExitCode.Equip_Without_USB_Failure)
         root = pathlib.Path(qtpy_device.drive_root).resolve()
 
@@ -80,7 +80,8 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
     }
 
     if behavior == Behavior.Compare:
-        comparison_report = _format_bundle_comparison(comparison_information)
+        runtime_freshness = _compare_file_trees(runtime_bundle.device_files, device_bundle.device_files)
+        comparison_report = _format_bundle_comparison(comparison_information, runtime_freshness)
         _ = [logger.info(line) for line in comparison_report]
         raise SystemExit(ExitCode.Success)
 
@@ -177,7 +178,10 @@ def _format_bundle_description(bundle: SnsrNodeBundle) -> list[str]:
     return report_contents
 
 
-def _format_bundle_comparison(comparison_information: dict[str, SnsrNodeBundle]) -> list[str]:
+def _format_bundle_comparison(
+    comparison_information: dict[str, SnsrNodeBundle],
+    file_freshness: dict[pathlib.Path, str],
+) -> list[str]:
     """Format and return a list of lines that compares the specified sensor_node bundles."""
     device_bundle = comparison_information["device bundle"]
     runtime_bundle = comparison_information["runtime bundle"]
@@ -203,6 +207,16 @@ def _format_bundle_comparison(comparison_information: dict[str, SnsrNodeBundle])
         device_mark = same_mark
         self_mark = same_mark
 
+    newer_files = set()
+    for path, freshness in file_freshness.items():
+        full_path = comparison_information["runtime bundle"].device_files[0].joinpath(path)
+        if not full_path.is_file():
+            continue
+        if freshness == "newer":
+            newer_files.add(path)
+            continue
+    newer_file_lines = [f"  * {file!s}\n" for file in sorted(newer_files)]
+
     report_contents = textwrap.dedent(
         f"""
         Comparing sensor_node device with this package
@@ -213,9 +227,13 @@ def _format_bundle_comparison(comparison_information: dict[str, SnsrNodeBundle])
           CircuitPy    {device_bundle.circuitpy_version:<31}    (PC host)
           Board ID     {device_bundle.board_id:<31}    (PC host)
           Location     {device_bundle.device_files[0]!s:<31}    (builtin)
+
+        Newer files
         """
     )
-    return report_contents.splitlines()
+    report_lines = report_contents.splitlines()
+    report_lines.extend(newer_file_lines)
+    return report_lines
 
 
 def _should_install(behavior: Behavior, comparison_information: dict[str, SnsrNodeBundle]) -> tuple[bool, str]:
