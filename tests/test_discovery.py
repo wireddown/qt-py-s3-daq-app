@@ -182,7 +182,7 @@ def assert_universal_test_cases(excinfo: pytest.ExceptionInfo, expected_exit_cod
         ),  # This exception means connect() failed because no QT Py devices were discovered
     ],
 )
-def test_handle_connect_with_no_devices(
+def test_handle_connect_with_no_devices(  # noqa: PLR0913 -- allow more than 5 parameters
     monkeypatch: pytest.MonkeyPatch,
     behavior: discovery.Behavior,
     node: str,
@@ -214,7 +214,7 @@ def test_handle_connect_with_no_devices(
         ),  # This exception means connect() tried to correctly open the (monkeypatched) port
     ],
 )
-def test_handle_connect_with_one_usb_device(
+def test_handle_connect_with_one_usb_device(  # noqa: PLR0913 -- allow more than 5 parameters
     monkeypatch: pytest.MonkeyPatch,
     behavior: discovery.Behavior,
     node: str,
@@ -253,7 +253,7 @@ def test_handle_connect_with_one_usb_device(
         ),  # This exception means connect() tried to correctly open the (monkeypatched) port
     ],
 )
-def test_handle_connect_with_two_usb_devices(
+def test_handle_connect_with_two_usb_devices(  # noqa: PLR0913 -- allow more than 5 parameters
     monkeypatch: pytest.MonkeyPatch,
     behavior: discovery.Behavior,
     node: str,
@@ -301,7 +301,7 @@ def test_handle_connect_with_two_usb_devices(
         ),  # This exception means connect() tried to correctly open the (monkeypatched) node
     ],
 )
-def test_handle_connect_with_one_mqtt_device(
+def test_handle_connect_with_one_mqtt_device(  # noqa: PLR0913 -- allow more than 5 parameters
     monkeypatch: pytest.MonkeyPatch,
     behavior: discovery.Behavior,
     node: str,
@@ -337,7 +337,7 @@ def test_handle_connect_with_one_mqtt_device(
         ),  # This exception means connect() tried to correctly open the (monkeypatched) node
     ],
 )
-def test_handle_connect_with_two_dual_mode_devices(
+def test_handle_connect_with_two_dual_mode_devices(  # noqa: PLR0913 -- allow more than 5 parameters
     monkeypatch: pytest.MonkeyPatch,
     behavior: discovery.Behavior,
     node: str,
@@ -456,8 +456,8 @@ def test_windows_discovery(monkeypatch: pytest.MonkeyPatch) -> None:
     assert devices[mqtt_only_serial_number].node_id
 
 
-def test_QTPyDevice_uses_DetailKeys() -> None:
+def test_QTPyDevice_uses_DetailKeys() -> None:  # noqa: N802 -- allow upper case letters in function name
     """Do the properties in QTPyDevice match DetailKey names?"""
-    DetailKey_names = sorted(DetailKey.__members__)
+    DetailKey_names = sorted(DetailKey.__members__)  # noqa: N806 -- allow upper case letters in variable name
     instance_property_names = sorted(discovery.QTPyDevice.__annotations__)
     assert set(DetailKey_names) > set(instance_property_names)
