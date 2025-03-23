@@ -1,4 +1,8 @@
-"""Protocols and functions used by hosts and nodes."""
+"""
+Functions used by hosts and nodes.
+
+This module uses simple and explicit syntax to support CircuitPython clients.
+"""
 
 
 def get_mqtt_topics(group_id: str, node_id: str) -> dict[str, str]:
