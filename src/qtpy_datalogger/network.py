@@ -213,8 +213,13 @@ class QTPyController:
             message_id=self._format_message_id(command_name),
         )
 
+        await self._publish_action_payload(node_id, action_command)
+        return action_command
+
+    async def _publish_action_payload(self, node_id: str, action: node_classes.ActionInformation) -> None:
+        """Send the specified action to the specified node_id and return the sent ActionInformation."""
         action_payload = node_classes.ActionPayload(
-            action=action_command,
+            action=action,
             sender=_build_sender_information(self.descriptor_topic),
         )
 
@@ -226,13 +231,11 @@ class QTPyController:
         command_topic = node_mqtt.get_command_topic(self.group_id, node_id)
         self.client.publish(command_topic, json.dumps(action_payload.as_dict()))
 
-        return action_command
-
-    async def get_custom_result(self, node_id: str, action_command: node_classes.ActionInformation) -> str:
-        """Monitor the MQTT messages for a matching response to the specified custom command."""
+    async def get_matching_result(self, node_id: str, action: node_classes.ActionInformation) -> str:
+        """Monitor the MQTT messages for a matching response to the specified command."""
         custom_result_response = []
         other_messages = []
-        command_id = action_command.message_id
+        command_id = action.message_id
         while not custom_result_response:
             topic_and_message: MqttMessage = await self.message_queue.get()
             response_json = topic_and_message.message
@@ -319,7 +322,7 @@ async def _open_session_on_node(node_id: str) -> None:
     while user_input not in ["exit", "quit"]:
         user_input = input(f"{node_id} > ")
         command = await controller.send_custom_command(node_id, user_input)
-        response = await controller.get_custom_result(node_id, command)
+        response = await controller.get_matching_result(node_id, command)
         print(response)  # noqa: T201 -- use direct IO for user
     await controller.disconnect()
 
