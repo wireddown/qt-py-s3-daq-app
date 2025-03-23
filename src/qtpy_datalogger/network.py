@@ -82,21 +82,22 @@ class QTPyController:
         # Define these at runtime because
         #   we cannot change their parameters and make them instance methods (ie we cannot add 'self')
         #   we don't want to make make them static methods and share them across all instances
-        def on_mqtt_connect(client, flags, rc, properties) -> None:
+        def on_mqtt_connect(client: MqttClientWithContext, flags: int, rc: int, properties: dict) -> None:
             """Handle connection to the MQTT broker."""
             logger.debug(f"Connected with flags='{flags}' rc='{rc}' properties='{properties}'")
 
-        async def on_mqtt_message(client, topic, payload, qos, properties) -> None:
+        async def on_mqtt_message(client: MqttClientWithContext, topic: str, payload: bytes, qos: int, properties: dict) -> None:
             """Handle a message on topic with payload."""
             payload_string = payload.decode("UTF-8")
             logger.debug(f"Received '{payload_string}' on '{topic}' with qos='{qos}' properties='{properties}'")
-            await client.context.message_queue.put(MqttMessage(topic, payload_string))
+            as_self: QTPyController = client.context  # pyright: ignore reportAssignmentType -- the type for context is client-defined
+            await as_self.message_queue.put(MqttMessage(topic, payload_string))
 
-        def on_mqtt_disconnect(client, packet) -> None:
+        def on_mqtt_disconnect(client: MqttClientWithContext, packet: bytes) -> None:
             """Handle disconnection from the MQTT broker."""
             logger.debug(f"Disconnected with packet='{packet}'")
 
-        def on_mqtt_subscribe(client, mid, qos, properties) -> None:
+        def on_mqtt_subscribe(client: MqttClientWithContext, mid: int, qos: tuple, properties: dict) -> None:
             """Handle subscription from the MQTT broker."""
             logger.debug(f"Subscribed with mid='{mid}' qos='{qos}' properties='{properties}'")
 
@@ -294,7 +295,7 @@ async def _open_session_on_node(node_id: str) -> None:
         user_input = input(f"{node_id} > ")
         command = await controller.send_custom_command(node_id, user_input)
         response = await controller.get_custom_result(node_id, command)
-        print(response)
+        print(response)  # noqa: T201 -- use direct IO for user
     await controller.disconnect()
 
 
