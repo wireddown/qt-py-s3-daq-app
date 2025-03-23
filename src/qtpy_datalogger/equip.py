@@ -389,8 +389,6 @@ def _compare_file_trees(tree1: list[pathlib.Path], tree2: list[pathlib.Path]) ->
     """Compare two lists of paths, identifying newer or unique files."""
     set1 = {path.relative_to(tree1[0]) for path in tree1}
     set2 = {path.relative_to(tree2[0]) for path in tree2}
-    unique_to_1 = set1 - set2
-    unique_to_2 = set2 - set1
     shared_in_both = set1 & set2
     tree1_file_ages = {}
     for path in shared_in_both:
