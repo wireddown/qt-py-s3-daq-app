@@ -1,10 +1,14 @@
-"""Classes used by hosts and nodes."""
+"""
+Classes used by hosts and nodes to send and receive MQTT messages.
 
-# CircuitPython json supports literals, dictionaries, and lists
-# The library does not accept object hooks when creating json from objects
-# Manifests as
-#   TypeError: can't convert SnsrNotice to json
+- The clients use JSON to serialize the information they send to each other through the broker
+- However, the CircuitPython implementation of json only supports literals, dictionaries, and lists
+- And so the methods do not accept object hooks when creating json from objects
+- Without these hooks, the code raises
+    TypeError: can't convert SnsrNotice to json
 
+This module uses simple and explicit syntax to support CircuitPython clients.
+"""
 
 class StatusInformation:
     """A class that describes the status of a node in a sensor_node group."""
@@ -30,6 +34,21 @@ class StatusInformation:
     def as_dict(self) -> dict:
         """Return a dictionary representation."""
         return self.information
+
+    @property
+    def used_memory(self) -> str:
+        """The used_memory on the node."""
+        return self.information["used_memory"]
+
+    @property
+    def free_memory(self) -> str:
+        """The free_memory on the node."""
+        return self.information["free_memory"]
+
+    @property
+    def cpu_temperature(self) -> str:
+        """The cpu_temperature of the node."""
+        return self.information["cpu_temperature"]
 
 
 class NoticeInformation:
