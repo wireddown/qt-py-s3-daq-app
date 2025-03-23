@@ -216,7 +216,7 @@ def _query_mqtt_broker_information_from_wmi() -> MqttBrokerInformation | None:
 
     # Paths that have spaces use double-quotes, typically for the "Program Files" segment
     #   No-space  'C:\\WINDOWS\\System32\\svchost.exe -k LocalSystemNetworkRestricted -p'
-    #   With-pace '"C:\\Program Files\\mosquitto\\mosquitto.exe" run'
+    #   With-space '"C:\\Program Files\\mosquitto\\mosquitto.exe" run'
     path_parts = mqtt_broker.PathName.split('"')
     broker_executable = path_parts[0].split(" ")[0] if path_parts[0] else path_parts[1]
     broker_executable_path = pathlib.Path(broker_executable)
