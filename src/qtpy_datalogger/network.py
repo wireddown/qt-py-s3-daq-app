@@ -198,26 +198,23 @@ class QTPyController:
         }
         return node_information
 
-    async def send_custom_command(self, node_id: str, command: str) -> node_classes.ActionInformation:
+    async def send_action(self, node_id: str, command_name: str, parameters: dict) -> node_classes.ActionInformation:
         """
-        Send a command to the node in the group with node_id and return the sent ActionInformation.
+        Send a command with the specified parameters to the node in the group with node_id and return the sent ActionInformation.
 
         Use the returned ActionInformation with 'get_matching_result()' to await the result.
         """
-        command_name = "custom"
-        action_command = node_classes.ActionInformation(
+        action = node_classes.ActionInformation(
             command=command_name,
-            parameters={
-                "input": command,
-            },
+            parameters=parameters,
             message_id=self._format_message_id(command_name),
         )
 
-        await self._publish_action_payload(node_id, action_command)
-        return action_command
+        await self._publish_action_payload(node_id, action)
+        return action
 
     async def _publish_action_payload(self, node_id: str, action: node_classes.ActionInformation) -> None:
-        """Send the specified action to the specified node_id and return the sent ActionInformation."""
+        """Send the specified action to the specified node_id's command topic."""
         action_payload = node_classes.ActionPayload(
             action=action,
             sender=_build_sender_information(self.descriptor_topic),
@@ -231,21 +228,25 @@ class QTPyController:
         command_topic = node_mqtt.get_command_topic(self.group_id, node_id)
         self.client.publish(command_topic, json.dumps(action_payload.as_dict()))
 
-    async def get_matching_result(self, node_id: str, action: node_classes.ActionInformation) -> str:
-        """Monitor the MQTT messages for a matching response to the specified command."""
-        custom_result_response = []
+    async def get_matching_result(self, node_id: str, action: node_classes.ActionInformation, timeout: float = 5.0) -> dict:
+        """
+        Monitor the MQTT messages for a matching result to the specified action.
+
+        Return the dictionary of parameters from the result's matching ActionInformation.
+        """
+        result_response = []
         other_messages = []
-        command_id = action.message_id
-        while not custom_result_response:
-            topic_and_message: MqttMessage = await self.message_queue.get()
+        action_id = action.message_id
+        while not result_response:
+            topic_and_message = await self.message_queue.get()
             response_json = topic_and_message.message
             response = json.loads(response_json)
             if "action" in response:
                 payload = node_classes.ActionPayload.from_dict(response)
                 sending_node = node_mqtt.node_from_topic(payload.sender.descriptor_topic)
                 result_id = payload.action.message_id
-                if sending_node == node_id and result_id == command_id:
-                    custom_result_response.append(payload.action.parameters["output"])
+                if sending_node == node_id and result_id == action_id:
+                    result_response.append(payload.action.parameters)
                     break
                 logger.debug(f"Requeueing response '{topic_and_message}'")
                 other_messages.append(topic_and_message)
@@ -255,11 +256,11 @@ class QTPyController:
             self.message_queue.task_done()
         for other_message in other_messages:
             self.message_queue.put_nowait(other_message)
-        return custom_result_response[0]
+        return result_response[0]
 
-    def _format_message_id(self, command_name: str) -> str:
-        """Return a unique message ID for the command_name."""
-        return f"{command_name}-{self.named_counter.count(command_name)}"
+    def _format_message_id(self, action_name: str) -> str:
+        """Return a unique message ID for the action_name."""
+        return f"{action_name}-{self.named_counter.count(action_name)}"
 
 
 def query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
@@ -321,9 +322,16 @@ async def _open_session_on_node(node_id: str) -> None:
     user_input = ""
     while user_input not in ["exit", "quit"]:
         user_input = input(f"{node_id} > ")
-        command = await controller.send_custom_command(node_id, user_input)
-        response = await controller.get_matching_result(node_id, command)
-        print(response)  # noqa: T201 -- use direct IO for user
+        custom_parameters = {
+            "input": user_input,
+        }
+        sent_action = await controller.send_action(node_id, "custom", custom_parameters)
+        response_complete = False
+        while not response_complete:
+            response_parameters = await controller.get_matching_result(node_id, sent_action)
+            response_complete = response_parameters["complete"]
+            response = response_parameters["output"]
+            print(response)  # noqa: T201 -- use direct IO for user
     await controller.disconnect()
 
 
