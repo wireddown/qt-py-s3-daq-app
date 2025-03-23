@@ -113,7 +113,7 @@ class QTPyController:
         """Connect the MQTT broker and subscribe to the topics in the sensor_node API."""
         with suppress_unless_debug():
             await self.client.connect(self.broker_host)
-            self.publish_descriptor()
+            self._publish_descriptor()
             self.client.subscribe(self.broadcast_topic)
             self.client.subscribe(self.command_topic)
             self.client.subscribe(self.all_descriptors_in_group_topic)
@@ -124,7 +124,7 @@ class QTPyController:
         with suppress_unless_debug():
             await self.client.disconnect()
 
-    def publish_descriptor(self) -> None:
+    def _publish_descriptor(self) -> None:
         """Publish the descriptor to the topic for this controller."""
         descriptor_payload = node_classes.DescriptorPayload(
             descriptor=self.descriptor,
@@ -132,7 +132,7 @@ class QTPyController:
         )
         self.client.publish(self.descriptor_topic, json.dumps(descriptor_payload.as_dict()))
 
-    def broadcast_identify_command(self) -> None:
+    def _broadcast_identify_command(self) -> None:
         """Send the identify command to the broadcast topic for the group."""
         command_name = "identify"
         identify_command = node_classes.ActionPayload(
@@ -145,7 +145,7 @@ class QTPyController:
         )
         self.client.publish(self.broadcast_topic, json.dumps(identify_command.as_dict()))
 
-    async def collect_identify_responses(self) -> list[node_classes.DescriptorPayload]:
+    async def _collect_identify_responses(self) -> list[node_classes.DescriptorPayload]:
         """Get the messages sent by sensor_nodes in response to the identify command."""
         identify_responses = []
         other_messages = []
@@ -164,11 +164,24 @@ class QTPyController:
             self.message_queue.put_nowait(other_message)
         return identify_responses
 
-    async def scan_for_nodes(self) -> dict[str, dict[DetailKey, str]]:
-        """Scan the group for sensor_nodes and return a dictionary of discovered devices indexed by serial_number."""
-        self.broadcast_identify_command()
-        await _yield_async_event_loop(0.5)
-        discovered_sensor_nodes = await self.collect_identify_responses()
+    async def scan_for_nodes(self, discovery_timeout: float = 0.5) -> dict[str, dict[DetailKey, str]]:
+        """
+        Scan the group for sensor_nodes and return a dictionary of discovered devices indexed by serial_number.
+
+        Returned entries, grouped by serial_number:
+        - device_description
+        - ip_address
+        - node_id
+        - python_implementation
+        - serial_number
+        - snsr_commit
+        - snsr_timestamp
+        - snsr_version
+        - system_name
+        """
+        self._broadcast_identify_command()
+        await _yield_async_event_loop(discovery_timeout)
+        discovered_sensor_nodes = await self._collect_identify_responses()
         node_information = {
             node.descriptor.serial_number: {
                 DetailKey.device_description: node.descriptor.hardware_name,
@@ -186,7 +199,11 @@ class QTPyController:
         return node_information
 
     async def send_custom_command(self, node_id: str, command: str) -> node_classes.ActionInformation:
-        """Send a command to node in the group and return the sent ActionInformation."""
+        """
+        Send a command to the node in the group with node_id and return the sent ActionInformation.
+
+        Use the returned ActionInformation with 'get_matching_result()' to await the result.
+        """
         command_name = "custom"
         action_command = node_classes.ActionInformation(
             command=command_name,
@@ -246,16 +263,23 @@ def query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
     """
     Scan the MQTT broker on the network for sensor nodes and return a dictionary of information.
 
-    Returned entries, grouped by xxxx:
-    - xxxx
-    - yyyy
+    Returned entries, grouped by serial_number:
+    - device_description
+    - ip_address
+    - node_id
+    - python_implementation
+    - serial_number
+    - snsr_commit
+    - snsr_timestamp
+    - snsr_version
+    - system_name
     """
     discovered_nodes = asyncio.run(_query_nodes_from_mqtt())
     return discovered_nodes
 
 
 def open_session_on_node(node_id: str) -> None:
-    """Open a terminal connection to the specified sensor_node."""
+    """Open a terminal connection to the node with the specified node_id."""
     asyncio.run(_open_session_on_node(node_id))
 
 
@@ -291,7 +315,6 @@ async def _open_session_on_node(node_id: str) -> None:
     )
 
     await controller.connect_and_subscribe()
-    # - confirm node online
     user_input = ""
     while user_input not in ["exit", "quit"]:
         user_input = input(f"{node_id} > ")
