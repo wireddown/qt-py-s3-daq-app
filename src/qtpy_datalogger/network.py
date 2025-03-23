@@ -237,23 +237,24 @@ class QTPyController:
         result_response = []
         other_messages = []
         action_id = action.message_id
-        while not result_response:
-            topic_and_message = await self.message_queue.get()
-            response_json = topic_and_message.message
-            response = json.loads(response_json)
-            if "action" in response:
-                payload = node_classes.ActionPayload.from_dict(response)
-                sending_node = node_mqtt.node_from_topic(payload.sender.descriptor_topic)
-                result_id = payload.action.message_id
-                if sending_node == node_id and result_id == action_id:
-                    result_response.append(payload.action.parameters)
-                    break
-                logger.debug(f"Requeueing response '{topic_and_message}'")
-                other_messages.append(topic_and_message)
-            else:
-                logger.debug(f"Requeueing response '{topic_and_message}'")
-                other_messages.append(topic_and_message)
-            self.message_queue.task_done()
+        async with asyncio.timeout(timeout):
+            while not result_response:
+                topic_and_message = await self.message_queue.get()
+                response_json = topic_and_message.message
+                response = json.loads(response_json)
+                if "action" in response:
+                    payload = node_classes.ActionPayload.from_dict(response)
+                    sending_node = node_mqtt.node_from_topic(payload.sender.descriptor_topic)
+                    result_id = payload.action.message_id
+                    if sending_node == node_id and result_id == action_id:
+                        result_response.append(payload.action.parameters)
+                        break
+                    logger.debug(f"Requeueing response '{topic_and_message}'")
+                    other_messages.append(topic_and_message)
+                else:
+                    logger.debug(f"Requeueing response '{topic_and_message}'")
+                    other_messages.append(topic_and_message)
+                self.message_queue.task_done()
         for other_message in other_messages:
             self.message_queue.put_nowait(other_message)
         return result_response[0]
@@ -320,18 +321,28 @@ async def _open_session_on_node(node_id: str) -> None:
 
     await controller.connect_and_subscribe()
     user_input = ""
-    while user_input not in ["exit", "quit"]:
+    exit_commands = ["exit", "quit"]
+    while True:
         user_input = input(f"{node_id} > ")
+        if user_input in exit_commands:
+            break
         custom_parameters = {
             "input": user_input,
         }
         sent_action = await controller.send_action(node_id, "custom", custom_parameters)
         response_complete = False
         while not response_complete:
-            response_parameters = await controller.get_matching_result(node_id, sent_action)
-            response_complete = response_parameters["complete"]
-            response = response_parameters["output"]
-            print(response)  # noqa: T201 -- use direct IO for user
+            try:
+                response_parameters = await controller.get_matching_result(node_id, sent_action)
+                response_complete = response_parameters["complete"]
+                response = response_parameters["output"]
+                print(response)  # noqa: T201 -- use direct IO for user
+            except TimeoutError:
+                logger.error("Node did not respond! Is it online or correctly spelled?")
+                exit_options = "' or '".join(exit_commands)
+                logger.error(f"Use any of '{exit_options}' to exit.")
+                break
+
     await controller.disconnect()
 
 
