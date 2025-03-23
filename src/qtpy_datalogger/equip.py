@@ -69,7 +69,9 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
             logger.error("No QT Py devices found!")
             raise SystemExit(ExitCode.Discovery_Failure)
         if not communication_transport:
-            logger.error(f"Cannot compare or equip '{qtpy_device.node_id}' with MQTT connection. Please connect with USB.")
+            logger.error(
+                f"Cannot compare or equip '{qtpy_device.node_id}' with MQTT connection. Please connect with USB."
+            )
             raise SystemExit(ExitCode.Equip_Without_USB_Failure)
         root = pathlib.Path(qtpy_device.drive_root).resolve()
 
