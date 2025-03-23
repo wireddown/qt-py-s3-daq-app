@@ -319,12 +319,12 @@ async def _open_session_on_node(node_id: str) -> None:
         ip_address=ip_address,
     )
 
-    await controller.connect_and_subscribe()
-    user_input = ""
     exit_commands = ["exit", "quit"]
     exit_options = "' or '".join(exit_commands)
     exit_help = f"Use any of '{exit_options}' to exit."
     print(exit_help)  # noqa: T201 -- use direct IO for user REPL
+
+    await controller.connect_and_subscribe()
     while True:
         user_input = await asyncio.to_thread(input, f"{node_id} > ")
         if user_input in exit_commands:
@@ -332,10 +332,13 @@ async def _open_session_on_node(node_id: str) -> None:
         if user_input == "help":
             print(exit_help)  # noqa: T201 -- use direct IO for user REPL
             continue
+
+        command_name = "custom"
         custom_parameters = {
             "input": user_input,
         }
-        sent_action = await controller.send_action(node_id, "custom", custom_parameters)
+        sent_action = await controller.send_action(node_id, command_name, custom_parameters)
+
         response_complete = False
         while not response_complete:
             try:
