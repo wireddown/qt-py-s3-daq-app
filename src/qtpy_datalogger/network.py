@@ -322,10 +322,16 @@ async def _open_session_on_node(node_id: str) -> None:
     await controller.connect_and_subscribe()
     user_input = ""
     exit_commands = ["exit", "quit"]
+    exit_options = "' or '".join(exit_commands)
+    exit_help = f"Use any of '{exit_options}' to exit."
+    print(exit_help)  # noqa: T201 -- use direct IO for user REPL
     while True:
-        user_input = input(f"{node_id} > ")
+        user_input = await asyncio.to_thread(input, f"{node_id} > ")
         if user_input in exit_commands:
             break
+        if user_input == "help":
+            print(exit_help)  # noqa: T201 -- use direct IO for user REPL
+            continue
         custom_parameters = {
             "input": user_input,
         }
@@ -336,11 +342,10 @@ async def _open_session_on_node(node_id: str) -> None:
                 response_parameters = await controller.get_matching_result(node_id, sent_action)
                 response_complete = response_parameters["complete"]
                 response = response_parameters["output"]
-                print(response)  # noqa: T201 -- use direct IO for user
+                print(response)  # noqa: T201 -- use direct IO for user REPL
             except TimeoutError:
-                logger.error("Node did not respond! Is it online or correctly spelled?")
-                exit_options = "' or '".join(exit_commands)
-                logger.error(f"Use any of '{exit_options}' to exit.")
+                logger.error("Node did not respond! Is it online or correctly spelled?")  # noqa: TRY400 -- user-facing, known error condition
+                logger.error(exit_help)  # noqa: TRY400 -- user-facing, known error condition
                 break
 
     await controller.disconnect()
