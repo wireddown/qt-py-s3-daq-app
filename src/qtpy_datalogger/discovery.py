@@ -94,7 +94,6 @@ def handle_connect(behavior: Behavior, node: str, port: str) -> None:
             formatted_lines = _format_port_table(qtpy_devices)
             _ = [logger.info(line) for line in formatted_lines]
         else:
-            # And it may be on the network as a sensor_node
             logger.warning("No QT Py devices found!")
         raise SystemExit(ExitCode.Success)
 
@@ -257,7 +256,7 @@ def discover_and_select_qtpy(
     """
     Scan for QT Py devices and return a tuple of the selected device and its communication transport.
 
-    Ask the user for input when there is more than one device available.
+    Ask the user for input when there is more than one device available or when a device has more than one transport available.
     """
     qtpy_devices = discover_qtpy_devices()
     if not qtpy_devices:
@@ -292,7 +291,6 @@ def discover_and_select_qtpy(
             )
             selectable_transports = sorted(ConnectionTransport)
             selectable_transports.remove(ConnectionTransport.AutoSelect)
-
             _ = [print(f"  {index + 1}:  {entry}") for index, entry in enumerate(selectable_transports)]  # noqa: T201 -- use direct IO for user
 
             choices = click.Choice([f"{index + 1}" for index in range(len(selectable_transports))])
@@ -466,21 +464,22 @@ def _query_volumes_from_wmi() -> dict[str, dict[DetailKey, str]]:
     discovered_storage_volumes = {}
     for drive_letter, _ in drive_letters_and_labels.items():
         drive_label = drive_letters_and_labels[drive_letter][DetailKey.drive_label]
-        if drive_letter in drive_letters_and_partitions:
-            drive_partition = drive_letters_and_partitions[drive_letter][DetailKey.drive_partition]
-            disk_id = partitions_and_disks[drive_partition][DetailKey.disk_id]
-            disk_serial_number = disks_and_serial_numbers[disk_id][DetailKey.serial_number]
-            disk_description = disks_and_descriptions[disk_id][DetailKey.device_description]
-            discovered_storage_volumes.update(
-                {
-                    drive_letter: {
-                        DetailKey.drive_root: drive_letter,
-                        DetailKey.drive_label: drive_label,
-                        DetailKey.serial_number: disk_serial_number,
-                        DetailKey.device_description: disk_description,
-                    }
+        if drive_letter not in drive_letters_and_partitions:
+            continue
+        drive_partition = drive_letters_and_partitions[drive_letter][DetailKey.drive_partition]
+        disk_id = partitions_and_disks[drive_partition][DetailKey.disk_id]
+        disk_serial_number = disks_and_serial_numbers[disk_id][DetailKey.serial_number]
+        disk_description = disks_and_descriptions[disk_id][DetailKey.device_description]
+        discovered_storage_volumes.update(
+            {
+                drive_letter: {
+                    DetailKey.drive_root: drive_letter,
+                    DetailKey.drive_label: drive_label,
+                    DetailKey.serial_number: disk_serial_number,
+                    DetailKey.device_description: disk_description,
                 }
-            )
+            }
+        )
     logger.debug(discovered_storage_volumes)
     return discovered_storage_volumes
 
