@@ -55,10 +55,10 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
     this_file = pathlib.Path(__file__)
     this_folder = this_file.parent
     this_sensor_node_root = this_folder.joinpath("sensor_node")
-    runtime_bundle = _detect_snsr_bundle(this_sensor_node_root)
+    this_bundle = _detect_snsr_bundle(this_sensor_node_root)
 
     if behavior == Behavior.Describe:
-        self_description = _format_bundle_description(runtime_bundle)
+        self_description = _format_bundle_description(this_bundle)
         _ = [logger.info(line) for line in self_description]
         raise SystemExit(ExitCode.Success)
 
@@ -78,11 +78,11 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
     device_bundle = _detect_snsr_bundle(root)
     comparison_information = {
         "device bundle": device_bundle,
-        "runtime bundle": runtime_bundle,
+        "runtime bundle": this_bundle,
     }
 
     if behavior == Behavior.Compare:
-        runtime_freshness = _compare_file_trees(runtime_bundle.device_files, device_bundle.device_files)
+        runtime_freshness = _compare_file_trees(this_bundle.device_files, device_bundle.device_files)
         comparison_report = _format_bundle_comparison(comparison_information, runtime_freshness)
         _ = [logger.info(line) for line in comparison_report]
         raise SystemExit(ExitCode.Success)
@@ -186,7 +186,7 @@ def _format_bundle_comparison(
 ) -> list[str]:
     """Format and return a list of lines that compares the specified sensor_node bundles."""
     device_bundle = comparison_information["device bundle"]
-    runtime_bundle = comparison_information["runtime bundle"]
+    this_bundle = comparison_information["runtime bundle"]
 
     newer_mark = "(newer)"
     older_mark = "       "
@@ -196,8 +196,8 @@ def _format_bundle_comparison(
     except packaging.version.InvalidVersion:
         device_version = packaging.version.Version("0")
     device_timestamp = device_bundle.notice.timestamp
-    self_version = packaging.version.Version(runtime_bundle.notice.version)
-    self_timestamp = runtime_bundle.notice.timestamp
+    self_version = packaging.version.Version(this_bundle.notice.version)
+    self_timestamp = this_bundle.notice.timestamp
 
     self_is_newer = self_version > device_version
     if self_version == device_version:
@@ -209,16 +209,6 @@ def _format_bundle_comparison(
         device_mark = same_mark
         self_mark = same_mark
 
-    newer_files = set()
-    for path, freshness in file_freshness.items():
-        full_path = comparison_information["runtime bundle"].device_files[0].joinpath(path)
-        if not full_path.is_file():
-            continue
-        if freshness == "newer":
-            newer_files.add(path)
-            continue
-    newer_file_lines = [f"  * {file!s}\n" for file in sorted(newer_files)]
-
     report_contents = textwrap.dedent(
         f"""
         Comparing sensor_node device with this package
@@ -229,12 +219,22 @@ def _format_bundle_comparison(
           CircuitPy    {device_bundle.circuitpy_version:<31}    (PC host)
           Board ID     {device_bundle.board_id:<31}    (PC host)
           Location     {device_bundle.device_files[0]!s:<31}    (builtin)
-
-        Newer files
         """
     )
     report_lines = report_contents.splitlines()
-    report_lines.extend(newer_file_lines)
+
+    newer_files = set()
+    for path, freshness in file_freshness.items():
+        full_path = this_bundle.device_files[0].joinpath(path)
+        if not full_path.is_file():
+            continue
+        if freshness == "newer":
+            newer_files.add(path)
+            continue
+    if newer_files:
+        newer_file_lines = ["\n", "Newer files"]
+        newer_file_lines.extend([f"  * {file!s}\n" for file in sorted(newer_files)])
+        report_lines.extend(newer_file_lines)
     return report_lines
 
 
@@ -246,10 +246,10 @@ def _should_install(behavior: Behavior, comparison_information: dict[str, SnsrNo
     - a bool indicating whether the bundle should be installed
     - a string message explaining why the bundle should not be installed
     """
-    my_bundle = comparison_information["runtime bundle"]
+    this_bundle = comparison_information["runtime bundle"]
     device_bundle = comparison_information["device bundle"]
 
-    my_version = packaging.version.Version(my_bundle.notice.version)
+    my_version = packaging.version.Version(this_bundle.notice.version)
     should_install = False
 
     # Do the first lines from the device's code.py and our code.py match?
@@ -258,14 +258,14 @@ def _should_install(behavior: Behavior, comparison_information: dict[str, SnsrNo
     device_codepy_is_snsr_node = False
     if device_codepy_file.exists():
         device_first_line = device_codepy_file.read_text().splitlines()[0]
-        snsr_codepy_first_line = my_bundle.device_files[0].joinpath("code.py").read_text().splitlines()[0]
+        snsr_codepy_first_line = this_bundle.device_files[0].joinpath("code.py").read_text().splitlines()[0]
         device_codepy_is_snsr_node = device_first_line == snsr_codepy_first_line
 
     skip_reason = ""
     if device_codepy_is_snsr_node:
         device_snsr_version = packaging.version.Version(device_bundle.notice.version)
         device_snsr_timestamp = device_bundle.notice.timestamp
-        my_timestamp = my_bundle.notice.timestamp
+        my_timestamp = this_bundle.notice.timestamp
         if behavior == Behavior.OnlyNewerFiles:
             logger.info("Forcing installation of newer files")
             should_install = True
@@ -295,21 +295,19 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
     """Install the sensor_node bundle and its CircuitPython dependencies."""
     device_bundle = comparison_information["device bundle"]
     device_main_folder = device_bundle.device_files[0]
-    my_bundle = comparison_information["runtime bundle"]
+    this_bundle = comparison_information["runtime bundle"]
 
-    logger.info(f"Installing sensor_node v{my_bundle.notice.version} to '{device_main_folder}'")
-    my_main_folder = my_bundle.device_files[0]
+    logger.info(f"Installing sensor_node v{this_bundle.notice.version} to '{device_main_folder}'")
+    my_main_folder = this_bundle.device_files[0]
     device_snsr_root = device_main_folder.joinpath(SnsrPath.root)
 
     ignore_patterns = {"*.pyc", "__pycache__"}
     if behavior == Behavior.OnlyNewerFiles:
-        runtime_freshness = _compare_file_trees(
-            comparison_information["runtime bundle"].device_files, comparison_information["device bundle"].device_files
-        )
+        runtime_freshness = _compare_file_trees(this_bundle.device_files, device_bundle.device_files)
         older_files = set()
         newer_files = set()
         for path, freshness in runtime_freshness.items():
-            full_path = comparison_information["runtime bundle"].device_files[0].joinpath(path)
+            full_path = this_bundle.device_files[0].joinpath(path)
             if not full_path.is_file():
                 continue
             if freshness == "newer":
@@ -341,7 +339,7 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
         logger.info("Bundle files updated")
         return
 
-    circup_packages = my_bundle.circuitpy_dependencies
+    circup_packages = this_bundle.circuitpy_dependencies
     return_code = ExitCode.Success
     if circup_packages:
         circup_install_command = [
