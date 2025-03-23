@@ -12,6 +12,9 @@ _BROKER_IP_ADDRESS = "192.168.0.167"
 def connect_to_wifi() -> wifi.Radio:
     """Connect to the SSID from settings.toml and return the radio instance."""
     wifi.radio.connect(os.getenv("CIRCUITPY_WIFI_SSID"), os.getenv("CIRCUITPY_WIFI_PASSWORD"))
+    if not wifi.radio.ap_info:
+        return wifi.radio
+
     print("Connected to WiFi")
 
     print()
@@ -110,12 +113,12 @@ def create_mqtt_client(radio, node_group: str, node_identifier: str) -> minimqtt
     )
 
     # Connect callback handlers to mqtt_client
-    mqtt_client.on_connect = connect
-    mqtt_client.on_disconnect = disconnect
-    mqtt_client.on_subscribe = subscribe
-    mqtt_client.on_unsubscribe = unsubscribe
-    mqtt_client.on_publish = publish
-    mqtt_client.on_message = message
+    mqtt_client.on_connect = connect  # type: ignore -- we're assigning callbacks
+    mqtt_client.on_disconnect = disconnect  # type: ignore -- we're assigning callbacks
+    mqtt_client.on_subscribe = subscribe  # type: ignore -- we're assigning callbacks
+    mqtt_client.on_unsubscribe = unsubscribe  # type: ignore -- we're assigning callbacks
+    mqtt_client.on_publish = publish  # type: ignore -- we're assigning callbacks
+    mqtt_client.on_message = message  # type: ignore -- we're assigning callbacks
     return mqtt_client
 
 
