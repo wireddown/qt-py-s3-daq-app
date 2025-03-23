@@ -10,6 +10,7 @@ Classes used by hosts and nodes to send and receive MQTT messages.
 This module uses simple and explicit syntax to support CircuitPython clients.
 """
 
+
 class StatusInformation:
     """A class that describes the status of a node in a sensor_node group."""
 
