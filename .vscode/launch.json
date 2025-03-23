@@ -20,6 +20,7 @@
                 // "--help",
             ],
             // Useful options to enable in some situations
+            "justMyCode": false,
             "stopOnEntry": false,
             "autoReload": {
                 "enable": false
