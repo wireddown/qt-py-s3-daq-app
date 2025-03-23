@@ -69,7 +69,7 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
             logger.error("No QT Py devices found!")
             raise SystemExit(ExitCode.Discovery_Failure)
         if not communication_transport:
-            logger.error(f"Cannot compare or equip '{qtpy_device.node_id}' with MQTT connection.")
+            logger.error(f"Cannot compare or equip '{qtpy_device.node_id}' with MQTT connection. Please connect with USB.")
             raise SystemExit(ExitCode.Equip_Without_USB_Failure)
         root = pathlib.Path(qtpy_device.drive_root).resolve()
 
@@ -404,7 +404,7 @@ def _collect_file_list(folder: pathlib.Path) -> list[pathlib.Path]:
 
 
 def _compare_file_trees(tree1: list[pathlib.Path], tree2: list[pathlib.Path]) -> dict[pathlib.Path, str]:
-    """Compare two lists of paths, identifying newer or unique files."""
+    """Compare two lists of paths, identifying newer. A value of "newer" means tree1's file is newer than tree2's file."""
     set1 = {path.relative_to(tree1[0]) for path in tree1}
     set2 = {path.relative_to(tree2[0]) for path in tree2}
     shared_in_both = set1 & set2
