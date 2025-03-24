@@ -284,11 +284,12 @@ def query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
 
 
 def open_session_on_node(node_id: str) -> None:
-    """Open a terminal connection to the node with the specified node_id."""
+    """Open a terminal connection to the sensor_node with the specified node_id."""
     asyncio.run(_open_session_on_node(node_id))
 
 
 async def _query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
+    """Use a new QTPyController to scan the network for sensor_nodes."""
     broker_host = "localhost"
     group_id = "centrifuge"
     mac_address = hex(uuid.getnode())[2:]
@@ -308,6 +309,7 @@ async def _query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
 
 
 async def _open_session_on_node(node_id: str) -> None:
+    """Use a new QTPyController to open a terminal session on the specified node_id."""
     broker_host = "localhost"
     group_id = "centrifuge"
     mac_address = hex(uuid.getnode())[2:]
