@@ -78,6 +78,7 @@ class QTPyController:
 
         self.named_counter = NamedCounter()
         self.message_queue: asyncio.Queue[MqttMessage] = asyncio.Queue()
+        self.subscribed_topics: set[str] = set()
 
     async def connect_and_subscribe(self) -> None:
         """Connect the MQTT broker and subscribe to the topics in the sensor_node API."""
@@ -114,15 +115,19 @@ class QTPyController:
         with suppress_unless_debug():
             await self.client.connect(self.broker_host)
             self._publish_descriptor()
-            self.client.subscribe(self.broadcast_topic)
-            self.client.subscribe(self.command_topic)
-            self.client.subscribe(self.all_descriptors_in_group_topic)
-            await asyncio.sleep(0.2)  # Wait long enough to receive the subscription acknowledgements
+            await self._subscribe(
+                [
+                    self.broadcast_topic,
+                    self.command_topic,
+                    self.all_descriptors_in_group_topic,
+                ]
+            )
 
     async def disconnect(self) -> None:
         """Disconnect from the MQTT broker."""
         with suppress_unless_debug():
             await self.client.disconnect()
+        self.subscribed_topics.clear()
 
     def _publish_descriptor(self) -> None:
         """Publish the descriptor to the topic for this controller."""
@@ -131,6 +136,17 @@ class QTPyController:
             sender=_build_sender_information(self.descriptor_topic),
         )
         self.client.publish(self.descriptor_topic, json.dumps(descriptor_payload.as_dict()))
+
+    async def _subscribe(self, topics: list[str]) -> None:
+        """Subscribe to the specified topics."""
+        new_topics = set(topics) - self.subscribed_topics
+        if not new_topics:
+            return
+        with suppress_unless_debug():
+            for new_topic in new_topics:
+                self.subscribed_topics.add(new_topic)
+                self.client.subscribe(new_topic)
+            await asyncio.sleep(0.2)  # Wait long enough to receive the subscription acknowledgements
 
     def _broadcast_identify_command(self) -> None:
         """Send the identify command to the broadcast topic for the group."""
@@ -222,8 +238,7 @@ class QTPyController:
 
         with suppress_unless_debug():
             result_topic = node_mqtt.get_result_topic(self.group_id, node_id)
-            self.client.subscribe(result_topic)
-            await asyncio.sleep(0.2)  # Wait long enough to receive the subscription acknowledgements
+            await self._subscribe([result_topic])
 
         command_topic = node_mqtt.get_command_topic(self.group_id, node_id)
         self.client.publish(command_topic, json.dumps(action_payload.as_dict()))
