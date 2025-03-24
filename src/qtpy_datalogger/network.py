@@ -140,8 +140,8 @@ class QTPyController:
         - system_name
         """
         self._broadcast_identify_command()
-        await _yield_async_event_loop(discovery_timeout)
-        discovered_sensor_nodes = await self._collect_identify_responses()
+        discovered_sensor_nodes = await self._collect_identify_responses(discovery_timeout)
+
         node_information = {
             node.descriptor.serial_number: {
                 DetailKey.device_description: node.descriptor.hardware_name,
@@ -247,21 +247,28 @@ class QTPyController:
         )
         self.client.publish(self.broadcast_topic, json.dumps(identify_command.as_dict()))
 
-    async def _collect_identify_responses(self) -> list[node_classes.DescriptorPayload]:
+    async def _collect_identify_responses(self, discovery_timeout: float) -> list[node_classes.DescriptorPayload]:
         """Get the messages sent by sensor_nodes in response to the identify command."""
         identify_responses = []
         other_messages = []
-        while not self.message_queue.empty():
-            topic_and_message: MqttMessage = await self.message_queue.get()
-            response_json = topic_and_message.message
-            response = json.loads(response_json)
-            if "descriptor" in response:
-                descriptor = node_classes.DescriptorPayload.from_dict(response)
-                identify_responses.append(descriptor)
-            else:
-                logger.debug(f"Requeueing response '{topic_and_message}'")
-                other_messages.append(topic_and_message)
-            self.message_queue.task_done()
+
+        try:
+            async with asyncio.timeout(discovery_timeout):
+                while True:
+                    topic_and_message: MqttMessage = await self.message_queue.get()
+                    response_json = topic_and_message.message
+                    response = json.loads(response_json)
+                    if "descriptor" in response:
+                        descriptor = node_classes.DescriptorPayload.from_dict(response)
+                        identify_responses.append(descriptor)
+                    else:
+                        logger.debug(f"Requeueing response '{topic_and_message}'")
+                        other_messages.append(topic_and_message)
+                    self.message_queue.task_done()
+        except TimeoutError:
+            # Expected because the loop never exits and the timeout always expires
+            pass
+
         for other_message in other_messages:
             self.message_queue.put_nowait(other_message)
         return identify_responses
@@ -406,15 +413,3 @@ def _build_descriptor_information(role: str, serial_number: str, ip_address: str
             timestamp=snsr_notice.timestamp.isoformat(),
         ),
     )
-
-
-async def _yield_async_event_loop(timeout: float) -> None:
-    """Yield the async event loop for the specified timeout in seconds."""
-    try:
-        async with asyncio.timeout(timeout):
-            while True:  # noqa: ASYNC110 -- we cannot predict how many devices will respond, so we cannot know how many Events to await
-                # Let other async tasks run so we can receive MQTT messages
-                await asyncio.sleep(0)
-    except TimeoutError:
-        # Expected because the loop never exits and the timeout always expires
-        pass
