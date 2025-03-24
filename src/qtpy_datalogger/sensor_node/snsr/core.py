@@ -102,7 +102,7 @@ def _build_descriptor(
         node_id=format_mqtt_client_id(role, serial_number, pid),
         serial_number=serial_number,
         hardware_name=hardware_name,
-        system_name=micropython_base,
+        system_name=f"python-{micropython_base}",
         python_implementation=python_implementation,
         ip_address=ip_address,
         notice=notice,
