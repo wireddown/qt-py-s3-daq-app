@@ -518,7 +518,7 @@ def _parse_boot_out_file(main_folder: pathlib.Path) -> dict[DetailKey, str]:
     board_id = board_id_line.split(":")[-1]
 
     return {
-        DetailKey.python_implementation: circuitpy_version,
+        DetailKey.python_implementation: f"circuitpython-{circuitpy_version}",
         DetailKey.device_description: board_id,
     }
 
