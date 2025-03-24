@@ -82,6 +82,7 @@ class QTPyController:
 
     async def connect_and_subscribe(self) -> None:
         """Connect the MQTT broker and subscribe to the topics in the sensor_node API."""
+
         # Define these at runtime because
         #   we cannot change their parameters and make them instance methods (ie we cannot add 'self')
         #   we don't want to make make them static methods and share them across all instances
@@ -172,7 +173,12 @@ class QTPyController:
         await self._publish_action_payload(node_id, action)
         return action
 
-    async def get_matching_result(self, node_id: str, action: node_classes.ActionInformation, timeout: float = 5.0) -> dict:
+    async def get_matching_result(
+        self,
+        node_id: str,
+        action: node_classes.ActionInformation,
+        timeout: float = 5.0,
+    ) -> dict:
         """
         Monitor the MQTT messages for a matching result to the specified action.
 
