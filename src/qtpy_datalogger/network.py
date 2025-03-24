@@ -10,6 +10,7 @@ import uuid
 from typing import NamedTuple
 
 import gmqtt
+import psutil
 
 from .datatypes import DetailKey, SnsrNotice, suppress_unless_debug
 from .sensor_node.snsr.node import classes as node_classes
@@ -389,13 +390,15 @@ async def _open_session_on_node(node_id: str) -> None:
 
 def _build_sender_information(descriptor_topic: str) -> node_classes.SenderInformation:
     """Return a SenderInformation instance describing the system's current state."""
+    memory_information = psutil.virtual_memory()
+
     return node_classes.SenderInformation(
         descriptor_topic=descriptor_topic,
         sent_at="host-time",
         status=node_classes.StatusInformation(
-            used_memory="host-used",
-            free_memory="host-free",
-            cpu_temperature="host-cpu-temp",
+            used_memory=str(memory_information.used),
+            free_memory=str(memory_information.available),
+            cpu_temperature="NaN",  # No simple way to query this on Windows
         ),
     )
 
