@@ -34,7 +34,7 @@ class Behavior(StrEnum):
     Compare = "Compare"
     Describe = "Describe"
     Force = "Force"
-    OnlyNewerFiles = "OnlyNewerFiles"
+    NewerFilesOnly = "NewerFilesOnly"
 
 
 class SnsrNodeBundle(NamedTuple):
@@ -266,7 +266,7 @@ def _should_install(behavior: Behavior, comparison_information: dict[str, SnsrNo
         device_snsr_version = packaging.version.Version(device_bundle.notice.version)
         device_snsr_timestamp = device_bundle.notice.timestamp
         my_timestamp = this_bundle.notice.timestamp
-        if behavior == Behavior.OnlyNewerFiles:
+        if behavior == Behavior.NewerFilesOnly:
             logger.info("Forcing installation of newer files")
             should_install = True
         elif my_version > device_snsr_version:
@@ -302,7 +302,7 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
     device_snsr_root = device_main_folder.joinpath(SnsrPath.root)
 
     ignore_patterns = {"*.pyc", "__pycache__"}
-    if behavior == Behavior.OnlyNewerFiles:
+    if behavior == Behavior.NewerFilesOnly:
         runtime_freshness = _compare_file_trees(this_bundle.device_files, device_bundle.device_files)
         older_files = set()
         newer_files = set()
@@ -335,7 +335,7 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
     notice_contents = _create_notice_file_contents(allow_dev_version=True)
     notice_file.write_text(notice_contents)
 
-    if behavior == Behavior.OnlyNewerFiles:
+    if behavior == Behavior.NewerFilesOnly:
         logger.info("Bundle files updated")
         return
 

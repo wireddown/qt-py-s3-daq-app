@@ -209,7 +209,7 @@ def test_only_newer_files(
     monkeypatch.setattr(equip, "_compare_file_trees", override_file_freshness)
 
     with caplog.at_level(logging.INFO):
-        equip.handle_equip(behavior=equip.Behavior.OnlyNewerFiles, root=tmp_path)
+        equip.handle_equip(behavior=equip.Behavior.NewerFilesOnly, root=tmp_path)
 
     comparison_results = get_bundle_comparison(tmp_path)
     assert_device_matches_self(comparison_results)
