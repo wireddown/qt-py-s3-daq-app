@@ -123,6 +123,86 @@ class QTPyController:
                 ]
             )
 
+    async def scan_for_nodes(self, discovery_timeout: float = 0.5) -> dict[str, dict[DetailKey, str]]:
+        """
+        Scan the group for sensor_nodes and return a dictionary of discovered devices indexed by serial_number.
+
+        Returned entries, grouped by serial_number:
+        - device_description
+        - ip_address
+        - node_id
+        - python_implementation
+        - serial_number
+        - snsr_commit
+        - snsr_timestamp
+        - snsr_version
+        - system_name
+        """
+        self._broadcast_identify_command()
+        await _yield_async_event_loop(discovery_timeout)
+        discovered_sensor_nodes = await self._collect_identify_responses()
+        node_information = {
+            node.descriptor.serial_number: {
+                DetailKey.device_description: node.descriptor.hardware_name,
+                DetailKey.ip_address: node.descriptor.ip_address,
+                DetailKey.node_id: node.descriptor.node_id,
+                DetailKey.python_implementation: node.descriptor.python_implementation,
+                DetailKey.serial_number: node.descriptor.serial_number,
+                DetailKey.snsr_commit: node.descriptor.notice_information.commit,
+                DetailKey.snsr_timestamp: node.descriptor.notice_information.timestamp,
+                DetailKey.snsr_version: node.descriptor.notice_information.version,
+                DetailKey.system_name: node.descriptor.system_name,
+            }
+            for node in discovered_sensor_nodes
+        }
+        return node_information
+
+    async def send_action(self, node_id: str, command_name: str, parameters: dict) -> node_classes.ActionInformation:
+        """
+        Send a command with the specified parameters to the node in the group with node_id and return the sent ActionInformation.
+
+        Use the returned ActionInformation with 'get_matching_result()' to await the result.
+        """
+        action = node_classes.ActionInformation(
+            command=command_name,
+            parameters=parameters,
+            message_id=self._format_message_id(command_name),
+        )
+
+        await self._publish_action_payload(node_id, action)
+        return action
+
+    async def get_matching_result(self, node_id: str, action: node_classes.ActionInformation, timeout: float = 5.0) -> dict:
+        """
+        Monitor the MQTT messages for a matching result to the specified action.
+
+        Return the dictionary of parameters from the result's matching ActionInformation.
+        """
+        result_response = []
+        other_messages = []
+        action_id = action.message_id
+        async with asyncio.timeout(timeout):
+            while not result_response:
+                topic_and_message = await self.message_queue.get()
+                response_json = topic_and_message.message
+                response = json.loads(response_json)
+                if "action" in response:
+                    payload = node_classes.ActionPayload.from_dict(response)
+                    sending_node = node_mqtt.node_from_topic(payload.sender.descriptor_topic)
+                    result_id = payload.action.message_id
+                    if sending_node == node_id and result_id == action_id:
+                        result_response.append(payload.action.parameters)
+                        break
+                    logger.debug(f"Requeueing response '{topic_and_message}'")
+                    other_messages.append(topic_and_message)
+                else:
+                    logger.debug(f"Requeueing response '{topic_and_message}'")
+                    other_messages.append(topic_and_message)
+                self.message_queue.task_done()
+        for other_message in other_messages:
+            self.message_queue.put_nowait(other_message)
+        return result_response[0]
+
     async def disconnect(self) -> None:
         """Disconnect from the MQTT broker."""
         with suppress_unless_debug():
@@ -180,55 +260,6 @@ class QTPyController:
             self.message_queue.put_nowait(other_message)
         return identify_responses
 
-    async def scan_for_nodes(self, discovery_timeout: float = 0.5) -> dict[str, dict[DetailKey, str]]:
-        """
-        Scan the group for sensor_nodes and return a dictionary of discovered devices indexed by serial_number.
-
-        Returned entries, grouped by serial_number:
-        - device_description
-        - ip_address
-        - node_id
-        - python_implementation
-        - serial_number
-        - snsr_commit
-        - snsr_timestamp
-        - snsr_version
-        - system_name
-        """
-        self._broadcast_identify_command()
-        await _yield_async_event_loop(discovery_timeout)
-        discovered_sensor_nodes = await self._collect_identify_responses()
-        node_information = {
-            node.descriptor.serial_number: {
-                DetailKey.device_description: node.descriptor.hardware_name,
-                DetailKey.ip_address: node.descriptor.ip_address,
-                DetailKey.node_id: node.descriptor.node_id,
-                DetailKey.python_implementation: node.descriptor.python_implementation,
-                DetailKey.serial_number: node.descriptor.serial_number,
-                DetailKey.snsr_commit: node.descriptor.notice_information.commit,
-                DetailKey.snsr_timestamp: node.descriptor.notice_information.timestamp,
-                DetailKey.snsr_version: node.descriptor.notice_information.version,
-                DetailKey.system_name: node.descriptor.system_name,
-            }
-            for node in discovered_sensor_nodes
-        }
-        return node_information
-
-    async def send_action(self, node_id: str, command_name: str, parameters: dict) -> node_classes.ActionInformation:
-        """
-        Send a command with the specified parameters to the node in the group with node_id and return the sent ActionInformation.
-
-        Use the returned ActionInformation with 'get_matching_result()' to await the result.
-        """
-        action = node_classes.ActionInformation(
-            command=command_name,
-            parameters=parameters,
-            message_id=self._format_message_id(command_name),
-        )
-
-        await self._publish_action_payload(node_id, action)
-        return action
-
     async def _publish_action_payload(self, node_id: str, action: node_classes.ActionInformation) -> None:
         """Send the specified action to the specified node_id's command topic."""
         action_payload = node_classes.ActionPayload(
@@ -242,37 +273,6 @@ class QTPyController:
 
         command_topic = node_mqtt.get_command_topic(self.group_id, node_id)
         self.client.publish(command_topic, json.dumps(action_payload.as_dict()))
-
-    async def get_matching_result(self, node_id: str, action: node_classes.ActionInformation, timeout: float = 5.0) -> dict:
-        """
-        Monitor the MQTT messages for a matching result to the specified action.
-
-        Return the dictionary of parameters from the result's matching ActionInformation.
-        """
-        result_response = []
-        other_messages = []
-        action_id = action.message_id
-        async with asyncio.timeout(timeout):
-            while not result_response:
-                topic_and_message = await self.message_queue.get()
-                response_json = topic_and_message.message
-                response = json.loads(response_json)
-                if "action" in response:
-                    payload = node_classes.ActionPayload.from_dict(response)
-                    sending_node = node_mqtt.node_from_topic(payload.sender.descriptor_topic)
-                    result_id = payload.action.message_id
-                    if sending_node == node_id and result_id == action_id:
-                        result_response.append(payload.action.parameters)
-                        break
-                    logger.debug(f"Requeueing response '{topic_and_message}'")
-                    other_messages.append(topic_and_message)
-                else:
-                    logger.debug(f"Requeueing response '{topic_and_message}'")
-                    other_messages.append(topic_and_message)
-                self.message_queue.task_done()
-        for other_message in other_messages:
-            self.message_queue.put_nowait(other_message)
-        return result_response[0]
 
     def _format_message_id(self, action_name: str) -> str:
         """Return a unique message ID for the action_name."""
