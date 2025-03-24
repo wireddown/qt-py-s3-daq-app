@@ -115,14 +115,14 @@ class QTPyController:
 
         with suppress_unless_debug():
             await self.client.connect(self.broker_host)
-            self._publish_descriptor()
-            await self._subscribe(
-                [
-                    self.broadcast_topic,
-                    self.command_topic,
-                    self.all_descriptors_in_group_topic,
-                ]
-            )
+        self._publish_descriptor()
+        await self._subscribe(
+            [
+                self.broadcast_topic,
+                self.command_topic,
+                self.all_descriptors_in_group_topic,
+            ]
+        )
 
     async def scan_for_nodes(self, discovery_timeout: float = 0.5) -> dict[str, dict[DetailKey, str]]:
         """
@@ -273,9 +273,8 @@ class QTPyController:
             sender=_build_sender_information(self.descriptor_topic),
         )
 
-        with suppress_unless_debug():
-            result_topic = node_mqtt.get_result_topic(self.group_id, node_id)
-            await self._subscribe([result_topic])
+        result_topic = node_mqtt.get_result_topic(self.group_id, node_id)
+        await self._subscribe([result_topic])
 
         command_topic = node_mqtt.get_command_topic(self.group_id, node_id)
         self.client.publish(command_topic, json.dumps(action_payload.as_dict()))
