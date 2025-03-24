@@ -79,6 +79,8 @@ class QTPyController:
         self.named_counter = NamedCounter()
         self.message_queue: asyncio.Queue[MqttMessage] = asyncio.Queue()
 
+    async def connect_and_subscribe(self) -> None:
+        """Connect the MQTT broker and subscribe to the topics in the sensor_node API."""
         # Define these at runtime because
         #   we cannot change their parameters and make them instance methods (ie we cannot add 'self')
         #   we don't want to make make them static methods and share them across all instances
@@ -109,8 +111,6 @@ class QTPyController:
         self.client.on_disconnect = on_mqtt_disconnect
         self.client.on_subscribe = on_mqtt_subscribe
 
-    async def connect_and_subscribe(self) -> None:
-        """Connect the MQTT broker and subscribe to the topics in the sensor_node API."""
         with suppress_unless_debug():
             await self.client.connect(self.broker_host)
             self._publish_descriptor()
