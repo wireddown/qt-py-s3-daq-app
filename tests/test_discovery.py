@@ -10,12 +10,12 @@ from qtpy_datalogger.datatypes import DetailKey, ExitCode
 usb_qtpy_1 = discovery.QTPyDevice(
     com_id="USB VID:PID=239A:811A SER=00AA00AA00AA LOCATION=1-7:x.0",
     com_port="COMxx",
-    device_description="Adafruit QT Py ESP32S3 no PSRAM",
+    device_description="Adafruit QT Py ESP32-S3 no PSRAM",
     drive_label="CIRCUITPY",
     drive_root="Q:",
     ip_address="",
     node_id="",
-    python_implementation="9.2.1",
+    python_implementation="circuitpython-9.2.1",
     serial_number="00aa00aa00aa",
     snsr_version="1.2.3",
 )
@@ -23,7 +23,7 @@ usb_qtpy_1 = discovery.QTPyDevice(
 mqtt_qtpy_1 = discovery.QTPyDevice(
     com_id="",
     com_port="",
-    device_description="adafruit_qtpy_esp32s3_nopsram",
+    device_description="Adafruit QT Py ESP32-S3 no PSRAM",
     drive_label="",
     drive_root="",
     ip_address="192.168.0.0",
@@ -36,7 +36,7 @@ mqtt_qtpy_1 = discovery.QTPyDevice(
 dual_mode_qtpy_1 = discovery.QTPyDevice(
     com_id="USB VID:PID=239A:811A SER=00AA00AA00AA LOCATION=1-7:x.0",
     com_port="COMxx",
-    device_description="Adafruit QT Py ESP32S3 no PSRAM",
+    device_description="Adafruit QT Py ESP32-S3 no PSRAM",
     drive_label="CIRCUITPY",
     drive_root="Q:",
     ip_address="192.168.0.0",
@@ -49,12 +49,12 @@ dual_mode_qtpy_1 = discovery.QTPyDevice(
 usb_qtpy_2 = discovery.QTPyDevice(
     com_id="USB VID:PID=239A:8144 SER=11CC11CC11CC LOCATION=1-8:x.0",
     com_port="COMyy",
-    device_description="Adafruit QT Py ESP32S3 2MB PSRAM",
+    device_description="Adafruit QT Py ESP32-S3 2MB PSRAM",
     drive_label="CIRCUITPY",
     drive_root="T:",
     ip_address="",
     node_id="",
-    python_implementation="9.2.1",
+    python_implementation="circuitpython-9.1.3",
     serial_number="11cc11cc11cc",
     snsr_version="1.1.0",
 )
@@ -62,12 +62,12 @@ usb_qtpy_2 = discovery.QTPyDevice(
 mqtt_qtpy_2 = discovery.QTPyDevice(
     com_id="",
     com_port="",
-    device_description="adafruit_qtpy_esp32s3_4mbflash_2mbpsram",
+    device_description="Adafruit QT Py ESP32-S3 2MB PSRAM",
     drive_label="",
     drive_root="",
     ip_address="172.16.0.0",
     node_id="node-11cc11cc11cc-0",
-    python_implementation="circuitpython-9.2.1",
+    python_implementation="circuitpython-9.1.3",
     serial_number="11cc11cc11cc",
     snsr_version="1.1.0",
 )
@@ -75,7 +75,7 @@ mqtt_qtpy_2 = discovery.QTPyDevice(
 dual_mode_qtpy_2 = discovery.QTPyDevice(
     com_id="USB VID:PID=239A:8144 SER=11CC11CC11CC LOCATION=1-8:x.0",
     com_port="COMyy",
-    device_description="Adafruit QT Py ESP32S3 2MB PSRAM",
+    device_description="Adafruit QT Py ESP32-S3 2MB PSRAM",
     drive_label="CIRCUITPY",
     drive_root="T:",
     ip_address="172.16.0.0",

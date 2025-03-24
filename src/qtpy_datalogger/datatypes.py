@@ -66,6 +66,21 @@ class DetailKey(enum.StrEnum):
     system_name = "system_name"
 
 
+class CaptionCorrections:
+    """Corrections for abbreviated or malformatted device descriptions."""
+
+    @staticmethod
+    def get_corrected(caption: str) -> str:
+        """Return the corrected string for the specified input caption."""
+        caption_corrections = {
+            "Adafruit QT Py ESP32S3 no USB Device": "Adafruit QT Py ESP32-S3 no PSRAM",
+            "adafruit_qtpy_esp32s3_nopsram": "Adafruit QT Py ESP32-S3 no PSRAM",
+            "Adafruit QT Py ESP32S3 4M USB Device": "Adafruit QT Py ESP32-S3 2MB PSRAM",
+            "adafruit_qtpy_esp32s3_4mbflash_2mbpsram": "Adafruit QT Py ESP32-S3 2MB PSRAM",
+        }
+        return caption_corrections.get(caption, caption)
+
+
 class SnsrPath(enum.StrEnum):
     """Reserved path names for qtpy_datalogger sensor_node bundles."""
 

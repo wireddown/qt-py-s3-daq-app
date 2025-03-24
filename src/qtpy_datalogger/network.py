@@ -12,7 +12,7 @@ from typing import NamedTuple
 import gmqtt
 import psutil
 
-from .datatypes import DetailKey, SnsrNotice, suppress_unless_debug
+from .datatypes import CaptionCorrections, DetailKey, SnsrNotice, suppress_unless_debug
 from .sensor_node.snsr.node import classes as node_classes
 from .sensor_node.snsr.node import mqtt as node_mqtt
 
@@ -145,7 +145,7 @@ class QTPyController:
 
         node_information = {
             node.descriptor.serial_number: {
-                DetailKey.device_description: node.descriptor.hardware_name,
+                DetailKey.device_description: CaptionCorrections.get_corrected(node.descriptor.hardware_name),
                 DetailKey.ip_address: node.descriptor.ip_address,
                 DetailKey.node_id: node.descriptor.node_id,
                 DetailKey.python_implementation: node.descriptor.python_implementation,

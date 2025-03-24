@@ -23,7 +23,7 @@ from serial.tools import miniterm as mt
 
 from qtpy_datalogger import network
 
-from .datatypes import ConnectionTransport, DetailKey, ExitCode, SnsrNotice, SnsrPath
+from .datatypes import CaptionCorrections, ConnectionTransport, DetailKey, ExitCode, SnsrNotice, SnsrPath
 
 logger = logging.getLogger(__name__)
 
@@ -441,16 +441,13 @@ def _query_volumes_from_wmi() -> dict[str, dict[DetailKey, str]]:
         )
     logger.debug(f"Win32_PhysicalMedia report: {disks_and_serial_numbers}")
 
-    caption_corrections = {
-        "Adafruit QT Py ESP32S3 no USB Device": "Adafruit QT Py ESP32S3 no PSRAM",
-        "Adafruit QT Py ESP32S3 4M USB Device": "Adafruit QT Py ESP32S3 2MB PSRAM",
-    }
+
     disks_and_descriptions = {}
     for drive in list(host_pc.Win32_DiskDrive()):
         # Full value has format '\\\\.\\PHYSICALDRIVE0'
         disk_id = drive.wmi_property("DeviceID").value.split("\\")[-1]
         disk_description = drive.wmi_property("Caption").value
-        corrected_description = caption_corrections.get(disk_description, disk_description)
+        corrected_description = CaptionCorrections.get_corrected(disk_description)
         disks_and_descriptions.update(
             {
                 disk_id: {
@@ -519,7 +516,7 @@ def _parse_boot_out_file(main_folder: pathlib.Path) -> dict[DetailKey, str]:
 
     return {
         DetailKey.python_implementation: f"circuitpython-{circuitpy_version}",
-        DetailKey.device_description: board_id,
+        DetailKey.device_description: CaptionCorrections.get_corrected(board_id),
     }
 
 
