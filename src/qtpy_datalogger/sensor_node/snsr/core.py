@@ -1,5 +1,7 @@
 """Core classes and functions."""
 
+from snsr.node.classes import DescriptorInformation, NoticeInformation, SenderInformation
+
 
 def read_one_uart_line() -> str:
     """Read characters from the USB UART until a newline."""
@@ -53,7 +55,7 @@ def get_system_info() -> dict[str, str]:
 def get_notice_info() -> dict:
     """Return a serializable representation of the notice.toml file."""
     notice_contents = []
-    with open("/snsr/notice.toml", "r") as notice_toml:
+    with open("/snsr/notice.toml") as notice_toml:  # noqa: PTH123 -- Path.open() is not available on CircuitPython
         notice_contents = notice_toml.read().splitlines()
     notice_info = {}
     for line in notice_contents:
@@ -64,13 +66,12 @@ def get_notice_info() -> dict:
     return notice_info
 
 
-def build_descriptor_information(role: str, serial_number: str, ip_address: str):
+def build_descriptor_information(role: str, serial_number: str, ip_address: str) -> DescriptorInformation:
+    """Return a DescriptorInformation instance describing the client's current state."""
     from os import uname
     from sys import implementation, version_info
 
     from board import board_id
-
-    from snsr.node.classes import NoticeInformation
 
     pid = 0
     system_info = uname()
@@ -92,10 +93,17 @@ def build_descriptor_information(role: str, serial_number: str, ip_address: str)
     return descriptor
 
 
-def _build_descriptor(
-    role, serial_number, pid, hardware_name, micropython_base, python_implementation, ip_address, notice
-):
-    from snsr.node.classes import DescriptorInformation
+def _build_descriptor(  # noqa: PLR0913 -- allow more than 5 parameters for this function
+    role: str,
+    serial_number: str,
+    pid: int,
+    hardware_name: str,
+    micropython_base: str,
+    python_implementation: str,
+    ip_address: str,
+    notice: NoticeInformation,
+) -> DescriptorInformation:
+    """Return a DescriptorInformation instance using the specified parameters."""
     from snsr.node.mqtt import format_mqtt_client_id
 
     descriptor = DescriptorInformation(
@@ -110,7 +118,8 @@ def _build_descriptor(
     return descriptor
 
 
-def build_sender_information(descriptor_topic: str):
+def build_sender_information(descriptor_topic: str) -> SenderInformation:
+    """Return a SenderInformation instance describing the system's current state."""
     import gc
     from time import monotonic
 
@@ -130,6 +139,7 @@ def build_sender_information(descriptor_topic: str):
 
 
 def get_descriptor_payload(role: str, serial_number: str, ip_address: str) -> str:
+    """Return a serialized string representation of the DescriptorPayload."""
     import json
 
     from snsr.node.classes import DescriptorPayload
