@@ -187,6 +187,7 @@ class QTPyController:
         result_response = []
         other_messages = []
         action_id = action.message_id
+        logger.debug(f"Monitoring MQTT messages for the '{action_id}' result from '{node_id}'")
         async with asyncio.timeout(timeout):
             while not result_response:
                 topic_and_message = await self.message_queue.get()
@@ -197,6 +198,7 @@ class QTPyController:
                     sending_node = node_mqtt.node_from_topic(payload.sender.descriptor_topic)
                     result_id = payload.action.message_id
                     if sending_node == node_id and result_id == action_id:
+                        logger.debug(f"Matched result '{payload.action.parameters}'")
                         result_response.append(payload.action.parameters)
                         break
                     logger.debug(f"Requeueing response '{topic_and_message}'")
@@ -253,14 +255,16 @@ class QTPyController:
         other_messages = []
 
         try:
+            logger.debug("Monitoring MQTT messages for 'identify' responses")
             async with asyncio.timeout(discovery_timeout):
                 while True:
                     topic_and_message: MqttMessage = await self.message_queue.get()
                     response_json = topic_and_message.message
                     response = json.loads(response_json)
                     if "descriptor" in response:
-                        descriptor = node_classes.DescriptorPayload.from_dict(response)
-                        identify_responses.append(descriptor)
+                        payload = node_classes.DescriptorPayload.from_dict(response)
+                        logger.debug(f"Matched response '{payload.descriptor.node_id}'")
+                        identify_responses.append(payload)
                     else:
                         logger.debug(f"Requeueing response '{topic_and_message}'")
                         other_messages.append(topic_and_message)
