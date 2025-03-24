@@ -140,12 +140,12 @@ def test_host_build_descriptor() -> None:
 
 def test_node_build_descriptor(monkeypatch: pytest.MonkeyPatch) -> None:
     """Does the node-side usage match the shared classes' definitions?"""
-    from qtpy_datalogger.datatypes import SnsrNotice
-    from qtpy_datalogger.sensor_node.snsr.core import _build_descriptor as node_build_descriptor
-
     # Support looking up sensor_node modules from the node's perspective (where 'snsr' is a package)
     sensor_node_root = pathlib.Path(__file__).parent.parent.joinpath("src", "qtpy_datalogger", "sensor_node")
     monkeypatch.syspath_prepend(sensor_node_root)
+
+    from qtpy_datalogger.datatypes import SnsrNotice
+    from qtpy_datalogger.sensor_node.snsr.core import _build_descriptor as node_build_descriptor
 
     snsr_notice = SnsrNotice.get_package_notice_info(allow_dev_version=True)
     descriptor = node_build_descriptor(

@@ -72,7 +72,7 @@ def on_message(client: minimqtt.MQTT, topic: str, message: str) -> None:
 
         from .core import get_descriptor_payload
 
-        context: dict = client.user_data
+        context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
         descriptor_topic = f"qtpy/v1/{context['node_group']}/{context['node_identifier']}/$DESCRIPTOR"
         descriptor_message = get_descriptor_payload("node", cpu.uid.hex().lower(), str(radio.ipv4_address))
         client.publish(descriptor_topic, descriptor_message)
@@ -82,7 +82,7 @@ def on_message(client: minimqtt.MQTT, topic: str, message: str) -> None:
         from .core import build_sender_information
         from .node.classes import ActionInformation, ActionPayload
 
-        context: dict = client.user_data
+        context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
         result_topic = f"qtpy/v1/{context['node_group']}/{context['node_identifier']}/result"
         action_payload_information = loads(message)
         action_payload = ActionPayload.from_dict(action_payload_information)

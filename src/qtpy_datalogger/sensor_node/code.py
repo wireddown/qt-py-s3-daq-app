@@ -1,11 +1,11 @@
 """code.py file is the main loop from qtpy_datalogger.sensor_node."""  # noqa: INP001 -- this is the entry point for CircuitPython devices
 
-from microcontroller import cpu
-from snsr.core import get_memory_info, read_one_uart_line, paint_uart_line
-from snsr.rxtx import connect_to_wifi, create_mqtt_client, connect_and_subscribe, unsubscribe_and_disconnect
-from supervisor import runtime
 from time import sleep
-from usb_cdc import console
+
+from microcontroller import cpu
+from snsr.core import get_memory_info, paint_uart_line, read_one_uart_line
+from snsr.rxtx import connect_and_subscribe, connect_to_wifi, create_mqtt_client, unsubscribe_and_disconnect
+from supervisor import runtime
 
 radio = connect_to_wifi()
 
@@ -29,11 +29,11 @@ while response.lower() not in ["exit", "quit"]:
     paint_uart_line(" [ Poll UART ]     Poll MQTT  ")
     sleep(0.2)
     if runtime.usb_connected and runtime.serial_connected and runtime.serial_bytes_available > 0:
-        print()
+        print()  # noqa: T201 -- use direct IO for user REPL
         response = read_one_uart_line()
         if not response:
             response = read_one_uart_line()
-        used_kB, free_kB = get_memory_info()
-        print(f"Received '{response}' with {used_kB} / {free_kB}  (used/free)")
+        used_kb, free_kb = get_memory_info()
+        print(f"Received '{response}' with {used_kb} / {free_kb}  (used/free)")  # noqa: T201 -- use direct IO for user REPL
 
 unsubscribe_and_disconnect(mqtt_client, mqtt_topics)
