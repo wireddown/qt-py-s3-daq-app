@@ -441,7 +441,6 @@ def _query_volumes_from_wmi() -> dict[str, dict[DetailKey, str]]:
         )
     logger.debug(f"Win32_PhysicalMedia report: {disks_and_serial_numbers}")
 
-
     disks_and_descriptions = {}
     for drive in list(host_pc.Win32_DiskDrive()):
         # Full value has format '\\\\.\\PHYSICALDRIVE0'
