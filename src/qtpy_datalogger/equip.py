@@ -55,10 +55,10 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
     this_file = pathlib.Path(__file__)
     this_folder = this_file.parent
     this_sensor_node_root = this_folder.joinpath("sensor_node")
-    runtime_bundle = _detect_snsr_bundle(this_sensor_node_root)
+    this_bundle = _detect_snsr_bundle(this_sensor_node_root)
 
     if behavior == Behavior.Describe:
-        self_description = _format_bundle_description(runtime_bundle)
+        self_description = _format_bundle_description(this_bundle)
         _ = [logger.info(line) for line in self_description]
         raise SystemExit(ExitCode.Success)
 
@@ -72,7 +72,7 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
     device_bundle = _detect_snsr_bundle(root)
     comparison_information = {
         "device bundle": device_bundle,
-        "runtime bundle": runtime_bundle,
+        "runtime bundle": this_bundle,
     }
 
     if behavior == Behavior.Compare:
@@ -176,7 +176,7 @@ def _format_bundle_description(bundle: SnsrNodeBundle) -> list[str]:
 def _format_bundle_comparison(comparison_information: dict[str, SnsrNodeBundle]) -> list[str]:
     """Format and return a list of lines that compares the specified sensor_node bundles."""
     device_bundle = comparison_information["device bundle"]
-    runtime_bundle = comparison_information["runtime bundle"]
+    this_bundle = comparison_information["runtime bundle"]
 
     newer_mark = "(newer)"
     older_mark = "       "
@@ -186,8 +186,8 @@ def _format_bundle_comparison(comparison_information: dict[str, SnsrNodeBundle])
     except packaging.version.InvalidVersion:
         device_version = packaging.version.Version("0")
     device_timestamp = device_bundle.notice.timestamp
-    self_version = packaging.version.Version(runtime_bundle.notice.version)
-    self_timestamp = runtime_bundle.notice.timestamp
+    self_version = packaging.version.Version(this_bundle.notice.version)
+    self_timestamp = this_bundle.notice.timestamp
 
     self_is_newer = self_version > device_version
     if self_version == device_version:
@@ -222,10 +222,10 @@ def _should_install(behavior: Behavior, comparison_information: dict[str, SnsrNo
     - a bool indicating whether the bundle should be installed
     - a string message explaining why the bundle should not be installed
     """
-    my_bundle = comparison_information["runtime bundle"]
+    this_bundle = comparison_information["runtime bundle"]
     device_bundle = comparison_information["device bundle"]
 
-    my_version = packaging.version.Version(my_bundle.notice.version)
+    my_version = packaging.version.Version(this_bundle.notice.version)
     should_install = False
 
     # Do the first lines from the device's code.py and our code.py match?
@@ -234,14 +234,14 @@ def _should_install(behavior: Behavior, comparison_information: dict[str, SnsrNo
     device_codepy_is_snsr_node = False
     if device_codepy_file.exists():
         device_first_line = device_codepy_file.read_text().splitlines()[0]
-        snsr_codepy_first_line = my_bundle.device_files[0].joinpath("code.py").read_text().splitlines()[0]
+        snsr_codepy_first_line = this_bundle.device_files[0].joinpath("code.py").read_text().splitlines()[0]
         device_codepy_is_snsr_node = device_first_line == snsr_codepy_first_line
 
     skip_reason = ""
     if device_codepy_is_snsr_node:
         device_snsr_version = packaging.version.Version(device_bundle.notice.version)
         device_snsr_timestamp = device_bundle.notice.timestamp
-        my_timestamp = my_bundle.notice.timestamp
+        my_timestamp = this_bundle.notice.timestamp
         if my_version > device_snsr_version:
             logger.info("Upgrading version")
             logger.info(f"  Device is version  '{device_snsr_version}'")
