@@ -359,6 +359,8 @@ def _query_volumes_from_wmi() -> dict[str, dict[str, str]]:
     discovered_storage_volumes = {}
     for drive_letter, _ in drive_letters_and_labels.items():
         drive_label = drive_letters_and_labels[drive_letter][_INFO_KEY_drive_label]
+        if drive_letter not in drive_letters_and_partitions:
+            continue
         drive_partition = drive_letters_and_partitions[drive_letter][_INFO_KEY_drive_partition]
         disk_id = partitions_and_disks[drive_partition][_INFO_KEY_disk_id]
         disk_serial_number = disks_and_serial_numbers[disk_id][_INFO_KEY_serial_number]
