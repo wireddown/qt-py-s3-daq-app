@@ -7,7 +7,7 @@ import pytest
 import toml
 
 from qtpy_datalogger import equip
-from qtpy_datalogger.datatypes import ExitCode, SnsrPath
+from qtpy_datalogger.datatypes import ExitCode, SnsrNotice, SnsrPath
 
 
 def create_test_device_folder(tmp_folder: pathlib.Path) -> None:
@@ -25,7 +25,7 @@ def create_test_device_folder(tmp_folder: pathlib.Path) -> None:
 
     # Stamp the notice file
     device_notice = tmp_folder.joinpath(SnsrPath.notice)
-    source_toml = equip._get_package_notice_info(allow_dev_version=True)
+    source_toml = SnsrNotice.get_package_notice_info(allow_dev_version=True)
     notice_text = toml.dumps(source_toml._asdict())
     device_notice.write_text(notice_text)
 
