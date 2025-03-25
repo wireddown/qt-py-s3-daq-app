@@ -215,7 +215,9 @@ class QTPyController:
     async def disconnect(self) -> None:
         """Disconnect from the MQTT broker."""
         if not self.message_queue.empty():
-            logger.warning(f"Leaving {self.message_queue.qsize()} MQTT messages unprocessed. Add '--verbose' to see them.")
+            logger.warning(
+                f"Leaving {self.message_queue.qsize()} MQTT messages unprocessed. Add '--verbose' to see them."
+            )
             while not self.message_queue.empty():
                 unprocessed_message = self.message_queue.get_nowait()
                 logger.debug(unprocessed_message._asdict())
