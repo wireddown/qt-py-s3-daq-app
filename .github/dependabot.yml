@@ -9,3 +9,5 @@ updates:
       interval: 'monthly'
     labels:
       - 'inbox'
+    ignore:
+      - dependency-name: "circuitpython-stubs"
