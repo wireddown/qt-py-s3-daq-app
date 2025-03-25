@@ -1,6 +1,5 @@
 """Functions for creating, configuring, and updating QT Py sensor nodes."""
 
-import contextlib
 import datetime
 import logging
 import pathlib
@@ -9,9 +8,8 @@ import subprocess
 import sys
 import textwrap
 import urllib.request
-from collections.abc import Generator
 from enum import StrEnum
-from typing import Any, NamedTuple
+from typing import NamedTuple
 
 import bs4
 import circup
@@ -21,7 +19,7 @@ import toml
 
 from qtpy_datalogger import discovery
 
-from .datatypes import ExitCode, Links, SnsrNotice, SnsrPath
+from .datatypes import ExitCode, Links, SnsrNotice, SnsrPath, suppress_unless_debug
 
 logger = logging.getLogger(__name__)
 
@@ -48,19 +46,6 @@ class SnsrNodeBundle(NamedTuple):
     board_id: str
     circuitpy_dependencies: list[str]
     installed_circuitpy_modules: list[tuple[str, str]]
-
-
-@contextlib.contextmanager
-def suppress_unless_debug() -> Generator[None, Any, None]:
-    """Suppress logger.info() messages unless logging has been set to DEBUG / --verbose."""
-    initial_log_level = logger.getEffectiveLevel()
-    should_suppress = initial_log_level > logging.DEBUG
-    try:
-        if should_suppress:
-            logger.setLevel(logging.WARNING)
-        yield
-    finally:
-        logger.setLevel(initial_log_level)
 
 
 def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
