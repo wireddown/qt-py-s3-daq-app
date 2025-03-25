@@ -1,4 +1,4 @@
-"""code.py file is the main loop from qtpy_datalogger.sensor_node."""  # noqa: INP001 -- this is the entry point for CircuitPython devices
+"""code.py file is the main loop from qtpy_datalogger.sensor_node."""  # noqa: INP001 A005 -- we must hide 'code' (A005) to use the entry point for CircuitPython devices (IMP001)
 
 import gc
 
