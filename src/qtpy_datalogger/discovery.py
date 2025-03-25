@@ -105,12 +105,13 @@ def discover_qtpy_devices() -> list[dict[str, str]]:
             port_serial_number = port_info[_INFO_KEY_serial_number]
 
             if port_serial_number and port_serial_number == drive_serial_number:
+                serial_number = port_serial_number.lower()
                 qtpy_devices.append(
                     {
                         _INFO_KEY_drive_letter: drive_info[_INFO_KEY_drive_letter],
                         _INFO_KEY_drive_label: drive_info[_INFO_KEY_drive_label],
                         _INFO_KEY_disk_description: drive_info[_INFO_KEY_disk_description],
-                        _INFO_KEY_serial_number: drive_info[_INFO_KEY_serial_number],
+                        _INFO_KEY_serial_number: serial_number,
                         _INFO_KEY_com_port: port_info[_INFO_KEY_com_port],
                         _INFO_KEY_com_id: port_info[_INFO_KEY_com_id],
                     }
