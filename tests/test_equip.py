@@ -1,5 +1,6 @@
 """Acceptance tests for the equip module."""
 
+import logging
 import pathlib
 import shutil
 
@@ -140,6 +141,7 @@ def test_skip_upgrade(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -
     set_device_notice(upversion_toml, tmp_path)
 
     equip.handle_equip(behavior=equip.Behavior.Upgrade, root=tmp_path)
+    assert not tmp_path.joinpath("lib").exists()
 
 
 def test_force_install(tmp_path: pathlib.Path) -> None:
@@ -158,3 +160,40 @@ def test_force_install(tmp_path: pathlib.Path) -> None:
 
     comparison_results = get_bundle_comparison(tmp_path)
     assert_device_matches_self(comparison_results)
+
+
+def test_only_newer_files(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Does it skip circup packages for Behavior.OnlyNewerFiles?"""
+    create_test_device_folder(tmp_path)
+    newer_files = []
+
+    def override_file_freshness(
+        tree1: list[pathlib.Path], tree2: list[pathlib.Path], newer_files: list[pathlib.Path] = newer_files
+    ) -> dict[pathlib.Path, str]:
+        """Override equip._compare_file_trees() to make the bundle newer than than device."""
+        set1 = {path.relative_to(tree1[0]) for path in tree1}
+        set2 = {path.relative_to(tree2[0]) for path in tree2}
+        shared_in_both = sorted(f for f in set1 & set2 if tree1[0].joinpath(f).is_file())
+        equal_file = shared_in_both[0]
+        older_file = shared_in_both[1]
+        newer_file = shared_in_both[2]
+        tree1_file_ages = {
+            equal_file: "equal",
+            older_file: "older",
+            newer_file: "newer",
+        }
+        newer_files.append(newer_file)
+        return tree1_file_ages
+
+    monkeypatch.setattr(equip, "_compare_file_trees", override_file_freshness)
+
+    with caplog.at_level(logging.INFO):
+        equip.handle_equip(behavior=equip.Behavior.NewerFilesOnly, root=tmp_path)
+
+    comparison_results = get_bundle_comparison(tmp_path)
+    assert_device_matches_self(comparison_results)
+    assert not tmp_path.joinpath("lib").exists()
+    updated_file = newer_files[0]
+    assert f"Newer: {updated_file!s}" in caplog.text

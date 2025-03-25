@@ -35,6 +35,7 @@ class Behavior(StrEnum):
     Compare = "Compare"
     Describe = "Describe"
     Force = "Force"
+    NewerFilesOnly = "NewerFilesOnly"
 
 
 class SnsrNodeBundle(NamedTuple):
@@ -76,7 +77,8 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
     }
 
     if behavior == Behavior.Compare:
-        comparison_report = _format_bundle_comparison(comparison_information)
+        runtime_freshness = _compare_file_trees(this_bundle.device_files, device_bundle.device_files)
+        comparison_report = _format_bundle_comparison(comparison_information, runtime_freshness)
         _ = [logger.info(line) for line in comparison_report]
         raise SystemExit(ExitCode.Success)
 
@@ -173,7 +175,10 @@ def _format_bundle_description(bundle: SnsrNodeBundle) -> list[str]:
     return report_contents
 
 
-def _format_bundle_comparison(comparison_information: dict[str, SnsrNodeBundle]) -> list[str]:
+def _format_bundle_comparison(
+    comparison_information: dict[str, SnsrNodeBundle],
+    file_freshness: dict[pathlib.Path, str],
+) -> list[str]:
     """Format and return a list of lines that compares the specified sensor_node bundles."""
     device_bundle = comparison_information["device bundle"]
     this_bundle = comparison_information["runtime bundle"]
@@ -211,7 +216,21 @@ def _format_bundle_comparison(comparison_information: dict[str, SnsrNodeBundle])
           Location     {device_bundle.device_files[0]!s:<31}    (builtin)
         """
     )
-    return report_contents.splitlines()
+    report_lines = report_contents.splitlines()
+
+    newer_files = set()
+    for path, freshness in file_freshness.items():
+        full_path = this_bundle.device_files[0].joinpath(path)
+        if not full_path.is_file():
+            continue
+        if freshness == "newer":
+            newer_files.add(path)
+            continue
+    if newer_files:
+        newer_file_lines = ["\n", "Newer files"]
+        newer_file_lines.extend([f"  * {file!s}\n" for file in sorted(newer_files)])
+        report_lines.extend(newer_file_lines)
+    return report_lines
 
 
 def _should_install(behavior: Behavior, comparison_information: dict[str, SnsrNodeBundle]) -> tuple[bool, str]:
@@ -242,7 +261,11 @@ def _should_install(behavior: Behavior, comparison_information: dict[str, SnsrNo
         device_snsr_version = packaging.version.Version(device_bundle.notice.version)
         device_snsr_timestamp = device_bundle.notice.timestamp
         my_timestamp = this_bundle.notice.timestamp
-        if my_version > device_snsr_version:
+
+        if behavior == Behavior.NewerFilesOnly:
+            logger.info("Forcing installation of newer files")
+            should_install = True
+        elif my_version > device_snsr_version:
             logger.info("Upgrading version")
             logger.info(f"  Device is version  '{device_snsr_version}'")
             logger.info(f"  Runtime is version '{my_version}'")
@@ -268,18 +291,39 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
     """Install the sensor_node bundle and its CircuitPython dependencies."""
     device_bundle = comparison_information["device bundle"]
     device_main_folder = device_bundle.device_files[0]
-    my_bundle = comparison_information["runtime bundle"]
+    this_bundle = comparison_information["runtime bundle"]
 
-    logger.info(f"Installing sensor_node v{my_bundle.notice.version} to '{device_main_folder}'")
-    logger.info("  Copying snsr bundle")
-    my_main_folder = my_bundle.device_files[0]
+    logger.info(f"Installing sensor_node v{this_bundle.notice.version} to '{device_main_folder}'")
+    my_main_folder = this_bundle.device_files[0]
     device_snsr_root = device_main_folder.joinpath(SnsrPath.root)
-    if device_snsr_root.exists():
+
+    ignore_patterns = {"*.pyc", "__pycache__"}
+    if behavior == Behavior.NewerFilesOnly:
+        runtime_freshness = _compare_file_trees(this_bundle.device_files, device_bundle.device_files)
+        older_files = set()
+        newer_files = set()
+        for path, freshness in runtime_freshness.items():
+            full_path = this_bundle.device_files[0].joinpath(path)
+            if not full_path.is_file():
+                continue
+            if freshness == "newer":
+                logger.info(f"  Newer: {path}")
+                newer_files.add(path.name)
+                continue
+            older_files.add(path.name)
+        if not newer_files:
+            logger.info("All files up to date with the host")
+            return
+        ignored_files = older_files - newer_files
+        ignore_patterns.update(ignored_files)
+    elif device_snsr_root.exists():
+        logger.info("  Copying snsr bundle")
         shutil.rmtree(device_snsr_root)
+
     shutil.copytree(
         src=my_main_folder,
         dst=device_main_folder,
-        ignore=shutil.ignore_patterns("*.pyc", "__pycache__"),
+        ignore=shutil.ignore_patterns(*ignore_patterns),
         dirs_exist_ok=True,
     )
 
@@ -287,7 +331,11 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
     notice_contents = _create_notice_file_contents(allow_dev_version=True)
     notice_file.write_text(notice_contents)
 
-    circup_packages = my_bundle.circuitpy_dependencies
+    if behavior == Behavior.NewerFilesOnly:
+        logger.info("Bundle files updated")
+        return
+
+    circup_packages = this_bundle.circuitpy_dependencies
     return_code = ExitCode.Success
     if circup_packages:
         circup_install_command = [
@@ -349,6 +397,24 @@ def _collect_file_list(folder: pathlib.Path) -> list[pathlib.Path]:
             folder_contents.extend(subfolder_list)
         return sorted(folder_contents)
     return [folder]
+
+
+def _compare_file_trees(tree1: list[pathlib.Path], tree2: list[pathlib.Path]) -> dict[pathlib.Path, str]:
+    """Compare two lists of paths, identifying newer. A value of "newer" means tree1's file is newer than tree2's file."""
+    set1 = {path.relative_to(tree1[0]) for path in tree1}
+    set2 = {path.relative_to(tree2[0]) for path in tree2}
+    shared_in_both = set1 & set2
+    tree1_file_ages = {}
+    for path in shared_in_both:
+        modification_time1 = tree1[0].joinpath(path).stat().st_mtime
+        modification_time2 = tree2[0].joinpath(path).stat().st_mtime
+        age = "equal"
+        if modification_time1 > modification_time2:
+            age = "newer"
+        if modification_time1 < modification_time2:
+            age = "older"
+        tree1_file_ages[path] = age
+    return tree1_file_ages
 
 
 def _get_circuitpython_dependencies(device_files: list[pathlib.Path], device_id: str, log_info: bool) -> list[str]:
