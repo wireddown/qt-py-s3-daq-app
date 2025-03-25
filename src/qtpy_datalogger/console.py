@@ -7,13 +7,17 @@ import click
 
 from . import discovery, tracelog
 from . import equip as _equip
+from .datatypes import Links
 
 logger = logging.getLogger(__name__)
 
 
+DEFAULT_HELP_URL = Links.Homepage
+
+
 @click.group(
     invoke_without_command=True,
-    epilog=f"Help and home page: {_equip._HOMEPAGE_URL}",
+    epilog=f"Help and home page: {DEFAULT_HELP_URL}",
 )
 @click.option(
     "--generate-notice",
@@ -71,7 +75,7 @@ def cli(
         cli(["--help"])
 
 
-@cli.command(epilog=f"Help and home page: {_equip._HOMEPAGE_URL}")
+@cli.command(epilog=f"Help and home page: {DEFAULT_HELP_URL}")
 @click.option(
     "--auto-connect",
     "behavior",
@@ -85,7 +89,7 @@ def cli(
     flag_value=discovery.Behavior.DiscoverOnly,
     help="Behavior: List discovered ports and exit.",
 )
-@click.option("-p", "--port", default="", metavar="COM#", help="COM port to open for communication.")
+@click.option("-p", "--port", default="", metavar="COM#", help="Serial COM port to use for connection.")
 @click.help_option()
 def connect(behavior: str, port: str) -> None:
     """Connect to a serial port, preferring a CircuitPython device."""
@@ -93,14 +97,14 @@ def connect(behavior: str, port: str) -> None:
     discovery.handle_connect(discovery_behavior, port)
 
 
-@cli.command(epilog=f"Help and home page: {_equip._HOMEPAGE_URL}")
+@cli.command(epilog=f"Help and home page: {DEFAULT_HELP_URL}")
 @click.help_option()
 def run() -> None:
     """Stub entry point for 'run' command."""
     logger.warning("this is a stub command")
 
 
-@cli.command(epilog=f"Help and home page: {_equip._HOMEPAGE_URL}")
+@cli.command(epilog=f"Help and home page: {DEFAULT_HELP_URL}")
 @click.option(
     "--upgrade",
     "behavior",

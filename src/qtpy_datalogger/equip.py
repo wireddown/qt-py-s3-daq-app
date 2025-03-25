@@ -20,19 +20,9 @@ import packaging.version
 import toml
 
 from . import discovery
+from .datatypes import ExitCode, Links, SnsrPath
 
 logger = logging.getLogger(__name__)
-
-_EXIT_SUCCESS = 0
-_EXIT_BOARD_LOOKUP_FAILURE = 51
-
-_SNSR_ROOT_FOLDER = "snsr"
-_SNSR_NOTICE_FILE = "notice.toml"
-
-_HOMEPAGE_URL = "https://github.com/wireddown/qt-py-s3-daq-app/wiki"
-_NEW_BUG_URL = "https://github.com/wireddown/qt-py-s3-daq-app/issues/new?template=bug-report.md"
-_board_support_matrix_page = "https://docs.circuitpython.org/en/stable/shared-bindings/support_matrix.html"
-
 
 _PC_ONLY_IMPORTS = [
     "typing",
@@ -93,13 +83,13 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
     if behavior == Behavior.Describe:
         self_description = _format_bundle_description(runtime_bundle)
         _ = [logger.info(line) for line in self_description]
-        raise SystemExit(_EXIT_SUCCESS)
+        raise SystemExit(ExitCode.Success)
 
     if not root:
         qtpy_device = discovery.discover_and_select_qtpy()
         if not qtpy_device:
             logger.error("No QT Py devices found!")
-            raise SystemExit(discovery._EXIT_DISCOVERY_FAILURE)
+            raise SystemExit(ExitCode.Discovery_Failure)
         root = pathlib.Path(qtpy_device[discovery._INFO_KEY_drive_letter]).resolve()
 
     device_bundle = _detect_snsr_bundle(root)
@@ -111,7 +101,7 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
     if behavior == Behavior.Compare:
         comparison_report = _format_bundle_comparison(comparison_information)
         _ = [logger.info(line) for line in comparison_report]
-        raise SystemExit(_EXIT_SUCCESS)
+        raise SystemExit(ExitCode.Success)
 
     should_install, skip_reason = _should_install(behavior, comparison_information)
 
@@ -142,7 +132,7 @@ def _detect_snsr_bundle(main_folder: pathlib.Path) -> SnsrNodeBundle:
     main_folder_parent = main_folder.parent
     detecting_self = this_folder_parent == main_folder_parent
 
-    notice_file = main_folder.joinpath(_SNSR_ROOT_FOLDER, _SNSR_NOTICE_FILE)
+    notice_file = main_folder.joinpath(SnsrPath.notice)
 
     detect_message = f"Probing for sensor_node at '{main_folder}'"
     if detecting_self:
@@ -193,7 +183,7 @@ def _format_bundle_description(bundle: SnsrNodeBundle) -> list[str]:
         QT Py Data Logger Sensor Node
           Version:    {bundle.notice.version}  ({bundle.notice.commit})
           Timestamp:  {bundle.notice.timestamp.strftime("%Y.%m.%d  %H:%M:%S")}
-          Homepage:   {_HOMEPAGE_URL}
+          Homepage:   {Links.Homepage}
 
         Dependencies
           CircuitPython module           PC package name
@@ -306,7 +296,7 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
     logger.info(f"Installing sensor_node v{my_bundle.notice.version} to '{device_main_folder}'")
     logger.info("  Copying snsr bundle")
     my_main_folder = my_bundle.device_files[0]
-    device_snsr_root = device_main_folder.joinpath(_SNSR_ROOT_FOLDER)
+    device_snsr_root = device_main_folder.joinpath(SnsrPath.root)
     if device_snsr_root.exists():
         shutil.rmtree(device_snsr_root)
     shutil.copytree(
@@ -316,12 +306,12 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
         dirs_exist_ok=True,
     )
 
-    notice_file = device_main_folder.joinpath(_SNSR_ROOT_FOLDER, _SNSR_NOTICE_FILE)
+    notice_file = device_main_folder.joinpath(SnsrPath.notice)
     notice_contents = _create_notice_file_contents(allow_dev_version=True)
     notice_file.write_text(notice_contents)
 
     circup_packages = my_bundle.circuitpy_dependencies
-    return_code = _EXIT_SUCCESS
+    return_code = ExitCode.Success
     if circup_packages:
         circup_install_command = [
             "circup",
@@ -342,7 +332,7 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
         logger.info("")
         return_code = result.returncode
 
-    if return_code == _EXIT_SUCCESS:
+    if return_code == ExitCode.Success:
         logger.info("Installation complete")
     else:
         logger.error(f"circup exited with code '{return_code}'")
@@ -361,7 +351,7 @@ def _get_package_notice_info(allow_dev_version: bool) -> SnsrNotice:
 
     this_file = pathlib.Path(__file__)
     this_folder = this_file.parent
-    notice_toml = this_folder.joinpath("sensor_node", _SNSR_ROOT_FOLDER, _SNSR_NOTICE_FILE)
+    notice_toml = this_folder.joinpath("sensor_node", SnsrPath.notice)
     notice_contents = toml.load(notice_toml)
     snsr_notice = SnsrNotice(**notice_contents)
     my_comment = snsr_notice.comment
@@ -398,7 +388,7 @@ def _get_package_notice_info(allow_dev_version: bool) -> SnsrNotice:
 def _get_plugins(folder_list: list[pathlib.Path]) -> list[str]:
     """Return a list of the installed sensor_node plugins."""
     main_folder = folder_list[0]
-    snsr_root = main_folder.joinpath(_SNSR_ROOT_FOLDER)
+    snsr_root = main_folder.joinpath(SnsrPath.root)
     plugins = [entry for entry in folder_list if entry.is_relative_to(snsr_root) and entry.is_dir()]
     return [entry.name for entry in plugins[1:]]
 
@@ -428,7 +418,7 @@ def _get_circuitpython_dependencies(device_files: list[pathlib.Path], device_id:
     """Scan the sensor_node files for Python dependencies and return a list of external module imports."""
     # Get the folder and file names under the snsr folder
     main_folder = device_files[0]
-    snsr_folder = main_folder.joinpath(_SNSR_ROOT_FOLDER)
+    snsr_folder = main_folder.joinpath(SnsrPath.root)
     snsr_node_listing = [entry for entry in device_files if entry.is_relative_to(snsr_folder)]
     snsr_node_folders = [entry for entry in snsr_node_listing if entry.is_dir()]
     snsr_node_files = [entry for entry in snsr_node_listing if entry.is_file() and str(entry).endswith(".py")]
@@ -462,11 +452,11 @@ def _get_circuitpython_dependencies(device_files: list[pathlib.Path], device_id:
     builtin_module_names = builtin_circuitpython_modules.get(device_id, [])
     if not builtin_module_names:
         logger.warning(f"Missing information for builtin modules on CircuitPython device '{device_id}'")
-        logger.warning(f"  Visit '{_board_support_matrix_page}' and find your BOARD NAME")
+        logger.warning(f"  Visit '{Links.Board_Support_Matrix}' and find your BOARD NAME")
         logger.warning(
             "  Then use 'qtpy-datalogger --list-builtin-modules \"BOARD NAME\" -' to get the builtin modules"
         )
-        logger.warning(f"  And create a new Issue with this information at '{_NEW_BUG_URL}'")
+        logger.warning(f"  And create a new Issue with this information at '{Links.New_Bug}'")
     all_builtin_circuitpython_modules = {*stdlib_module_names, *builtin_module_names}
     name_collisions = all_builtin_circuitpython_modules & internal_modules
     if name_collisions:
@@ -540,7 +530,7 @@ def _handle_list_builtin_modules(board_id: str) -> str:
         if not the_row:
             logger.error(f"Cannot find CircuitPython board with name '{board_id}'!")
             logger.error(f"Confirm spelling from '{reference_url}'")
-            raise SystemExit(_EXIT_BOARD_LOOKUP_FAILURE)
+            raise SystemExit(ExitCode.Board_Lookup_Failure)
         row_cells = the_row.find_all("td")  # pyright: ignore
         modules_cell = row_cells[-1]
         builtin_module_names = [entry.text for entry in modules_cell.find_all("span", class_="pre")]  # pyright: ignore
@@ -559,14 +549,14 @@ def _handle_list_builtin_modules(board_id: str) -> str:
     standard_library_page = "https://docs.circuitpython.org/en/stable/docs/library/index.html"
 
     reference_version, builtin_module_names = fetch_find_extract_builtin_modules_for_board_id(
-        _board_support_matrix_page,
+        Links.Board_Support_Matrix,
         board_id,
     )
     stdlib_module_names = fetch_find_extract_standard_library_modules(standard_library_page)
 
     full_contents = {
         "reference": reference_version,
-        "urls": [_board_support_matrix_page, standard_library_page],
+        "urls": [Links.Board_Support_Matrix, standard_library_page],
         "standard_library": stdlib_module_names,
         board_id: builtin_module_names,
     }

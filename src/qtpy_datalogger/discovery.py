@@ -18,11 +18,9 @@ import click
 import serial
 from serial.tools import miniterm as mt
 
-logger = logging.getLogger(__name__)
+from .datatypes import CaptionCorrections, ExitCode
 
-_EXIT_SUCCESS = 0
-_EXIT_DISCOVERY_FAILURE = 41
-_EXIT_COM1_FAILURE = 42
+logger = logging.getLogger(__name__)
 
 _INFO_KEY_drive_letter = "drive_letter"
 _INFO_KEY_drive_label = "drive_label"
@@ -57,13 +55,13 @@ def handle_connect(behavior: Behavior, port: str) -> None:
             _ = [logger.info(line) for line in formatted_lines]
         else:
             logger.warning("No QT Py devices found!")
-        raise SystemExit(_EXIT_SUCCESS)
+        raise SystemExit(ExitCode.Success)
 
     if not port:
         qtpy_device = discover_and_select_qtpy()
         if not qtpy_device:
             logger.error("No QT Py devices found!")
-            raise SystemExit(_EXIT_DISCOVERY_FAILURE)
+            raise SystemExit(ExitCode.Discovery_Failure)
         port = qtpy_device[_INFO_KEY_com_port]
 
     if not port.startswith("COM"):
@@ -73,7 +71,7 @@ def handle_connect(behavior: Behavior, port: str) -> None:
 
     if port == "COM1":
         logger.error(f"Opening '{port}' is not supported.")
-        raise SystemExit(_EXIT_COM1_FAILURE)
+        raise SystemExit(ExitCode.COM1_Failure)
 
     open_session_on_port(port)
 
@@ -336,16 +334,12 @@ def _query_volumes_from_wmi() -> dict[str, dict[str, str]]:
         )
     logger.debug(f"Win32_PhysicalMedia report: {disks_and_serial_numbers}")
 
-    caption_corrections = {
-        "Adafruit QT Py ESP32S3 no USB Device": "Adafruit QT Py ESP32S3 no PSRAM",
-        "Adafruit QT Py ESP32S3 4M USB Device": "Adafruit QT Py ESP32S3 2MB PSRAM",
-    }
     disks_and_descriptions = {}
     for drive in list(host_pc.Win32_DiskDrive()):
         # Full value has format '\\\\.\\PHYSICALDRIVE0'
         disk_id = drive.wmi_property("DeviceID").value.split("\\")[-1]
         disk_description = drive.wmi_property("Caption").value
-        corrected_description = caption_corrections.get(disk_description, disk_description)
+        corrected_description = CaptionCorrections.get_corrected(disk_description)
         disks_and_descriptions.update(
             {
                 disk_id: {

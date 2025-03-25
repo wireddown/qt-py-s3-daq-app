@@ -7,6 +7,7 @@ import pytest
 import toml
 
 from qtpy_datalogger import equip
+from qtpy_datalogger.datatypes import ExitCode, SnsrPath
 
 
 def create_test_device_folder(tmp_folder: pathlib.Path) -> None:
@@ -23,7 +24,7 @@ def create_test_device_folder(tmp_folder: pathlib.Path) -> None:
     )
 
     # Stamp the notice file
-    device_notice = tmp_folder.joinpath("snsr", "notice.toml")
+    device_notice = tmp_folder.joinpath(SnsrPath.notice)
     source_toml = equip._get_package_notice_info(allow_dev_version=True)
     notice_text = toml.dumps(source_toml._asdict())
     device_notice.write_text(notice_text)
@@ -44,14 +45,14 @@ def get_bundle_comparison(device_path: pathlib.Path) -> dict[str, equip.SnsrNode
 
 def get_device_notice(device_path: pathlib.Path) -> equip.SnsrNotice:
     """Get the SnsrNotice information from the sensor_node at the specified path."""
-    device_notice = device_path.joinpath("snsr", "notice.toml")
+    device_notice = device_path.joinpath(SnsrPath.notice)
     device_toml = equip.SnsrNotice(**toml.load(device_notice))
     return device_toml
 
 
 def set_device_notice(notice: equip.SnsrNotice, device_path: pathlib.Path) -> None:
     """Set the SnsrNotice information on the sensor_node at the specified path."""
-    device_notice = device_path.joinpath("snsr", "notice.toml")
+    device_notice = device_path.joinpath(SnsrPath.notice)
     notice_text = toml.dumps(notice._asdict())
     device_notice.write_text(notice_text)
 
@@ -77,7 +78,7 @@ def test_describe(tmp_path: pathlib.Path) -> None:
     exception = excinfo.value
     exception_type = type(exception)
     assert exception_type is SystemExit
-    assert exception.code == equip._EXIT_SUCCESS
+    assert exception.code == ExitCode.Success
 
 
 def test_compare(tmp_path: pathlib.Path) -> None:
@@ -91,7 +92,7 @@ def test_compare(tmp_path: pathlib.Path) -> None:
     exception = excinfo.value
     exception_type = type(exception)
     assert exception_type is SystemExit
-    assert exception.code == equip._EXIT_SUCCESS
+    assert exception.code == ExitCode.Success
 
 
 def test_install_new(tmp_path: pathlib.Path) -> None:

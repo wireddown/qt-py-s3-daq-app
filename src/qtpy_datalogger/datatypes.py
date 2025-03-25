@@ -6,8 +6,6 @@ This module uses CPython features not available in the CircuitPython implementat
 
 import enum
 
-import toml
-
 
 class Links(enum.StrEnum):
     """URLs for references and help."""
@@ -40,3 +38,9 @@ class CaptionCorrections:
         }
         return caption_corrections.get(caption, caption)
 
+
+class SnsrPath(enum.StrEnum):
+    """Reserved path names for qtpy_datalogger sensor_node bundles."""
+
+    root = "snsr"
+    notice = "snsr/notice.toml"
