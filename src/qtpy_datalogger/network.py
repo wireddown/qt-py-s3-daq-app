@@ -179,18 +179,20 @@ class QTPyController:
         node_id: str,
         action: node_classes.ActionInformation,
         timeout: float = 5.0,
-    ) -> dict:
+    ) -> tuple[dict, node_classes.SenderInformation]:
         """
         Monitor the MQTT messages for a matching result to the specified action.
 
-        Return the dictionary of parameters from the result's matching ActionInformation.
+        Returns a tuple with
+        - the dictionary of parameters from the result's matching ActionInformation
+        - the SenderInformation from the matching payload
         """
-        result_response = []
+        parameters_and_sender = ()
         other_messages = []
         action_id = action.message_id
         logger.debug(f"Monitoring MQTT messages for the '{action_id}' result from '{node_id}'")
         async with asyncio.timeout(timeout):
-            while not result_response:
+            while not parameters_and_sender:
                 topic_and_message = await self.message_queue.get()
                 response_json = topic_and_message.message
                 response = json.loads(response_json)
@@ -200,20 +202,24 @@ class QTPyController:
                     result_id = payload.action.message_id
                     if sending_node == node_id and result_id == action_id:
                         logger.debug(f"Matched result '{payload.action.parameters}'")
-                        result_response.append(payload.action.parameters)
-                        break
-                    logger.debug(f"Requeueing response '{topic_and_message}'")
-                    other_messages.append(topic_and_message)
+                        parameters_and_sender = (payload.action.parameters, payload.sender)
+                    else:
+                        other_messages.append(topic_and_message)
                 else:
-                    logger.debug(f"Requeueing response '{topic_and_message}'")
                     other_messages.append(topic_and_message)
                 self.message_queue.task_done()
         for other_message in other_messages:
-            self.message_queue.put_nowait(other_message)
-        return result_response[0]
+            self._requeue_or_discard(other_message)
+        return parameters_and_sender
 
     async def disconnect(self) -> None:
         """Disconnect from the MQTT broker."""
+        if not self.message_queue.empty():
+            logger.warning(f"Leaving {self.message_queue.qsize()} MQTT messages unprocessed. Add '--verbose' to see them.")
+            while not self.message_queue.empty():
+                unprocessed_message = self.message_queue.get_nowait()
+                logger.debug(unprocessed_message._asdict())
+                self.message_queue.task_done()
         with suppress_unless_debug():
             await self.client.disconnect()
         self.subscribed_topics.clear()
@@ -267,7 +273,6 @@ class QTPyController:
                         logger.debug(f"Matched response '{payload.descriptor.node_id}'")
                         identify_responses.append(payload)
                     else:
-                        logger.debug(f"Requeueing response '{topic_and_message}'")
                         other_messages.append(topic_and_message)
                     self.message_queue.task_done()
         except TimeoutError:
@@ -275,8 +280,36 @@ class QTPyController:
             pass
 
         for other_message in other_messages:
-            self.message_queue.put_nowait(other_message)
+            self._requeue_or_discard(other_message)
         return identify_responses
+
+    def _requeue_or_discard(self, topic_and_message: MqttMessage) -> None:
+        """Scan the specified message and requeue it if it should be processed. Discard otherwise."""
+        message = json.loads(topic_and_message.message)
+
+        should_discard = False
+        discard_reason = ""
+        if "descriptor" in message:
+            descriptor_payload = node_classes.DescriptorPayload.from_dict(message)
+            sender = descriptor_payload.sender
+            if sender.descriptor_topic == self.descriptor_topic:
+                should_discard = True
+                discard_reason = "ignore messages from self"
+        elif "action" in message:
+            action_payload = node_classes.ActionPayload.from_dict(message)
+            sender = action_payload.sender
+            if sender.descriptor_topic == self.descriptor_topic:
+                should_discard = True
+                discard_reason = "ignore messages from self"
+        else:
+            logger.warning(f"Cannot analyze response '{topic_and_message}'")
+            should_discard = False
+
+        if should_discard:
+            logger.debug(f"Discarding response '{topic_and_message}' with reason '{discard_reason}'")
+        else:
+            logger.debug(f"Requeueing response '{topic_and_message}'")
+            self.message_queue.put_nowait(topic_and_message)
 
     async def _publish_action_payload(self, node_id: str, action: node_classes.ActionInformation) -> None:
         """Send the specified action to the specified node_id's command topic."""
@@ -376,7 +409,7 @@ async def _open_session_on_node(node_id: str) -> None:
         response_complete = False
         while not response_complete:
             try:
-                response_parameters = await controller.get_matching_result(node_id, sent_action)
+                response_parameters, sender_information = await controller.get_matching_result(node_id, sent_action)
                 response_complete = response_parameters["complete"]
                 response = response_parameters["output"]
                 print(response)  # noqa: T201 -- use direct IO for user REPL
