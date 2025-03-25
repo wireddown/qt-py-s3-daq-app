@@ -412,7 +412,12 @@ async def _open_session_on_node(node_id: str) -> None:
                 response_parameters, sender_information = await controller.get_matching_result(node_id, sent_action)
                 response_complete = response_parameters["complete"]
                 response = response_parameters["output"]
-                print(response)  # noqa: T201 -- use direct IO for user REPL
+                used_kb = sender_information.status.used_memory
+                free_kb = sender_information.status.free_memory
+                cpu_degc = sender_information.status.cpu_temperature
+                print(  # noqa: T201 -- use direct IO for user REPL
+                    f"Received '{response}' from node with {used_kb} kB used, {free_kb} kB remaining, at temperature {cpu_degc} degC"
+                )
             except TimeoutError:
                 logger.error("Node did not respond! Is it online or correctly spelled?")  # noqa: TRY400 -- user-facing, known error condition
                 logger.error(exit_help)  # noqa: TRY400 -- user-facing, known error condition
