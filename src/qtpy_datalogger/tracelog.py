@@ -101,7 +101,7 @@ class ColorFormatter(logging.Formatter):
         if self.level < logging.INFO:
             timestamp = time.localtime(record.created)
             time_string = click.style(f"{time.strftime('%Y.%m.%d %H:%M:%S', timestamp)}.{record.msecs:03.0f}", fg=color)
-            location_string = click.style(f"{record.name:>30}::{record.funcName} {record.lineno:>4}", fg=color)
+            location_string = click.style(f"{record.name:>26}::{record.funcName:<22} {record.lineno:>4}", fg=color)
 
         severity_string = click.style(f"{record.levelname:<8}", fg=color)
         message_strings = [click.style(line, fg="bright_white") for line in formatted_message.splitlines()]
