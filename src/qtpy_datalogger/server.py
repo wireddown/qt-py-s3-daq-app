@@ -18,7 +18,7 @@ class Behavior(StrEnum):
     """Supported behaviors for server interaction."""
 
     Describe = "Describe"
-    # Observe = "Observe"
+    Observe = "Observe"
     Restart = "Restart"
 
 
@@ -96,6 +96,34 @@ def handle_server(behavior: Behavior) -> None:
             raise SystemExit(ExitCode.Success)
         logger.error("Could not restart the MQTT broker service!")
         raise SystemExit(ExitCode.Server_Offline_Failure)
+
+    if behavior == Behavior.Observe:
+        mqtt_broker_runmode = mqtt_broker_information.server_runmode
+        if mqtt_broker_runmode != "Running":
+            logger.warning(f"Cannot observe: MQTT broker state is '{mqtt_broker_runmode}'")
+            logger.info("Attempting to restart the service")
+            did_restart = _restart_mqtt_broker_with_wmi(mqtt_broker_information)
+            if not did_restart:
+                logger.error("Could not restart the MQTT broker service!")
+                raise SystemExit(ExitCode.Server_Offline_Failure)
+
+        subscribe_exe = mqtt_broker_information.server_executable.with_name("mosquitto_sub.exe")
+        subscribe_command = [
+            str(subscribe_exe),
+            "--id",
+            "qtpy-datalogger-sub",
+            "--topic",
+            "$SYS/#",
+            "--unsubscribe",
+            "$SYS/#",
+            "--topic",
+            "qtpy/#",
+            "-F",
+            "%j",
+        ]
+        logger.info(f"Subscribing with '{' '.join(subscribe_command)}'")
+        logger.info("Use Ctrl-C to quit")
+        _ = subprocess.run(subscribe_command, stdout=sys.stdout, stderr=subprocess.STDOUT, check=False)  # noqa: S603 -- command is well-formed and user cannot execute arbitrary code
 
 def _analyze_mqtt_broker(broker_information: MqttBrokerInformation) -> list[tuple[str, int]]:
     """Analyze the availability and accessibility of the MQTT broker service."""

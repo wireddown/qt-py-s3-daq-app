@@ -160,6 +160,12 @@ def equip(behavior: str, root: pathlib.Path | None) -> None:
     help="Behavior: [default] Show the current status of the service.",
 )
 @click.option(
+    "--observe",
+    "behavior",
+    flag_value=_server.Behavior.Observe,
+    help="Behavior: Monitor the service and print published messages, Ctrl-C to quit.",
+)
+@click.option(
     "--restart",
     "behavior",
     flag_value=_server.Behavior.Restart,
