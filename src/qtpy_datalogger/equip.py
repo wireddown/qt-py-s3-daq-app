@@ -1,6 +1,5 @@
 """Functions for creating, configuring, and updating QT Py sensor nodes."""
 
-import contextlib
 import datetime
 import logging
 import pathlib
@@ -9,9 +8,8 @@ import subprocess
 import sys
 import textwrap
 import urllib.request
-from collections.abc import Generator
 from enum import StrEnum
-from typing import Any, NamedTuple
+from typing import NamedTuple
 
 import bs4
 import circup
@@ -19,20 +17,11 @@ import findimports
 import packaging.version
 import toml
 
-from . import discovery
+from qtpy_datalogger import discovery
+
+from .datatypes import ExitCode, Links, SnsrNotice, SnsrPath, suppress_unless_debug
 
 logger = logging.getLogger(__name__)
-
-_EXIT_SUCCESS = 0
-_EXIT_BOARD_LOOKUP_FAILURE = 51
-
-_SNSR_ROOT_FOLDER = "snsr"
-_SNSR_NOTICE_FILE = "notice.toml"
-
-_HOMEPAGE_URL = "https://github.com/wireddown/qt-py-s3-daq-app/wiki"
-_NEW_BUG_URL = "https://github.com/wireddown/qt-py-s3-daq-app/issues/new?template=bug-report.md"
-_board_support_matrix_page = "https://docs.circuitpython.org/en/stable/shared-bindings/support_matrix.html"
-
 
 _PC_ONLY_IMPORTS = [
     "typing",
@@ -46,15 +35,7 @@ class Behavior(StrEnum):
     Compare = "Compare"
     Describe = "Describe"
     Force = "Force"
-
-
-class SnsrNotice(NamedTuple):
-    """Represents the contents of the notice.toml file for a sensor_node."""
-
-    comment: str
-    version: str
-    commit: str
-    timestamp: datetime.datetime
+    NewerFilesOnly = "NewerFilesOnly"
 
 
 class SnsrNodeBundle(NamedTuple):
@@ -68,19 +49,6 @@ class SnsrNodeBundle(NamedTuple):
     installed_circuitpy_modules: list[tuple[str, str]]
 
 
-@contextlib.contextmanager
-def suppress_unless_debug() -> Generator[None, Any, None]:
-    """Suppress logger.info() messages unless logging has been set to DEBUG / --verbose."""
-    initial_log_level = logger.getEffectiveLevel()
-    should_suppress = initial_log_level > logging.DEBUG
-    try:
-        if should_suppress:
-            logger.setLevel(logging.WARNING)
-        yield
-    finally:
-        logger.setLevel(initial_log_level)
-
-
 def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
     """Handle the equip CLI command."""
     logger.debug(f"behavior: '{behavior}', root: '{root}'")
@@ -88,30 +56,31 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
     this_file = pathlib.Path(__file__)
     this_folder = this_file.parent
     this_sensor_node_root = this_folder.joinpath("sensor_node")
-    runtime_bundle = _detect_snsr_bundle(this_sensor_node_root)
+    this_bundle = _detect_snsr_bundle(this_sensor_node_root)
 
     if behavior == Behavior.Describe:
-        self_description = _format_bundle_description(runtime_bundle)
+        self_description = _format_bundle_description(this_bundle)
         _ = [logger.info(line) for line in self_description]
-        raise SystemExit(_EXIT_SUCCESS)
+        raise SystemExit(ExitCode.Success)
 
     if not root:
         qtpy_device = discovery.discover_and_select_qtpy()
         if not qtpy_device:
             logger.error("No QT Py devices found!")
-            raise SystemExit(discovery._EXIT_DISCOVERY_FAILURE)
+            raise SystemExit(ExitCode.Discovery_Failure)
         root = pathlib.Path(qtpy_device[discovery._INFO_KEY_drive_letter]).resolve()
 
     device_bundle = _detect_snsr_bundle(root)
     comparison_information = {
         "device bundle": device_bundle,
-        "runtime bundle": runtime_bundle,
+        "runtime bundle": this_bundle,
     }
 
     if behavior == Behavior.Compare:
-        comparison_report = _format_bundle_comparison(comparison_information)
+        runtime_freshness = _compare_file_trees(this_bundle.device_files, device_bundle.device_files)
+        comparison_report = _format_bundle_comparison(comparison_information, runtime_freshness)
         _ = [logger.info(line) for line in comparison_report]
-        raise SystemExit(_EXIT_SUCCESS)
+        raise SystemExit(ExitCode.Success)
 
     should_install, skip_reason = _should_install(behavior, comparison_information)
 
@@ -142,11 +111,11 @@ def _detect_snsr_bundle(main_folder: pathlib.Path) -> SnsrNodeBundle:
     main_folder_parent = main_folder.parent
     detecting_self = this_folder_parent == main_folder_parent
 
-    notice_file = main_folder.joinpath(_SNSR_ROOT_FOLDER, _SNSR_NOTICE_FILE)
+    notice_file = main_folder.joinpath(SnsrPath.notice)
 
     detect_message = f"Probing for sensor_node at '{main_folder}'"
     if detecting_self:
-        snsr_notice = _get_package_notice_info(allow_dev_version=True)
+        snsr_notice = SnsrNotice.get_package_notice_info(allow_dev_version=True)
         detect_message = ""
     elif notice_file.exists():
         file_contents = notice_file.read_text()
@@ -193,7 +162,7 @@ def _format_bundle_description(bundle: SnsrNodeBundle) -> list[str]:
         QT Py Data Logger Sensor Node
           Version:    {bundle.notice.version}  ({bundle.notice.commit})
           Timestamp:  {bundle.notice.timestamp.strftime("%Y.%m.%d  %H:%M:%S")}
-          Homepage:   {_HOMEPAGE_URL}
+          Homepage:   {Links.Homepage}
 
         Dependencies
           CircuitPython module           PC package name
@@ -206,10 +175,13 @@ def _format_bundle_description(bundle: SnsrNodeBundle) -> list[str]:
     return report_contents
 
 
-def _format_bundle_comparison(comparison_information: dict[str, SnsrNodeBundle]) -> list[str]:
+def _format_bundle_comparison(
+    comparison_information: dict[str, SnsrNodeBundle],
+    file_freshness: dict[pathlib.Path, str],
+) -> list[str]:
     """Format and return a list of lines that compares the specified sensor_node bundles."""
     device_bundle = comparison_information["device bundle"]
-    runtime_bundle = comparison_information["runtime bundle"]
+    this_bundle = comparison_information["runtime bundle"]
 
     newer_mark = "(newer)"
     older_mark = "       "
@@ -219,8 +191,8 @@ def _format_bundle_comparison(comparison_information: dict[str, SnsrNodeBundle])
     except packaging.version.InvalidVersion:
         device_version = packaging.version.Version("0")
     device_timestamp = device_bundle.notice.timestamp
-    self_version = packaging.version.Version(runtime_bundle.notice.version)
-    self_timestamp = runtime_bundle.notice.timestamp
+    self_version = packaging.version.Version(this_bundle.notice.version)
+    self_timestamp = this_bundle.notice.timestamp
 
     self_is_newer = self_version > device_version
     if self_version == device_version:
@@ -235,16 +207,30 @@ def _format_bundle_comparison(comparison_information: dict[str, SnsrNodeBundle])
     report_contents = textwrap.dedent(
         f"""
         Comparing sensor_node device with this package
-            Trait        Device {device_mark}                     Self {self_mark}
-         ===========  -{"-" * 31}-  ----------------------
-          Version      {device_version!s:<31}    {self_version!s}
-          Timestamp    {device_timestamp.strftime("%Y.%m.%d  %H:%M:%S"):<31}    {self_timestamp.strftime("%Y.%m.%d  %H:%M:%S")}
-          CircuitPy    {device_bundle.circuitpy_version:<31}    (PC host)
-          Board ID     {device_bundle.board_id:<31}    (PC host)
-          Location     {device_bundle.device_files[0]!s:<31}    (builtin)
+            Trait        Device {device_mark}                              Self {self_mark}
+         ===========  -{"-" * 40}-  ----------------------
+          Version      {device_version!s:<40}    {self_version!s}
+          Timestamp    {device_timestamp.strftime("%Y.%m.%d  %H:%M:%S"):<40}    {self_timestamp.strftime("%Y.%m.%d  %H:%M:%S")}
+          CircuitPy    {device_bundle.circuitpy_version:<40}    (PC host)
+          Board ID     {device_bundle.board_id:<40}    (PC host)
+          Location     {device_bundle.device_files[0]!s:<40}    (builtin)
         """
     )
-    return report_contents.splitlines()
+    report_lines = report_contents.splitlines()
+
+    newer_files = set()
+    for path, freshness in file_freshness.items():
+        full_path = this_bundle.device_files[0].joinpath(path)
+        if not full_path.is_file():
+            continue
+        if freshness == "newer":
+            newer_files.add(path)
+            continue
+    if newer_files:
+        newer_file_lines = ["\n", "Newer files"]
+        newer_file_lines.extend([f"  * {file!s}\n" for file in sorted(newer_files)])
+        report_lines.extend(newer_file_lines)
+    return report_lines
 
 
 def _should_install(behavior: Behavior, comparison_information: dict[str, SnsrNodeBundle]) -> tuple[bool, str]:
@@ -255,10 +241,10 @@ def _should_install(behavior: Behavior, comparison_information: dict[str, SnsrNo
     - a bool indicating whether the bundle should be installed
     - a string message explaining why the bundle should not be installed
     """
-    my_bundle = comparison_information["runtime bundle"]
+    this_bundle = comparison_information["runtime bundle"]
     device_bundle = comparison_information["device bundle"]
 
-    my_version = packaging.version.Version(my_bundle.notice.version)
+    my_version = packaging.version.Version(this_bundle.notice.version)
     should_install = False
 
     # Do the first lines from the device's code.py and our code.py match?
@@ -267,15 +253,19 @@ def _should_install(behavior: Behavior, comparison_information: dict[str, SnsrNo
     device_codepy_is_snsr_node = False
     if device_codepy_file.exists():
         device_first_line = device_codepy_file.read_text().splitlines()[0]
-        snsr_codepy_first_line = my_bundle.device_files[0].joinpath("code.py").read_text().splitlines()[0]
+        snsr_codepy_first_line = this_bundle.device_files[0].joinpath("code.py").read_text().splitlines()[0]
         device_codepy_is_snsr_node = device_first_line == snsr_codepy_first_line
 
     skip_reason = ""
     if device_codepy_is_snsr_node:
         device_snsr_version = packaging.version.Version(device_bundle.notice.version)
         device_snsr_timestamp = device_bundle.notice.timestamp
-        my_timestamp = my_bundle.notice.timestamp
-        if my_version > device_snsr_version:
+        my_timestamp = this_bundle.notice.timestamp
+
+        if behavior == Behavior.NewerFilesOnly:
+            logger.info("Forcing installation of newer files")
+            should_install = True
+        elif my_version > device_snsr_version:
             logger.info("Upgrading version")
             logger.info(f"  Device is version  '{device_snsr_version}'")
             logger.info(f"  Runtime is version '{my_version}'")
@@ -301,27 +291,52 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
     """Install the sensor_node bundle and its CircuitPython dependencies."""
     device_bundle = comparison_information["device bundle"]
     device_main_folder = device_bundle.device_files[0]
-    my_bundle = comparison_information["runtime bundle"]
+    this_bundle = comparison_information["runtime bundle"]
 
-    logger.info(f"Installing sensor_node v{my_bundle.notice.version} to '{device_main_folder}'")
-    logger.info("  Copying snsr bundle")
-    my_main_folder = my_bundle.device_files[0]
-    device_snsr_root = device_main_folder.joinpath(_SNSR_ROOT_FOLDER)
-    if device_snsr_root.exists():
+    logger.info(f"Installing sensor_node v{this_bundle.notice.version} to '{device_main_folder}'")
+    my_main_folder = this_bundle.device_files[0]
+    device_snsr_root = device_main_folder.joinpath(SnsrPath.root)
+
+    ignore_patterns = {"*.pyc", "__pycache__"}
+    if behavior == Behavior.NewerFilesOnly:
+        runtime_freshness = _compare_file_trees(this_bundle.device_files, device_bundle.device_files)
+        older_files = set()
+        newer_files = set()
+        for path, freshness in runtime_freshness.items():
+            full_path = this_bundle.device_files[0].joinpath(path)
+            if not full_path.is_file():
+                continue
+            if freshness == "newer":
+                logger.info(f"  Newer: {path}")
+                newer_files.add(path.name)
+                continue
+            older_files.add(path.name)
+        if not newer_files:
+            logger.info("All files up to date with the host")
+            return
+        ignored_files = older_files - newer_files
+        ignore_patterns.update(ignored_files)
+    elif device_snsr_root.exists():
+        logger.info("  Copying snsr bundle")
         shutil.rmtree(device_snsr_root)
+
     shutil.copytree(
         src=my_main_folder,
         dst=device_main_folder,
-        ignore=shutil.ignore_patterns("*.pyc", "__pycache__"),
+        ignore=shutil.ignore_patterns(*ignore_patterns),
         dirs_exist_ok=True,
     )
 
-    notice_file = device_main_folder.joinpath(_SNSR_ROOT_FOLDER, _SNSR_NOTICE_FILE)
+    notice_file = device_main_folder.joinpath(SnsrPath.notice)
     notice_contents = _create_notice_file_contents(allow_dev_version=True)
     notice_file.write_text(notice_contents)
 
-    circup_packages = my_bundle.circuitpy_dependencies
-    return_code = _EXIT_SUCCESS
+    if behavior == Behavior.NewerFilesOnly:
+        logger.info("Bundle files updated")
+        return
+
+    circup_packages = this_bundle.circuitpy_dependencies
+    return_code = ExitCode.Success
     if circup_packages:
         circup_install_command = [
             "circup",
@@ -342,7 +357,7 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
         logger.info("")
         return_code = result.returncode
 
-    if return_code == _EXIT_SUCCESS:
+    if return_code == ExitCode.Success:
         logger.info("Installation complete")
     else:
         logger.error(f"circup exited with code '{return_code}'")
@@ -350,55 +365,15 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
 
 def _create_notice_file_contents(allow_dev_version: bool) -> str:
     """Format the notice.toml file for the package."""
-    snsr_notice = _get_package_notice_info(allow_dev_version)
+    snsr_notice = SnsrNotice.get_package_notice_info(allow_dev_version)
     file_contents = toml.dumps(snsr_notice._asdict())
     return file_contents
-
-
-def _get_package_notice_info(allow_dev_version: bool) -> SnsrNotice:
-    """Detect and generate the information used in the notice.toml file."""
-    logger.debug("Getting notice information from notice file")
-
-    this_file = pathlib.Path(__file__)
-    this_folder = this_file.parent
-    notice_toml = this_folder.joinpath("sensor_node", _SNSR_ROOT_FOLDER, _SNSR_NOTICE_FILE)
-    notice_contents = toml.load(notice_toml)
-    snsr_notice = SnsrNotice(**notice_contents)
-    my_comment = snsr_notice.comment
-    my_version = snsr_notice.version
-    my_commit = snsr_notice.commit
-    my_timestamp = snsr_notice.timestamp
-
-    if __package__:
-        # We're installed
-        import importlib.metadata
-
-        logger.debug("Updating version from __package__ metadata")
-        my_version = importlib.metadata.version(str(__package__))
-
-    # When we're running from the git source, we're in development mode
-    this_package_parent = this_file.parent.parent
-    in_dev_mode = this_package_parent.name == "src"
-    if in_dev_mode:
-        logger.debug("Updating notice information from development environment")
-        if allow_dev_version:
-            logger.debug("Including the version")
-            my_version = f"{my_version}.post0.dev0"
-
-        most_recent_commit_info = ["git", "log", "--max-count=1", "--format=%h %aI"]
-        sha_with_timestamp = subprocess.check_output(most_recent_commit_info).strip()  # noqa: S603 -- command is well-formed and user cannot execute arbitrary code
-        sha_and_timestamp = sha_with_timestamp.decode("UTF-8").split(" ")
-        my_commit = sha_and_timestamp[0]
-        my_timestamp = datetime.datetime.fromisoformat(sha_and_timestamp[1])
-
-    my_comment = f"Generated by '{__name__}.py'"
-    return SnsrNotice(my_comment, my_version, my_commit, my_timestamp)
 
 
 def _get_plugins(folder_list: list[pathlib.Path]) -> list[str]:
     """Return a list of the installed sensor_node plugins."""
     main_folder = folder_list[0]
-    snsr_root = main_folder.joinpath(_SNSR_ROOT_FOLDER)
+    snsr_root = main_folder.joinpath(SnsrPath.root)
     plugins = [entry for entry in folder_list if entry.is_relative_to(snsr_root) and entry.is_dir()]
     return [entry.name for entry in plugins[1:]]
 
@@ -424,11 +399,29 @@ def _collect_file_list(folder: pathlib.Path) -> list[pathlib.Path]:
     return [folder]
 
 
+def _compare_file_trees(tree1: list[pathlib.Path], tree2: list[pathlib.Path]) -> dict[pathlib.Path, str]:
+    """Compare two lists of paths, identifying newer. A value of "newer" means tree1's file is newer than tree2's file."""
+    set1 = {path.relative_to(tree1[0]) for path in tree1}
+    set2 = {path.relative_to(tree2[0]) for path in tree2}
+    shared_in_both = set1 & set2
+    tree1_file_ages = {}
+    for path in shared_in_both:
+        modification_time1 = tree1[0].joinpath(path).stat().st_mtime
+        modification_time2 = tree2[0].joinpath(path).stat().st_mtime
+        age = "equal"
+        if modification_time1 > modification_time2:
+            age = "newer"
+        if modification_time1 < modification_time2:
+            age = "older"
+        tree1_file_ages[path] = age
+    return tree1_file_ages
+
+
 def _get_circuitpython_dependencies(device_files: list[pathlib.Path], device_id: str, log_info: bool) -> list[str]:
     """Scan the sensor_node files for Python dependencies and return a list of external module imports."""
     # Get the folder and file names under the snsr folder
     main_folder = device_files[0]
-    snsr_folder = main_folder.joinpath(_SNSR_ROOT_FOLDER)
+    snsr_folder = main_folder.joinpath(SnsrPath.root)
     snsr_node_listing = [entry for entry in device_files if entry.is_relative_to(snsr_folder)]
     snsr_node_folders = [entry for entry in snsr_node_listing if entry.is_dir()]
     snsr_node_files = [entry for entry in snsr_node_listing if entry.is_file() and str(entry).endswith(".py")]
@@ -462,11 +455,11 @@ def _get_circuitpython_dependencies(device_files: list[pathlib.Path], device_id:
     builtin_module_names = builtin_circuitpython_modules.get(device_id, [])
     if not builtin_module_names:
         logger.warning(f"Missing information for builtin modules on CircuitPython device '{device_id}'")
-        logger.warning(f"  Visit '{_board_support_matrix_page}' and find your BOARD NAME")
+        logger.warning(f"  Visit '{Links.Board_Support_Matrix}' and find your BOARD NAME")
         logger.warning(
             "  Then use 'qtpy-datalogger --list-builtin-modules \"BOARD NAME\" -' to get the builtin modules"
         )
-        logger.warning(f"  And create a new Issue with this information at '{_NEW_BUG_URL}'")
+        logger.warning(f"  And create a new Issue with this information at '{Links.New_Bug}'")
     all_builtin_circuitpython_modules = {*stdlib_module_names, *builtin_module_names}
     name_collisions = all_builtin_circuitpython_modules & internal_modules
     if name_collisions:
@@ -540,7 +533,7 @@ def _handle_list_builtin_modules(board_id: str) -> str:
         if not the_row:
             logger.error(f"Cannot find CircuitPython board with name '{board_id}'!")
             logger.error(f"Confirm spelling from '{reference_url}'")
-            raise SystemExit(_EXIT_BOARD_LOOKUP_FAILURE)
+            raise SystemExit(ExitCode.Board_Lookup_Failure)
         row_cells = the_row.find_all("td")  # pyright: ignore
         modules_cell = row_cells[-1]
         builtin_module_names = [entry.text for entry in modules_cell.find_all("span", class_="pre")]  # pyright: ignore
@@ -559,14 +552,14 @@ def _handle_list_builtin_modules(board_id: str) -> str:
     standard_library_page = "https://docs.circuitpython.org/en/stable/docs/library/index.html"
 
     reference_version, builtin_module_names = fetch_find_extract_builtin_modules_for_board_id(
-        _board_support_matrix_page,
+        Links.Board_Support_Matrix,
         board_id,
     )
     stdlib_module_names = fetch_find_extract_standard_library_modules(standard_library_page)
 
     full_contents = {
         "reference": reference_version,
-        "urls": [_board_support_matrix_page, standard_library_page],
+        "urls": [Links.Board_Support_Matrix, standard_library_page],
         "standard_library": stdlib_module_names,
         board_id: builtin_module_names,
     }

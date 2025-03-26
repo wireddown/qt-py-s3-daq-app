@@ -5,6 +5,7 @@ import pytest
 import serial
 
 from qtpy_datalogger import discovery
+from qtpy_datalogger.datatypes import ExitCode
 
 
 def no_qtpy_devices() -> list[dict[str, str]]:
@@ -57,12 +58,12 @@ def select_last_from_prompt(text: str, type: click.Choice, default: str, show_de
 universal_test_cases = [
     # Arguments:    behavior,   port,   raised_exception,   expected_exit_code
     # Using --discover-only always exits successfully because --port is ignored
-    (discovery.Behavior.DiscoverOnly, "", SystemExit, discovery._EXIT_SUCCESS),
-    (discovery.Behavior.DiscoverOnly, "COM2", SystemExit, discovery._EXIT_SUCCESS),
-    (discovery.Behavior.DiscoverOnly, "COM1", SystemExit, discovery._EXIT_SUCCESS),
-    (discovery.Behavior.DiscoverOnly, "99", SystemExit, discovery._EXIT_SUCCESS),
+    (discovery.Behavior.DiscoverOnly, "", SystemExit, ExitCode.Success),
+    (discovery.Behavior.DiscoverOnly, "COM2", SystemExit, ExitCode.Success),
+    (discovery.Behavior.DiscoverOnly, "COM1", SystemExit, ExitCode.Success),
+    (discovery.Behavior.DiscoverOnly, "99", SystemExit, ExitCode.Success),
     # Using '--port COM1' always exits with error because it is not supported
-    (discovery.Behavior.AutoConnect, "COM1", SystemExit, discovery._EXIT_COM1_FAILURE),
+    (discovery.Behavior.AutoConnect, "COM1", SystemExit, ExitCode.COM1_Failure),
     # Using a name for --port that doesn't start with 'COM' always exits with error because only Windows is supported
     (discovery.Behavior.AutoConnect, "88", click.BadParameter, 2),
 ]
@@ -88,7 +89,7 @@ def assert_universal_test_cases(excinfo: pytest.ExceptionInfo, expected_exit_cod
             discovery.Behavior.AutoConnect,
             "",
             SystemExit,
-            discovery._EXIT_DISCOVERY_FAILURE,
+            ExitCode.Discovery_Failure,
         ),  # This exception means connect() failed because no serial ports were discovered
     ],
 )
