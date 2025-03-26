@@ -19,7 +19,7 @@ class Behavior(StrEnum):
 
     Describe = "Describe"
     # Observe = "Observe"
-    # Restart = "Restart"
+    Restart = "Restart"
 
 
 class BrokerOption(NamedTuple):
@@ -90,6 +90,12 @@ def handle_server(behavior: Behavior) -> None:
         logger.error(f"  Visit {Links.MQTT_Walkthrough} to learn more")
         raise SystemExit(ExitCode.Server_Inaccessible_Failure)
 
+    if behavior == Behavior.Restart:
+        did_restart = _restart_mqtt_broker_with_wmi(mqtt_broker_information)
+        if did_restart:
+            raise SystemExit(ExitCode.Success)
+        logger.error("Could not restart the MQTT broker service!")
+        raise SystemExit(ExitCode.Server_Offline_Failure)
 
 def _analyze_mqtt_broker(broker_information: MqttBrokerInformation) -> list[tuple[str, int]]:
     """Analyze the availability and accessibility of the MQTT broker service."""
@@ -179,6 +185,65 @@ def _query_mqtt_broker_information_from_wmi() -> MqttBrokerInformation | None:
     )
     logger.debug(broker_information)
     return broker_information
+
+
+def _restart_mqtt_broker_with_wmi(broker_information: MqttBrokerInformation) -> bool:
+    """Stop and restart the mosquitto MQTT service and return True if the server changed states."""
+    from wmi import WMI
+
+    did_anything = False
+    host_pc = WMI()
+    matching_services = sorted(host_pc.Win32_Service(Name="mosquitto"))
+    if not matching_services:
+        return did_anything
+
+    def _call_service_control_function(
+        service_control_function: Callable,
+        active_runmode: str,
+        desired_runmode: str,
+    ) -> str:
+        """Call and handle exit codes from service_control_function() and return the updated runmode of the service."""
+        service_runmode = active_runmode
+        result = service_control_function()
+        return_code = result[0]
+        administrator_required_error = 2
+        if return_code == 0:
+            service_runmode = desired_runmode
+            time.sleep(0.25)  # Let the service settle
+        elif return_code == administrator_required_error:
+            logger.warning("Cannot control any services from a user account!")
+            logger.warning("  Try 'services.msc' to use Administrator privileges")
+        else:
+            logger.warning(
+                f"Received exit code '{return_code}' from 'Win32_Service.{str(service_control_function.__doc__).split(' ')[0]}()'"
+            )
+        return service_runmode
+
+    mqtt_broker = matching_services[0]
+    mqtt_broker_runmode = broker_information.server_runmode
+    logger.info(f"Restarting '{mqtt_broker.DisplayName}'")
+
+    if mqtt_broker_runmode != "Stopped":
+        logger.info(f"  Stopping '{mqtt_broker.DisplayName}'")
+        mqtt_broker_runmode = _call_service_control_function(mqtt_broker.StopService, mqtt_broker_runmode, "Stopped")
+        if mqtt_broker_runmode != "Stopped":
+            return did_anything
+        logger.info("  Stopped")
+        did_anything = True
+    else:
+        logger.info("  Service already stopped")
+
+    if mqtt_broker_runmode != "Running":
+        logger.info(f"  Starting '{mqtt_broker.DisplayName}'")
+        mqtt_broker_runmode = _call_service_control_function(mqtt_broker.StartService, mqtt_broker_runmode, "Running")
+        if mqtt_broker_runmode != "Running":
+            return did_anything
+        logger.info("  Started")
+        did_anything = True
+    else:
+        logger.info("  Service already started")
+
+    return did_anything
 
 
 def _query_mqtt_broker_configuration_from_file(broker_executable: pathlib.Path) -> list[BrokerOption]:

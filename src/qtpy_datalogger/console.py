@@ -159,6 +159,12 @@ def equip(behavior: str, root: pathlib.Path | None) -> None:
     default=True,
     help="Behavior: [default] Show the current status of the service.",
 )
+@click.option(
+    "--restart",
+    "behavior",
+    flag_value=_server.Behavior.Restart,
+    help="Behavior: Restart the service, requires Administrator privileges.",
+)
 @click.help_option()
 def server(behavior: str) -> None:
     """Query and control the MQTT server."""
