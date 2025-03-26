@@ -7,6 +7,7 @@ import click
 
 from . import discovery, tracelog
 from . import equip as _equip
+from . import server as _server
 from .datatypes import Links
 
 logger = logging.getLogger(__name__)
@@ -148,6 +149,21 @@ def equip(behavior: str, root: pathlib.Path | None) -> None:
     """Install the QT Py Sensor Node runtime on a CircuitPython device."""
     equip_behavior = _equip.Behavior(behavior)
     _equip.handle_equip(equip_behavior, root)
+
+
+@cli.command(epilog=f"Detailed help online\n\n{Links.MQTT_Walkthrough}")
+@click.option(
+    "--describe",
+    "behavior",
+    flag_value=_server.Behavior.Describe,
+    default=True,
+    help="Behavior: [default] Show the current status of the service.",
+)
+@click.help_option()
+def server(behavior: str) -> None:
+    """Query and control the MQTT server."""
+    server_behavior = _server.Behavior(behavior)
+    _server.handle_server(server_behavior)
 
 
 def get_logging_level(quiet: bool, verbose: bool) -> int:
