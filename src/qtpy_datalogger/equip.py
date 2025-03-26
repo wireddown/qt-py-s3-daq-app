@@ -207,13 +207,13 @@ def _format_bundle_comparison(
     report_contents = textwrap.dedent(
         f"""
         Comparing sensor_node device with this package
-            Trait        Device {device_mark}                     Self {self_mark}
-         ===========  -{"-" * 31}-  ----------------------
-          Version      {device_version!s:<31}    {self_version!s}
-          Timestamp    {device_timestamp.strftime("%Y.%m.%d  %H:%M:%S"):<31}    {self_timestamp.strftime("%Y.%m.%d  %H:%M:%S")}
-          CircuitPy    {device_bundle.circuitpy_version:<31}    (PC host)
-          Board ID     {device_bundle.board_id:<31}    (PC host)
-          Location     {device_bundle.device_files[0]!s:<31}    (builtin)
+            Trait        Device {device_mark}                              Self {self_mark}
+         ===========  -{"-" * 40}-  ----------------------
+          Version      {device_version!s:<40}    {self_version!s}
+          Timestamp    {device_timestamp.strftime("%Y.%m.%d  %H:%M:%S"):<40}    {self_timestamp.strftime("%Y.%m.%d  %H:%M:%S")}
+          CircuitPy    {device_bundle.circuitpy_version:<40}    (PC host)
+          Board ID     {device_bundle.board_id:<40}    (PC host)
+          Location     {device_bundle.device_files[0]!s:<40}    (builtin)
         """
     )
     report_lines = report_contents.splitlines()
