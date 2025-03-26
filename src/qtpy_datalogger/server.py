@@ -67,7 +67,7 @@ class MqttBrokerInformation(NamedTuple):
         return any(rule.action == "Allow" for rule in self.firewall_rules)
 
 
-def handle_server(behavior: Behavior) -> None:
+def handle_server(behavior: Behavior, publish: tuple[str, str]) -> None:
     """Handle the command for server."""
     mqtt_broker_information = _query_mqtt_broker_information_from_wmi()
     if not mqtt_broker_information:
@@ -124,6 +124,28 @@ def handle_server(behavior: Behavior) -> None:
         logger.info(f"Subscribing with '{' '.join(subscribe_command)}'")
         logger.info("Use Ctrl-C to quit")
         _ = subprocess.run(subscribe_command, stdout=sys.stdout, stderr=subprocess.STDOUT, check=False)  # noqa: S603 -- command is well-formed and user cannot execute arbitrary code
+
+    if publish:
+        topic = publish[0]
+        message = publish[1]
+        publish_exe = mqtt_broker_information.server_executable.with_name("mosquitto_pub.exe")
+        publish_command = [
+            str(publish_exe),
+            "--id",
+            "qtpy-datalogger-pub",
+            "--topic",
+            f"{topic}",
+            "--message",
+            f"{message}",
+        ]
+        logger.info(f"Publishing with '{' '.join(publish_command)}'")
+        result = subprocess.run(publish_command, stdout=sys.stdout, stderr=subprocess.STDOUT, check=False)  # noqa: S603 -- command is well-formed and user cannot execute arbitrary code
+        if result.returncode != 0:
+            logger.warning(f"Received exit code '{result.returncode}' from '{publish_exe.name}'")
+            _ = [logger.warning(line) for line in result.stderr.decode("UTF-8")]
+            raise SystemExit(result.returncode)
+        raise SystemExit(ExitCode.Success)
+
 
 def _analyze_mqtt_broker(broker_information: MqttBrokerInformation) -> list[tuple[str, int]]:
     """Analyze the availability and accessibility of the MQTT broker service."""
