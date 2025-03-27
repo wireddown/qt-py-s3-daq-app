@@ -72,6 +72,11 @@ universal_discovery_test_cases = [
     (discovery.Behavior.DiscoverOnly, "COM2", SystemExit, ExitCode.Success),
     (discovery.Behavior.DiscoverOnly, "COM1", SystemExit, ExitCode.Success),
     (discovery.Behavior.DiscoverOnly, "99", SystemExit, ExitCode.Success),
+]
+
+
+universal_usb_test_cases = [
+    # Arguments:      behavior,     port,   raised_exception,   expected_exit_code
     # Using '--port COM1' always exits with error because it is not supported
     (discovery.Behavior.AutoConnect, "COM1", SystemExit, ExitCode.COM1_Failure),
     # Using a name for --port that doesn't start with 'COM' always exits with error because only Windows is supported
@@ -95,6 +100,7 @@ def assert_universal_test_cases(excinfo: pytest.ExceptionInfo, expected_exit_cod
     ("behavior", "port", "raised_exception", "expected_exit_code"),
     [
         *universal_discovery_test_cases,
+        *universal_usb_test_cases,
         (
             discovery.Behavior.AutoConnect,
             "",
@@ -124,6 +130,7 @@ def test_handle_connect_with_no_devices(
     ("behavior", "port", "raised_exception", "expected_exit_code"),
     [
         *universal_discovery_test_cases,
+        *universal_usb_test_cases,
         (
             discovery.Behavior.AutoConnect,
             "",
@@ -160,6 +167,7 @@ def test_handle_connect_with_one_usb_device(
     ("behavior", "port", "raised_exception", "expected_exit_code"),
     [
         *universal_discovery_test_cases,
+        *universal_usb_test_cases,
         (
             discovery.Behavior.AutoConnect,
             "",
