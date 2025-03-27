@@ -37,6 +37,14 @@ class ExitCode(enum.IntEnum):
     Server_Inaccessible_Failure = 63
 
 
+class ConnectionTransport(enum.StrEnum):
+    """Supported communication types when connecting to a sensor_node."""
+
+    AutoSelect = "Auto select"
+    UART_Serial = "UART  (serial)"
+    MQTT_WiFi = "MQTT  (WiFi)"
+
+
 class DetailKey(enum.StrEnum):
     """Names of property details for QTPyDevice instances."""
 
