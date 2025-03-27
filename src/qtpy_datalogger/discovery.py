@@ -18,18 +18,9 @@ import click
 import serial
 from serial.tools import miniterm as mt
 
-from .datatypes import CaptionCorrections, ExitCode
+from .datatypes import CaptionCorrections, DetailKey, ExitCode
 
 logger = logging.getLogger(__name__)
-
-_INFO_KEY_drive_letter = "drive_letter"
-_INFO_KEY_drive_label = "drive_label"
-_INFO_KEY_drive_partition = "drive_partition"
-_INFO_KEY_disk_id = "disk_id"
-_INFO_KEY_disk_description = "disk_description"
-_INFO_KEY_serial_number = "serial_number"
-_INFO_KEY_com_port = "com_port"
-_INFO_KEY_com_id = "com_id"
 
 
 class Behavior(StrEnum):
@@ -62,7 +53,7 @@ def handle_connect(behavior: Behavior, port: str) -> None:
         if not qtpy_device:
             logger.error("No QT Py devices found!")
             raise SystemExit(ExitCode.Discovery_Failure)
-        port = qtpy_device[_INFO_KEY_com_port]
+        port = qtpy_device[DetailKey.com_port]
 
     if not port.startswith("COM"):
         logger.error("Format for --port argument is '--port COM#' where # is a number.")
@@ -76,7 +67,7 @@ def handle_connect(behavior: Behavior, port: str) -> None:
     open_session_on_port(port)
 
 
-def discover_qtpy_devices() -> list[dict[str, str]]:
+def discover_qtpy_devices() -> list[dict[DetailKey, str]]:
     """
     Scan for QT Py devices and return a list of information dictionaries.
 
@@ -99,21 +90,21 @@ def discover_qtpy_devices() -> list[dict[str, str]]:
     logger.info("Identifying QT Py devices")
     qtpy_devices = []
     for drive_info in discovered_disk_volumes.values():
-        drive_serial_number = drive_info[_INFO_KEY_serial_number]
+        drive_serial_number = drive_info[DetailKey.serial_number]
 
         for port_info in discovered_serial_ports.values():
-            port_serial_number = port_info[_INFO_KEY_serial_number]
+            port_serial_number = port_info[DetailKey.serial_number]
 
             if port_serial_number and port_serial_number == drive_serial_number:
                 serial_number = port_serial_number.lower()
                 qtpy_devices.append(
                     {
-                        _INFO_KEY_drive_letter: drive_info[_INFO_KEY_drive_letter],
-                        _INFO_KEY_drive_label: drive_info[_INFO_KEY_drive_label],
-                        _INFO_KEY_disk_description: drive_info[_INFO_KEY_disk_description],
-                        _INFO_KEY_serial_number: serial_number,
-                        _INFO_KEY_com_port: port_info[_INFO_KEY_com_port],
-                        _INFO_KEY_com_id: port_info[_INFO_KEY_com_id],
+                        DetailKey.drive_root: drive_info[DetailKey.drive_root],
+                        DetailKey.drive_label: drive_info[DetailKey.drive_label],
+                        DetailKey.device_description: drive_info[DetailKey.device_description],
+                        DetailKey.serial_number: serial_number,
+                        DetailKey.com_port: port_info[DetailKey.com_port],
+                        DetailKey.com_id: port_info[DetailKey.com_id],
                     }
                 )
     logger.debug(qtpy_devices)
@@ -177,7 +168,7 @@ def open_session_on_port(port: str) -> None:
     logger.info(f"Reconnect with 'qtpy-datalogger connect --port {port}'")
 
 
-def discover_and_select_qtpy() -> dict[str, str]:
+def discover_and_select_qtpy() -> dict[DetailKey, str]:
     """
     Scan for QT Py devices and return one.
 
@@ -211,13 +202,13 @@ def discover_and_select_qtpy() -> dict[str, str]:
             selected_device = qtpy_devices[selected_index]
             selected_reason = "User-selected"
         logger.info(
-            f"{selected_reason} '{selected_device[_INFO_KEY_disk_description]}' on '{selected_device[_INFO_KEY_drive_letter]}\\' with port '{selected_device[_INFO_KEY_com_port]}'"
+            f"{selected_reason} '{selected_device[DetailKey.device_description]}' on '{selected_device[DetailKey.drive_root]}\\' with port '{selected_device[DetailKey.com_port]}'"
         )
         return selected_device
     return {}
 
 
-def _query_ports_from_serial() -> dict[str, dict[str, str]]:
+def _query_ports_from_serial() -> dict[str, dict[DetailKey, str]]:
     """
     Scan the system for serial ports and return a dictionary of information.
 
@@ -231,9 +222,9 @@ def _query_ports_from_serial() -> dict[str, dict[str, str]]:
 
     discovered_comports = {
         comport.device: {
-            _INFO_KEY_com_port: comport.device,
-            _INFO_KEY_com_id: comport.hwid,
-            _INFO_KEY_serial_number: comport.serial_number,
+            DetailKey.com_port: comport.device,
+            DetailKey.com_id: comport.hwid,
+            DetailKey.serial_number: comport.serial_number,
         }
         for comport in sorted(comports())
     }
@@ -241,7 +232,7 @@ def _query_ports_from_serial() -> dict[str, dict[str, str]]:
     return discovered_comports
 
 
-def _query_volumes_from_wmi() -> dict[str, dict[str, str]]:
+def _query_volumes_from_wmi() -> dict[str, dict[DetailKey, str]]:
     """
     Scan the system for disk volumes and return a dictionary of information.
 
@@ -281,8 +272,8 @@ def _query_volumes_from_wmi() -> dict[str, dict[str, str]]:
             drive_letters_and_labels.update(
                 {
                     drive_letter: {
-                        _INFO_KEY_drive_letter: drive_letter,
-                        _INFO_KEY_drive_label: drive_label,  # Unique to this WMI call
+                        DetailKey.drive_root: drive_letter,
+                        DetailKey.drive_label: drive_label,  # Unique to this WMI call
                     }
                 }
             )
@@ -297,8 +288,8 @@ def _query_volumes_from_wmi() -> dict[str, dict[str, str]]:
         drive_letters_and_partitions.update(
             {
                 drive_letter: {
-                    _INFO_KEY_drive_letter: drive_letter,
-                    _INFO_KEY_drive_partition: drive_partition,
+                    DetailKey.drive_root: drive_letter,
+                    DetailKey.drive_partition: drive_partition,
                 }
             }
         )
@@ -313,8 +304,8 @@ def _query_volumes_from_wmi() -> dict[str, dict[str, str]]:
         partitions_and_disks.update(
             {
                 partition: {
-                    _INFO_KEY_drive_partition: partition,
-                    _INFO_KEY_disk_id: disk_id,
+                    DetailKey.drive_partition: partition,
+                    DetailKey.disk_id: disk_id,
                 }
             }
         )
@@ -328,8 +319,8 @@ def _query_volumes_from_wmi() -> dict[str, dict[str, str]]:
         disks_and_serial_numbers.update(
             {
                 disk_id: {
-                    _INFO_KEY_disk_id: disk_id,
-                    _INFO_KEY_serial_number: serial_number,  # Unique to this WMI call
+                    DetailKey.disk_id: disk_id,
+                    DetailKey.serial_number: serial_number,  # Unique to this WMI call
                 }
             }
         )
@@ -344,8 +335,8 @@ def _query_volumes_from_wmi() -> dict[str, dict[str, str]]:
         disks_and_descriptions.update(
             {
                 disk_id: {
-                    _INFO_KEY_disk_id: disk_id,
-                    _INFO_KEY_disk_description: corrected_description,  # Unique to this WMI call
+                    DetailKey.disk_id: disk_id,
+                    DetailKey.device_description: corrected_description,  # Unique to this WMI call
                 }
             }
         )
@@ -353,20 +344,20 @@ def _query_volumes_from_wmi() -> dict[str, dict[str, str]]:
 
     discovered_storage_volumes = {}
     for drive_letter, _ in drive_letters_and_labels.items():
-        drive_label = drive_letters_and_labels[drive_letter][_INFO_KEY_drive_label]
+        drive_label = drive_letters_and_labels[drive_letter][DetailKey.drive_label]
         if drive_letter not in drive_letters_and_partitions:
             continue
-        drive_partition = drive_letters_and_partitions[drive_letter][_INFO_KEY_drive_partition]
-        disk_id = partitions_and_disks[drive_partition][_INFO_KEY_disk_id]
-        disk_serial_number = disks_and_serial_numbers[disk_id][_INFO_KEY_serial_number]
-        disk_description = disks_and_descriptions[disk_id][_INFO_KEY_disk_description]
+        drive_partition = drive_letters_and_partitions[drive_letter][DetailKey.drive_partition]
+        disk_id = partitions_and_disks[drive_partition][DetailKey.disk_id]
+        disk_serial_number = disks_and_serial_numbers[disk_id][DetailKey.serial_number]
+        disk_description = disks_and_descriptions[disk_id][DetailKey.device_description]
         discovered_storage_volumes.update(
             {
                 drive_letter: {
-                    _INFO_KEY_drive_letter: drive_letter,
-                    _INFO_KEY_drive_label: drive_label,
-                    _INFO_KEY_serial_number: disk_serial_number,
-                    _INFO_KEY_disk_description: disk_description,
+                    DetailKey.drive_root: drive_letter,
+                    DetailKey.drive_label: drive_label,
+                    DetailKey.serial_number: disk_serial_number,
+                    DetailKey.device_description: disk_description,
                 }
             }
         )
@@ -374,16 +365,16 @@ def _query_volumes_from_wmi() -> dict[str, dict[str, str]]:
     return discovered_storage_volumes
 
 
-def _format_port_table(qtpy_devices: list[dict[str, str]]) -> list[str]:
+def _format_port_table(qtpy_devices: list[dict[DetailKey, str]]) -> list[str]:
     """Return a list of text lines that present a table of the specified qtpy_devices."""
     lines = []
     lines.append("")
     lines.append("      {:5}  {:5}  {:35}".format("Port", "Drive", "QT Py device"))
     lines.append("      {:5}  {:5}  {:35}".format("-" * 5, "-" * 5, "-" * 35))
     for index, qtpy_device in enumerate(qtpy_devices):
-        drive_letter = f"{qtpy_device[_INFO_KEY_drive_letter]}\\"
+        drive_letter = f"{qtpy_device[DetailKey.drive_root]}\\"
         lines.append(
-            f"{index + 1:3}:  {qtpy_device[_INFO_KEY_com_port]:5}  {drive_letter:5}  {qtpy_device[_INFO_KEY_disk_description]:35}"
+            f"{index + 1:3}:  {qtpy_device[DetailKey.com_port]:5}  {drive_letter:5}  {qtpy_device[DetailKey.device_description]:35}"
         )
     lines.append("")
     return lines

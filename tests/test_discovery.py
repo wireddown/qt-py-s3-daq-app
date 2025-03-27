@@ -5,7 +5,7 @@ import pytest
 import serial
 
 from qtpy_datalogger import discovery
-from qtpy_datalogger.datatypes import ExitCode
+from qtpy_datalogger.datatypes import DetailKey, ExitCode
 
 
 def no_qtpy_devices() -> list[dict[str, str]]:
@@ -17,9 +17,9 @@ def one_qtpy_device() -> list[dict[str, str]]:
     """Override discovery.discover_qtpy_devices() to return one result."""
     return [
         {
-            "drive_letter": "Q:",
+            "drive_root": "Q:",
             "drive_label": "CIRCUITPY",
-            "disk_description": "Adafruit QT Py ESP32S3 no PSRAM",
+            "device_description": "Adafruit QT Py ESP32S3 no PSRAM",
             "serial_number": "00AA00AA00AA",
             "com_port": "COMxx",
             "com_id": "USB VID:PID=239A:811A SER=00AA00AA00AA LOCATION=1-7:x.0",
@@ -31,17 +31,17 @@ def two_qtpy_devices() -> list[dict[str, str]]:
     """Override discovery.discover_qtpy_devices() to return two results."""
     return [
         {
-            "drive_letter": "Q:",
+            "drive_root": "Q:",
             "drive_label": "CIRCUITPY",
-            "disk_description": "Adafruit QT Py ESP32S3 no PSRAM",
+            "device_description": "Adafruit QT Py ESP32S3 no PSRAM",
             "serial_number": "00AA00AA00AA",
             "com_port": "COMxx",
             "com_id": "USB VID:PID=239A:811A SER=00AA00AA00AA LOCATION=1-7:x.0",
         },
         {
-            "drive_letter": "T:",
+            "drive_root": "T:",
             "drive_label": "CIRCUITPY",
-            "disk_description": "Adafruit QT Py ESP32S3 2MB PSRAM",
+            "device_description": "Adafruit QT Py ESP32S3 2MB PSRAM",
             "serial_number": "11CC11CC11CC",
             "com_port": "COMyy",
             "com_id": "USB VID:PID=239A:8144 SER=11CC11CC11CC LOCATION=1-8:x.0",
@@ -131,7 +131,7 @@ def test_handle_connect_with_one_device(
 ) -> None:
     """Does it correctly handle connect() when there is only one QT Py device?"""
     monkeypatch.setattr(discovery, "discover_qtpy_devices", one_qtpy_device)
-    expected_port = port if port else discovery.discover_qtpy_devices()[0][discovery._INFO_KEY_com_port]
+    expected_port = port if port else discovery.discover_qtpy_devices()[0][DetailKey.com_port]
 
     with pytest.raises(raised_exception) as excinfo:
         discovery.handle_connect(behavior, port)
@@ -167,7 +167,7 @@ def test_handle_connect_with_two_devices(
     """Does it correctly handle connect() when there are two QT Py devices?"""
     monkeypatch.setattr(discovery, "discover_qtpy_devices", two_qtpy_devices)
     monkeypatch.setattr(click, "prompt", select_last_from_prompt)
-    expected_port = port if port else two_qtpy_devices()[-1][discovery._INFO_KEY_com_port]
+    expected_port = port if port else two_qtpy_devices()[-1][DetailKey.com_port]
 
     with pytest.raises(raised_exception) as excinfo:
         discovery.handle_connect(behavior, port)
