@@ -11,14 +11,16 @@ Supported connection types
 import contextlib
 import logging
 import os
+import pathlib
 import sys
 from enum import StrEnum
 
 import click
 import serial
+import toml
 from serial.tools import miniterm as mt
 
-from .datatypes import CaptionCorrections, DetailKey, ExitCode
+from .datatypes import CaptionCorrections, DetailKey, ExitCode, SnsrNotice, SnsrPath
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +99,7 @@ def discover_qtpy_devices() -> list[dict[DetailKey, str]]:
 
             if port_serial_number and port_serial_number == drive_serial_number:
                 serial_number = port_serial_number.lower()
+                python_implementation, snsr_version = _query_node_info_from_drive(drive_info[DetailKey.drive_root])
                 qtpy_devices.append(
                     {
                         DetailKey.drive_root: drive_info[DetailKey.drive_root],
@@ -105,6 +108,8 @@ def discover_qtpy_devices() -> list[dict[DetailKey, str]]:
                         DetailKey.serial_number: serial_number,
                         DetailKey.com_port: port_info[DetailKey.com_port],
                         DetailKey.com_id: port_info[DetailKey.com_id],
+                        DetailKey.python_implementation: python_implementation,
+                        DetailKey.snsr_version: snsr_version,
                     }
                 )
     logger.debug(qtpy_devices)
@@ -363,6 +368,45 @@ def _query_volumes_from_wmi() -> dict[str, dict[DetailKey, str]]:
         )
     logger.debug(discovered_storage_volumes)
     return discovered_storage_volumes
+
+
+def _query_node_info_from_drive(drive_root: str) -> tuple[str, str]:
+    """Return a tuple of (python_implementation, snsr_version) from the candidate device as drive_root."""
+    as_path = pathlib.Path(drive_root)
+    boot_out_info = _parse_boot_out_file(as_path)
+    if not boot_out_info:
+        # If there isn't a boot_out.txt file on the device, it's not a CircuitPython device
+        return ("", "")
+
+    python_implementation = boot_out_info[DetailKey.python_implementation]
+    notice_file = as_path.joinpath(SnsrPath.notice)
+    if not notice_file.exists():
+        # If there isn't a notice.toml file on the device, it's not a qtpy_datalogger sensor_node
+        return (python_implementation, "")
+
+    notice_contents = toml.load(notice_file)
+    snsr_notice = SnsrNotice(**notice_contents)
+    return (python_implementation, snsr_notice.version)
+
+
+def _parse_boot_out_file(main_folder: pathlib.Path) -> dict[DetailKey, str]:
+    """Return a dictionary representation of the boot_out.txt file in main_folder."""
+    boot_out_file = main_folder.joinpath("boot_out.txt")
+    if not boot_out_file.exists():
+        return {}
+
+    lines = boot_out_file.read_text().splitlines()
+    logger.debug(f"Parsing '{boot_out_file}' with contents")
+    _ = [logger.debug(line) for line in lines]
+    circuitpy_version_line = lines[0]
+    board_id_line = lines[1]
+    circuitpy_version = circuitpy_version_line.split(";")[0].split(" ")[-3]
+    board_id = board_id_line.split(":")[-1]
+
+    return {
+        DetailKey.python_implementation: f"circuitpython-{circuitpy_version}",
+        DetailKey.device_description: CaptionCorrections.get_corrected(board_id),
+    }
 
 
 def _format_port_table(qtpy_devices: list[dict[DetailKey, str]]) -> list[str]:
