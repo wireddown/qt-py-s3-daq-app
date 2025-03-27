@@ -19,7 +19,7 @@ import toml
 
 from qtpy_datalogger import discovery
 
-from .datatypes import DetailKey, ExitCode, Links, SnsrNotice, SnsrPath, suppress_unless_debug
+from .datatypes import ExitCode, Links, SnsrNotice, SnsrPath, suppress_unless_debug
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
         if not qtpy_device:
             logger.error("No QT Py devices found!")
             raise SystemExit(ExitCode.Discovery_Failure)
-        root = pathlib.Path(qtpy_device[DetailKey.drive_root]).resolve()
+        root = pathlib.Path(qtpy_device.drive_root).resolve()
 
     device_bundle = _detect_snsr_bundle(root)
     comparison_information = {

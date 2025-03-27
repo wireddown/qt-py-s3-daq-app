@@ -92,7 +92,7 @@ def handle_connect(behavior: Behavior, port: str) -> None:
         if not qtpy_device:
             logger.error("No QT Py devices found!")
             raise SystemExit(ExitCode.Discovery_Failure)
-        port = qtpy_device[DetailKey.com_port]
+        port = qtpy_device.com_port
 
     if not port.startswith("COM"):
         logger.error("Format for --port argument is '--port COM#' where # is a number.")
@@ -106,18 +106,8 @@ def handle_connect(behavior: Behavior, port: str) -> None:
     open_session_on_port(port)
 
 
-def discover_qtpy_devices() -> list[dict[DetailKey, str]]:
-    """
-    Scan for QT Py devices and return a list of information dictionaries.
-
-    Returned entries
-    - drive_letter
-    - drive_label
-    - disk_description
-    - serial_number
-    - com_port
-    - com_id
-    """
+def discover_qtpy_devices() -> dict[str, QTPyDevice]:
+    """Scan for QT Py devices and return a dictionary of QTPyDevice instances indexed by serial_number."""
     # A QT Py COM port has a serial number
     logger.info("Discovering serial ports")
     discovered_serial_ports = _query_ports_from_serial()
@@ -127,7 +117,7 @@ def discover_qtpy_devices() -> list[dict[DetailKey, str]]:
     discovered_disk_volumes = _query_volumes_from_wmi()
 
     logger.info("Identifying QT Py devices")
-    qtpy_devices = []
+    qtpy_devices: dict[str, QTPyDevice] = {}
     for drive_info in discovered_disk_volumes.values():
         drive_serial_number = drive_info[DetailKey.serial_number]
 
@@ -137,17 +127,17 @@ def discover_qtpy_devices() -> list[dict[DetailKey, str]]:
             if port_serial_number and port_serial_number == drive_serial_number:
                 serial_number = port_serial_number.lower()
                 python_implementation, snsr_version = _query_node_info_from_drive(drive_info[DetailKey.drive_root])
-                qtpy_devices.append(
-                    {
-                        DetailKey.drive_root: drive_info[DetailKey.drive_root],
-                        DetailKey.drive_label: drive_info[DetailKey.drive_label],
-                        DetailKey.device_description: drive_info[DetailKey.device_description],
-                        DetailKey.serial_number: serial_number,
-                        DetailKey.com_port: port_info[DetailKey.com_port],
-                        DetailKey.com_id: port_info[DetailKey.com_id],
-                        DetailKey.python_implementation: python_implementation,
-                        DetailKey.snsr_version: snsr_version,
-                    }
+                qtpy_devices[serial_number] = QTPyDevice(
+                    com_id=port_info[DetailKey.com_id],
+                    com_port=port_info[DetailKey.com_port],
+                    device_description=drive_info[DetailKey.device_description],
+                    drive_label=drive_info[DetailKey.drive_label],
+                    drive_root=drive_info[DetailKey.drive_root],
+                    ip_address="",
+                    node_id="",
+                    python_implementation=python_implementation,
+                    serial_number=serial_number,
+                    snsr_version=snsr_version,
                 )
     logger.debug(qtpy_devices)
     return qtpy_devices
@@ -210,7 +200,7 @@ def open_session_on_port(port: str) -> None:
     logger.info(f"Reconnect with 'qtpy-datalogger connect --port {port}'")
 
 
-def discover_and_select_qtpy() -> dict[DetailKey, str]:
+def discover_and_select_qtpy() -> QTPyDevice | None:
     """
     Scan for QT Py devices and return one.
 
@@ -225,29 +215,32 @@ def discover_and_select_qtpy() -> dict[DetailKey, str]:
     - com_id
     """
     qtpy_devices = discover_qtpy_devices()
-    if qtpy_devices:
-        selected_device = qtpy_devices[0]
-        selected_reason = "Auto-selected"
-        if len(qtpy_devices) > 1:
-            logger.info(f"Found {len(qtpy_devices)} QT Py devices, select a device to continue")
-            formatted_lines = _format_port_table(qtpy_devices)
-            _ = [print(line) for line in formatted_lines]  # noqa: T201 -- use direct IO for user
 
-            choices = click.Choice([f"{index + 1}" for index in range(len(qtpy_devices))])
-            user_input = click.prompt(
-                text="Enter a device number",
-                type=choices,
-                default="1",
-                show_default=False,
-            )
-            selected_index = int(user_input) - 1
-            selected_device = qtpy_devices[selected_index]
-            selected_reason = "User-selected"
-        logger.info(
-            f"{selected_reason} '{selected_device[DetailKey.device_description]}' on '{selected_device[DetailKey.drive_root]}\\' with port '{selected_device[DetailKey.com_port]}'"
+    if not qtpy_devices:
+        return None
+
+    selectable_devices = sorted(qtpy_devices.keys())
+    selected_device = qtpy_devices[selectable_devices[0]]
+    selected_reason = "Auto-selected"
+    if len(selectable_devices) > 1:
+        logger.info(f"Found {len(selectable_devices)} QT Py devices, select a device to continue")
+        formatted_lines = _format_port_table(qtpy_devices)
+        _ = [print(line) for line in formatted_lines]  # noqa: T201 -- use direct IO for user prompt
+
+        choices = click.Choice([f"{index + 1}" for index in range(len(selectable_devices))])
+        user_input = click.prompt(
+            text="Enter a device number",
+            type=choices,
+            default="1",
+            show_default=False,
         )
-        return selected_device
-    return {}
+        selected_index = int(user_input) - 1
+        selected_device = qtpy_devices[selectable_devices[selected_index]]
+        selected_reason = "User-selected"
+    logger.info(
+        f"{selected_reason} '{selected_device.device_description}' on '{selected_device.drive_root}\\' with port '{selected_device.com_port}'"
+    )
+    return selected_device
 
 
 def _query_ports_from_serial() -> dict[str, dict[DetailKey, str]]:
@@ -446,16 +439,19 @@ def _parse_boot_out_file(main_folder: pathlib.Path) -> dict[DetailKey, str]:
     }
 
 
-def _format_port_table(qtpy_devices: list[dict[DetailKey, str]]) -> list[str]:
+def _format_port_table(qtpy_devices: dict[str, QTPyDevice]) -> list[str]:
     """Return a list of text lines that present a table of the specified qtpy_devices."""
     lines = []
     lines.append("")
     lines.append("      {:5}  {:5}  {:35}".format("Port", "Drive", "QT Py device"))
     lines.append("      {:5}  {:5}  {:35}".format("-" * 5, "-" * 5, "-" * 35))
-    for index, qtpy_device in enumerate(qtpy_devices):
-        drive_letter = f"{qtpy_device[DetailKey.drive_root]}\\"
+    sorted_devices = sorted(qtpy_devices.keys())
+    for index, qtpy_device in enumerate([qtpy_devices[serial_number] for serial_number in sorted_devices]):
+        drive_letter = ""
+        if qtpy_device.drive_root:
+            drive_letter = f"{qtpy_device.drive_root}\\"
         lines.append(
-            f"{index + 1:3}:  {qtpy_device[DetailKey.com_port]:5}  {drive_letter:5}  {qtpy_device[DetailKey.device_description]:35}"
+            f"{index + 1:3}:  {qtpy_device.com_port:5}  {drive_letter:5}  {qtpy_device.device_description:35}  {qtpy_device.node_id:20}"
         )
     lines.append("")
     return lines
