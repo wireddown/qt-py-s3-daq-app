@@ -22,6 +22,7 @@ class Links(enum.StrEnum):
     Homepage = "https://github.com/wireddown/qt-py-s3-daq-app/wiki"
     New_Bug = "https://github.com/wireddown/qt-py-s3-daq-app/issues/new?template=bug-report.md"
     Board_Support_Matrix = "https://docs.circuitpython.org/en/stable/shared-bindings/support_matrix.html"
+    MQTT_Walkthrough = "https://github.com/wireddown/qt-py-s3-daq-app/wiki/Walkthrough-5-MQTT"
 
 
 class ExitCode(enum.IntEnum):
@@ -31,6 +32,9 @@ class ExitCode(enum.IntEnum):
     Discovery_Failure = 41
     COM1_Failure = 42
     Board_Lookup_Failure = 51
+    Server_Missing_Failure = 61
+    Server_Offline_Failure = 62
+    Server_Inaccessible_Failure = 63
 
 
 class CaptionCorrections:
