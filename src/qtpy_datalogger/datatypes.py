@@ -37,6 +37,26 @@ class ExitCode(enum.IntEnum):
     Server_Inaccessible_Failure = 63
 
 
+class DetailKey(enum.StrEnum):
+    """Names of property details for QTPyDevice instances."""
+
+    com_id = "com_id"
+    com_port = "com_port"
+    device_description = "device_description"
+    disk_id = "disk_id"
+    drive_label = "drive_label"
+    drive_partition = "drive_partition"
+    drive_root = "drive_root"
+    ip_address = "ip_address"
+    node_id = "node_id"
+    python_implementation = "python_implementation"
+    serial_number = "serial_number"
+    snsr_commit = "snsr_commit"
+    snsr_timestamp = "snsr_timestamp"
+    snsr_version = "snsr_version"
+    system_name = "system_name"
+
+
 class CaptionCorrections:
     """Corrections for abbreviated or malformatted device descriptions."""
 
