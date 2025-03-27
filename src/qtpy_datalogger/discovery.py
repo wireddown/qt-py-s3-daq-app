@@ -9,6 +9,7 @@ Supported connection types
 """
 
 import contextlib
+import dataclasses
 import logging
 import os
 import pathlib
@@ -30,6 +31,42 @@ class Behavior(StrEnum):
 
     AutoConnect = "AutoConnect"
     DiscoverOnly = "DiscoveryOnly"
+
+
+@dataclasses.dataclass
+class QTPyDevice:
+    """
+    Information about a discovered QT Py device.
+
+    These details are always available:
+    - device_description -- Manufacturer product description for the QT Py device
+    - python_implementation -- The origin and version of the Python interpreter on the QT Py device
+    - serial_number:  -- The serial number for the QT Py device
+
+    When the device has qtpy_datalogger installed, these details are available:
+    - snsr_version -- The version of qtpy_datalogger installed on the QT Py device
+
+    When the device is connected with USB, these details are available:
+    - com_id -- System hardware identifiers for the QT Py device's UART port
+    - com_port -- System name for the QT Py device's UART port
+    - drive_label -- Name for the QT Py device's storage volume
+    - drive_root -- System name for the QT Py device's storage volume
+
+    When the device is connected to the same MQTT broker, these details are available:
+    - ip_address -- The IPv4 address for the QT Py device
+    - node_id -- The MQTT client identifier for the QT Py device
+    """
+
+    com_id: str
+    com_port: str
+    device_description: str
+    drive_label: str
+    drive_root: str
+    ip_address: str
+    node_id: str
+    python_implementation: str
+    serial_number: str
+    snsr_version: str
 
 
 def handle_connect(behavior: Behavior, port: str) -> None:
