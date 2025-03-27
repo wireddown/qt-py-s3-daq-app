@@ -21,7 +21,7 @@ import serial
 import toml
 from serial.tools import miniterm as mt
 
-from .datatypes import CaptionCorrections, DetailKey, ExitCode, SnsrNotice, SnsrPath
+from .datatypes import CaptionCorrections, ConnectionTransport, DetailKey, ExitCode, SnsrNotice, SnsrPath
 
 logger = logging.getLogger(__name__)
 
@@ -87,14 +87,18 @@ def handle_connect(behavior: Behavior, port: str) -> None:
             logger.warning("No QT Py devices found!")
         raise SystemExit(ExitCode.Success)
 
-    if not port:
-        qtpy_device = discover_and_select_qtpy()
+    communication_transport = ConnectionTransport.AutoSelect
+    if port:
+        communication_transport = ConnectionTransport.UART_Serial
+
+    if communication_transport == ConnectionTransport.AutoSelect:
+        qtpy_device, communication_transport = discover_and_select_qtpy()
         if not qtpy_device:
             logger.error("No QT Py devices found!")
             raise SystemExit(ExitCode.Discovery_Failure)
         port = qtpy_device.com_port
 
-    if not port.startswith("COM"):
+    if not port.startswith("COM") and communication_transport == ConnectionTransport.UART_Serial:
         logger.error("Format for --port argument is '--port COM#' where # is a number.")
         message = f"Cannot open a connection to '{port}'"
         raise click.BadParameter(message, param_hint="--port COM#")
@@ -103,7 +107,8 @@ def handle_connect(behavior: Behavior, port: str) -> None:
         logger.error(f"Opening '{port}' is not supported.")
         raise SystemExit(ExitCode.COM1_Failure)
 
-    open_session_on_port(port)
+    if communication_transport == ConnectionTransport.UART_Serial:
+        open_session_on_port(port)
 
 
 def discover_qtpy_devices() -> dict[str, QTPyDevice]:
@@ -200,24 +205,17 @@ def open_session_on_port(port: str) -> None:
     logger.info(f"Reconnect with 'qtpy-datalogger connect --port {port}'")
 
 
-def discover_and_select_qtpy() -> QTPyDevice | None:
+def discover_and_select_qtpy(
+    transport: ConnectionTransport = ConnectionTransport.AutoSelect,
+) -> tuple[QTPyDevice | None, ConnectionTransport | None]:
     """
-    Scan for QT Py devices and return one.
+    Scan for QT Py devices and return a tuple of the selected device and its communication transport.
 
-    Ask the user for input when there is more than one device available.
-
-    Returned entries
-    - drive_letter
-    - drive_label
-    - disk_description
-    - serial_number
-    - com_port
-    - com_id
+    Ask the user for input when there is more than one device available or when a device has more than one transport available.
     """
     qtpy_devices = discover_qtpy_devices()
-
     if not qtpy_devices:
-        return None
+        return (None, None)
 
     selectable_devices = sorted(qtpy_devices.keys())
     selected_device = qtpy_devices[selectable_devices[0]]
@@ -237,10 +235,17 @@ def discover_and_select_qtpy() -> QTPyDevice | None:
         selected_index = int(user_input) - 1
         selected_device = qtpy_devices[selectable_devices[selected_index]]
         selected_reason = "User-selected"
-    logger.info(
-        f"{selected_reason} '{selected_device.device_description}' on '{selected_device.drive_root}\\' with port '{selected_device.com_port}'"
-    )
-    return selected_device
+
+    has_uart = len(selected_device.com_port) > 0
+    if has_uart:
+        selected_transport = ConnectionTransport.UART_Serial
+    else:
+        return (selected_device, None)
+
+    transport_message = f"port '{selected_device.com_port}' on '{selected_device.drive_root}\\'"
+
+    logger.info(f"{selected_reason} '{selected_device.device_description}' as {transport_message}")
+    return (selected_device, selected_transport)
 
 
 def _query_ports_from_serial() -> dict[str, dict[DetailKey, str]]:

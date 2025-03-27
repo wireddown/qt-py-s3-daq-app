@@ -19,7 +19,7 @@ import toml
 
 from qtpy_datalogger import discovery
 
-from .datatypes import ExitCode, Links, SnsrNotice, SnsrPath, suppress_unless_debug
+from .datatypes import ConnectionTransport, ExitCode, Links, SnsrNotice, SnsrPath, suppress_unless_debug
 
 logger = logging.getLogger(__name__)
 
@@ -63,11 +63,17 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
         _ = [logger.info(line) for line in self_description]
         raise SystemExit(ExitCode.Success)
 
+    communication_transport = ConnectionTransport.UART_Serial
     if not root:
-        qtpy_device = discovery.discover_and_select_qtpy()
+        qtpy_device, communication_transport = discovery.discover_and_select_qtpy(communication_transport)
         if not qtpy_device:
             logger.error("No QT Py devices found!")
             raise SystemExit(ExitCode.Discovery_Failure)
+        if not communication_transport:
+            logger.error(
+                f"Cannot compare or equip '{qtpy_device.node_id}' with MQTT connection. Please connect with USB."
+            )
+            raise SystemExit(ExitCode.Equip_Without_USB_Failure)
         root = pathlib.Path(qtpy_device.drive_root).resolve()
 
     device_bundle = _detect_snsr_bundle(root)
