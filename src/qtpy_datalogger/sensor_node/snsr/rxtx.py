@@ -75,6 +75,29 @@ def on_message(client: minimqtt.MQTT, topic: str, message: str) -> None:
         descriptor_topic = f"qtpy/v1/{context['node_group']}/{context['node_identifier']}/$DESCRIPTOR"
         descriptor_message = get_descriptor_payload("node", cpu.uid.hex().lower(), str(radio.ipv4_address))
         client.publish(descriptor_topic, descriptor_message)
+    elif last_part == "command":
+        from json import dumps, loads
+
+        from .node.classes import ActionInformation, ActionPayload
+
+        context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
+        result_topic = f"qtpy/v1/{context['node_group']}/{context['node_identifier']}/result"
+        action_payload_information = loads(message)
+        action_payload = ActionPayload.from_dict(action_payload_information)
+        action = action_payload.action
+        sender = build_sender_information(f"qtpy/v1/{context['node_group']}/{context['node_identifier']}/$DESCRIPTOR")
+        result_payload = ActionPayload(
+            action=ActionInformation(
+                command=action.command,
+                parameters={
+                    "output": f"received: {action.parameters['input']}",
+                    "complete": True,
+                },
+                message_id=action.message_id,
+            ),
+            sender=sender,
+        )
+        client.publish(result_topic, dumps(result_payload.as_dict()))
 
 
 def create_mqtt_client(radio: wifi.Radio, node_group: str, node_identifier: str) -> minimqtt.MQTT:

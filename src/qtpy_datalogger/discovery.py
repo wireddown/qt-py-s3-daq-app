@@ -115,6 +115,8 @@ def handle_connect(behavior: Behavior, node: str, port: str) -> None:
     if communication_transport == ConnectionTransport.UART_Serial:
         open_session_on_port(port)
     elif communication_transport == ConnectionTransport.MQTT_WiFi:
+        network.open_session_on_node(node)
+        logger.info("")
         logger.info(f"Reconnect with 'qtpy-datalogger connect --node {node}'")
 
 

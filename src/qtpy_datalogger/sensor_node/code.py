@@ -14,6 +14,7 @@ node_group = os.getenv("QTPY_NODE_GROUP", "")
 node_identifier = f"node-{cpu.uid.hex().lower()}-0"  # Matches boot_out.txt
 mqtt_topics = [
     f"qtpy/v1/{node_group}/broadcast",
+    f"qtpy/v1/{node_group}/{node_identifier}/command",
 ]
 
 mqtt_client = create_mqtt_client(radio, node_group, node_identifier)

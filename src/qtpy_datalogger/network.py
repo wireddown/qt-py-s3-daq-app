@@ -159,6 +159,59 @@ class QTPyController:
         }
         return node_information
 
+    async def send_action(self, node_id: str, command_name: str, parameters: dict) -> node_classes.ActionInformation:
+        """
+        Send a command with the specified parameters to the node in the group with node_id and return the sent ActionInformation.
+
+        Use the returned ActionInformation with 'get_matching_result()' to await the result.
+        """
+        action = node_classes.ActionInformation(
+            command=command_name,
+            parameters=parameters,
+            message_id=self._format_message_id(command_name),
+        )
+
+        await self._publish_action_payload(node_id, action)
+        return action
+
+    async def get_matching_result(
+        self,
+        node_id: str,
+        action: node_classes.ActionInformation,
+        timeout: float = 5.0,
+    ) -> tuple[dict, node_classes.SenderInformation]:
+        """
+        Monitor the MQTT messages for a matching result to the specified action.
+
+        Returns a tuple with
+        - the dictionary of parameters from the result's matching ActionInformation
+        - the SenderInformation from the matching payload
+        """
+        parameters_and_sender = ()
+        other_messages = []
+        action_id = action.message_id
+        logger.debug(f"Monitoring MQTT messages for the '{action_id}' result from '{node_id}'")
+        async with asyncio.timeout(timeout):
+            while not parameters_and_sender:
+                topic_and_message = await self.message_queue.get()
+                response_json = topic_and_message.message
+                response = json.loads(response_json)
+                if "action" in response:
+                    payload = node_classes.ActionPayload.from_dict(response)
+                    sending_node = node_mqtt.node_from_topic(payload.sender.descriptor_topic)
+                    result_id = payload.action.message_id
+                    if sending_node == node_id and result_id == action_id:
+                        logger.debug(f"Matched result '{payload.action.parameters}'")
+                        parameters_and_sender = (payload.action.parameters, payload.sender)
+                    else:
+                        other_messages.append(topic_and_message)
+                else:
+                    other_messages.append(topic_and_message)
+                self.message_queue.task_done()
+        for other_message in other_messages:
+            self._requeue_or_discard(other_message)
+        return parameters_and_sender
+
     async def disconnect(self) -> None:
         """Disconnect from the MQTT broker."""
         if not self.message_queue.empty():
@@ -260,6 +313,19 @@ class QTPyController:
             logger.debug(f"Requeueing response '{topic_and_message}'")
             self.message_queue.put_nowait(topic_and_message)
 
+    async def _publish_action_payload(self, node_id: str, action: node_classes.ActionInformation) -> None:
+        """Send the specified action to the specified node_id's command topic."""
+        action_payload = node_classes.ActionPayload(
+            action=action,
+            sender=_build_sender_information(self.descriptor_topic),
+        )
+
+        result_topic = node_mqtt.get_result_topic(self.group_id, node_id)
+        await self._subscribe([result_topic])
+
+        command_topic = node_mqtt.get_command_topic(self.group_id, node_id)
+        self.client.publish(command_topic, json.dumps(action_payload.as_dict()))
+
     def _format_message_id(self, action_name: str) -> str:
         """Return a unique message ID for the action_name."""
         return f"{action_name}-{self.named_counter.count(action_name)}"
@@ -284,6 +350,11 @@ def query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
     return discovered_nodes
 
 
+def open_session_on_node(node_id: str) -> None:
+    """Open a terminal connection to the sensor_node with the specified node_id."""
+    asyncio.run(_open_session_on_node(node_id))
+
+
 async def _query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
     """Use a new QTPyController to scan the network for sensor_nodes."""
     broker_host = "localhost"
@@ -302,6 +373,59 @@ async def _query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
     await controller.disconnect()
 
     return node_information
+
+
+async def _open_session_on_node(node_id: str) -> None:
+    """Use a new QTPyController to open a terminal session on the specified node_id."""
+    broker_host = "localhost"
+    group_id = "centrifuge"
+    mac_address = hex(uuid.getnode())[2:]
+    ip_address = socket.gethostbyname(socket.gethostname())
+    controller = QTPyController(
+        broker_host=broker_host,
+        group_id=group_id,
+        mac_address=mac_address,
+        ip_address=ip_address,
+    )
+
+    exit_commands = ["exit", "quit"]
+    exit_options = "' or '".join(exit_commands)
+    exit_help = f"Use any of '{exit_options}' to exit."
+    print(exit_help)  # noqa: T201 -- use direct IO for user REPL
+
+    await controller.connect_and_subscribe()
+    while True:
+        user_input = await asyncio.to_thread(input, f"{node_id} > ")
+        if user_input in exit_commands:
+            break
+        if user_input == "help":
+            print(exit_help)  # noqa: T201 -- use direct IO for user REPL
+            continue
+
+        command_name = "custom"
+        custom_parameters = {
+            "input": user_input,
+        }
+        sent_action = await controller.send_action(node_id, command_name, custom_parameters)
+
+        response_complete = False
+        while not response_complete:
+            try:
+                response_parameters, sender_information = await controller.get_matching_result(node_id, sent_action)
+                response_complete = response_parameters["complete"]
+                response = response_parameters["output"]
+                used_kb = sender_information.status.used_memory
+                free_kb = sender_information.status.free_memory
+                cpu_degc = sender_information.status.cpu_temperature
+                print(  # noqa: T201 -- use direct IO for user REPL
+                    f"Received '{response}' from node with {used_kb} kB used, {free_kb} kB remaining, at temperature {cpu_degc} degC"
+                )
+            except TimeoutError:
+                logger.error("Node did not respond! Is it online or correctly spelled?")  # noqa: TRY400 -- user-facing, known error condition
+                logger.error(exit_help)  # noqa: TRY400 -- user-facing, known error condition
+                break
+
+    await controller.disconnect()
 
 
 def _build_sender_information(descriptor_topic: str) -> node_classes.SenderInformation:
