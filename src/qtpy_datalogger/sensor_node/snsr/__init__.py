@@ -1,0 +1,1 @@
+"""QT Py snsr package."""

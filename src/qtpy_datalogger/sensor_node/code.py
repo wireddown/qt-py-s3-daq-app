@@ -1,22 +1,21 @@
-"""code.py file is the main loop from qtpy_datalogger.sensor_node."""  # noqa: INP001 -- we must hide 'code' to use this entry point for CircuitPython devices (IMP001)
+"""code.py file is the main loop from qtpy_datalogger.sensor_node."""  # noqa: INP001 -- this is the entry point for CircuitPython devices
 
-import gc
+from time import sleep
 
-import usb_cdc
-from snsr.pysh.py_shell import PromptSession
+from snsr.core import get_memory_info, paint_uart_line, read_one_uart_line
+from supervisor import runtime
 
-serial = usb_cdc.console
-if usb_cdc.data:
-    print("Switching to usb_cdc.data for serial IO with host")  # noqa: T201 -- using print() because this is an interactive terminal program
-    serial = usb_cdc.data
-else:
-    print("Using sys.stdio for serial IO with host")  # noqa: T201 -- using print() because this is an interactive terminal program
+response = ""
+while response.lower() not in ["exit", "quit"]:
+    paint_uart_line("   Poll UART     [ Poll MQTT ]")
+    sleep(1.0)
 
-session = PromptSession(in_stream=serial, out_stream=serial)  # type: ignore -- CircuitPython Serial objects have no parents
-
-while True:
-    used_bytes = gc.mem_alloc()
-    free_bytes = gc.mem_free()
-    response = session.prompt(f"[{used_bytes / 1024:.3f} kB {free_bytes / 1024:.3f} kB] ")
-
-    print(f"(echo)\n{response}", file=serial)
+    paint_uart_line(" [ Poll UART ]     Poll MQTT  ")
+    sleep(0.2)
+    if runtime.usb_connected and runtime.serial_connected and runtime.serial_bytes_available > 0:
+        print()  # noqa: T201 -- use direct IO for user REPL
+        response = read_one_uart_line()
+        if not response:
+            response = read_one_uart_line()
+        used_kb, free_kb = get_memory_info()
+        print(f"Received '{response}' with {used_kb} / {free_kb}  (used/free)")  # noqa: T201 -- use direct IO for user REPL
