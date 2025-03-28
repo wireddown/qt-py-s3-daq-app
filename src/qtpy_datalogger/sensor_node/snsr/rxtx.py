@@ -71,8 +71,6 @@ def on_message(client: minimqtt.MQTT, topic: str, message: str) -> None:
         from microcontroller import cpu
         from wifi import radio
 
-        from .core import get_descriptor_payload
-
         context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
         descriptor_topic = f"qtpy/v1/{context['node_group']}/{context['node_identifier']}/$DESCRIPTOR"
         descriptor_message = get_descriptor_payload("node", cpu.uid.hex().lower(), str(radio.ipv4_address))

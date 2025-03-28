@@ -4,7 +4,7 @@ import click
 import pytest
 import serial
 
-from qtpy_datalogger import discovery
+from qtpy_datalogger import discovery, network
 from qtpy_datalogger.datatypes import DetailKey, ExitCode
 
 usb_qtpy_1 = discovery.QTPyDevice(
@@ -15,6 +15,19 @@ usb_qtpy_1 = discovery.QTPyDevice(
     drive_root="Q:",
     ip_address="",
     node_id="",
+    python_implementation="circuitpython-9.2.1",
+    serial_number="00aa00aa00aa",
+    snsr_version="1.2.3",
+)
+
+mqtt_qtpy_1 = discovery.QTPyDevice(
+    com_id="",
+    com_port="",
+    device_description="Adafruit QT Py ESP32-S3 no PSRAM",
+    drive_label="",
+    drive_root="",
+    ip_address="192.168.0.0",
+    node_id="node-00aa00aa00aa-0",
     python_implementation="circuitpython-9.2.1",
     serial_number="00aa00aa00aa",
     snsr_version="1.2.3",
@@ -51,6 +64,13 @@ def two_usb_qtpy_devices() -> dict[str, discovery.QTPyDevice]:
     return {
         usb_qtpy_1.serial_number: usb_qtpy_1,
         usb_qtpy_2.serial_number: usb_qtpy_2,
+    }
+
+
+def one_mqtt_qtpy_device() -> dict[str, discovery.QTPyDevice]:
+    """Override discovery.discover_qtpy_devices() to return one result."""
+    return {
+        mqtt_qtpy_1.serial_number: mqtt_qtpy_1,
     }
 
 
@@ -208,6 +228,99 @@ def test_handle_connect_with_two_usb_devices(  # noqa: PLR0913 -- allow more tha
             excinfo.value.args[0]
             == f"could not open port '{expected_port}': FileNotFoundError(2, 'The system cannot find the file specified.', None, 2)"
         )
+
+
+def test_windows_discovery(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Does it correctly identify dual-mode and MQTT-only devices?"""
+
+    def override_ports_from_serial() -> dict[str, dict[DetailKey, str]]:
+        """Return hardcoded details for Windows serial ports."""
+        return {
+            "COM1": {
+                DetailKey.com_port: "COM1",
+                DetailKey.com_id: "ACPI\\\\PNP0501\\\\0",
+                DetailKey.serial_number: "",
+            },
+            "COMyy": {
+                DetailKey.com_port: "COMyy",
+                DetailKey.com_id: "USB VID:PID=239A:8144 SER=11CC11CC11CC LOCATION=1-8:x.0",
+                DetailKey.serial_number: "11CC11CC11CC",
+            },
+        }
+
+    def override_volumes_from_wmi() -> dict[str, dict[DetailKey, str]]:
+        """Return hardcoded details for Windows storage volumes."""
+        return {
+            "C:": {
+                DetailKey.drive_root: "B:",
+                DetailKey.drive_label: "TestWindows",
+                DetailKey.serial_number: "BD64_1379.",
+                DetailKey.device_description: "MSI M371",
+            },
+            "X:": {
+                DetailKey.drive_root: "P:",
+                DetailKey.drive_label: "xtra",
+                DetailKey.serial_number: "E823_BF53_8FA6_0001.",
+                DetailKey.device_description: "WD SN770",
+            },
+            "E:": {
+                DetailKey.drive_root: "E:",
+                DetailKey.drive_label: "ENDER",
+                DetailKey.serial_number: "",
+                DetailKey.device_description: "SDHC Card",
+            },
+            "F:": {
+                DetailKey.drive_root: "F:",
+                DetailKey.drive_label: "CIRCUITPY",
+                DetailKey.serial_number: "11CC11CC11CC",
+                DetailKey.device_description: "Adafruit QT Py ESP32S3 2MB PSRAM",
+            },
+        }
+
+    def override_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
+        """Return hardcoded details for MQTT nodes."""
+        return {
+            "00aa00aa00aa": {
+                DetailKey.device_description: "adafruit_qtpy_esp32s3_nopsram",
+                DetailKey.ip_address: "192.168.0.0",
+                DetailKey.node_id: "node-00aa00aa00aa-0",
+                DetailKey.python_implementation: "circuitpython-9.2.1",
+                DetailKey.serial_number: "00aa00aa00aa",
+                DetailKey.snsr_commit: "ab8dc58",
+                DetailKey.snsr_timestamp: "2025-03-18T19:11:48-07:00",
+                DetailKey.snsr_version: "0.2.0",
+                DetailKey.system_name: "3.4.0",
+            },
+            "11cc11cc11cc": {
+                DetailKey.device_description: "adafruit_qtpy_esp32s3_4mbflash_2mbpsram",
+                DetailKey.ip_address: "172.16.0.0",
+                DetailKey.node_id: "node-11cc11cc11cc-0",
+                DetailKey.python_implementation: "circuitpython-9.1.3",
+                DetailKey.serial_number: "11CC11CC11CC",
+                DetailKey.snsr_commit: "d7efbab",
+                DetailKey.snsr_timestamp: "2025-03-04T13:22:51-07:00",
+                DetailKey.snsr_version: "0.1.0",
+                DetailKey.system_name: "3.4.0",
+            },
+        }
+
+    monkeypatch.setattr(discovery, "_query_ports_from_serial", override_ports_from_serial)
+    monkeypatch.setattr(discovery, "_query_volumes_from_wmi", override_volumes_from_wmi)
+    monkeypatch.setattr(network, "query_nodes_from_mqtt", override_nodes_from_mqtt)
+
+    devices = discovery.discover_qtpy_devices()
+
+    # 1 dual mode
+    dual_mode_serial_number = "11cc11cc11cc"
+    assert dual_mode_serial_number in devices
+    assert devices[dual_mode_serial_number].com_port
+    assert devices[dual_mode_serial_number].node_id
+
+    # 1 MQTT only
+    mqtt_only_serial_number = "00aa00aa00aa"
+    assert mqtt_only_serial_number in devices
+    assert not devices[mqtt_only_serial_number].com_port
+    assert devices[mqtt_only_serial_number].node_id
 
 
 def test_QTPyDevice_uses_DetailKeys() -> None:  # noqa: N802 -- allow upper case letters in function name

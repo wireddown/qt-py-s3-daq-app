@@ -130,6 +130,14 @@ def test_action_serialize() -> None:
     assert json_string
 
 
+def test_host_build_descriptor() -> None:
+    """Does the host-side usage match the shared classes' definitions?"""
+    from qtpy_datalogger.network import _build_descriptor_information as host_build_descriptor
+
+    descriptor = host_build_descriptor(role="host", serial_number="12ab34cd56ef", ip_address="192.168.0.0")
+    assert descriptor
+
+
 def test_node_build_descriptor(monkeypatch: pytest.MonkeyPatch) -> None:
     """Does the node-side usage match the shared classes' definitions?"""
     # Support looking up sensor_node modules from the node's perspective (where 'snsr' is a package)

@@ -21,6 +21,8 @@ import serial
 import toml
 from serial.tools import miniterm as mt
 
+from qtpy_datalogger import network
+
 from .datatypes import CaptionCorrections, ConnectionTransport, DetailKey, ExitCode, SnsrNotice, SnsrPath
 
 logger = logging.getLogger(__name__)
@@ -98,6 +100,7 @@ def handle_connect(behavior: Behavior, node: str, port: str) -> None:
         if not qtpy_device:
             logger.error("No QT Py devices found!")
             raise SystemExit(ExitCode.Discovery_Failure)
+        node = qtpy_device.node_id
         port = qtpy_device.com_port
 
     if not port.startswith("COM") and communication_transport == ConnectionTransport.UART_Serial:
@@ -125,6 +128,10 @@ def discover_qtpy_devices() -> dict[str, QTPyDevice]:
     logger.info("Discovering disk volumes")
     discovered_disk_volumes = _query_volumes_from_wmi()
 
+    # And its network MAC address uses the same serial number
+    logger.info("Discovering sensor_node devices on the network")
+    discovered_nodes = network.query_nodes_from_mqtt()
+
     logger.info("Identifying QT Py devices")
     qtpy_devices: dict[str, QTPyDevice] = {}
     for drive_info in discovered_disk_volumes.values():
@@ -148,6 +155,30 @@ def discover_qtpy_devices() -> dict[str, QTPyDevice]:
                     serial_number=serial_number,
                     snsr_version=snsr_version,
                 )
+
+    dual_mode_devices = set(qtpy_devices) & set(discovered_nodes)
+    for dual_mode_device in dual_mode_devices:
+        qtpy_devices[dual_mode_device].ip_address = discovered_nodes[dual_mode_device][DetailKey.ip_address]
+        qtpy_devices[dual_mode_device].node_id = discovered_nodes[dual_mode_device][DetailKey.node_id]
+        qtpy_devices[dual_mode_device].snsr_version = discovered_nodes[dual_mode_device][DetailKey.snsr_version]
+
+    mqtt_only_devices = set(discovered_nodes) - set(qtpy_devices)
+    for mqtt_only_device in [discovered_nodes[n] for n in mqtt_only_devices]:
+        serial_number = mqtt_only_device[DetailKey.serial_number]
+        device_description = mqtt_only_device[DetailKey.device_description]
+        qtpy_devices[serial_number] = QTPyDevice(
+            com_id="",
+            com_port="",
+            device_description=device_description,
+            drive_label="",
+            drive_root="",
+            ip_address=mqtt_only_device[DetailKey.ip_address],
+            node_id=mqtt_only_device[DetailKey.node_id],
+            python_implementation=mqtt_only_device[DetailKey.python_implementation],
+            serial_number=serial_number,
+            snsr_version=mqtt_only_device[DetailKey.snsr_version],
+        )
+
     logger.debug(qtpy_devices)
     return qtpy_devices
 
@@ -248,7 +279,20 @@ def discover_and_select_qtpy(
             logger.info(
                 f"QT Py device '{selected_device.device_description}' has UART and MQTT available, select a connection transport to continue"
             )
-            selected_transport = ConnectionTransport.UART_Serial
+            selectable_transports = sorted(ConnectionTransport)
+            selectable_transports.remove(ConnectionTransport.AutoSelect)
+            _ = [print(f"  {index + 1}:  {entry}") for index, entry in enumerate(selectable_transports)]  # noqa: T201 -- use direct IO for user prompt
+
+            choices = click.Choice([f"{index + 1}" for index in range(len(selectable_transports))])
+            user_input = click.prompt(
+                text="Enter a transport number",
+                type=choices,
+                default="1",
+                show_default=False,
+            )
+            selected_index = int(user_input) - 1
+            selected_transport = selectable_transports[selected_index]
+            selected_reason = "User-selected"
         elif has_uart:
             selected_transport = ConnectionTransport.UART_Serial
         else:
@@ -260,7 +304,10 @@ def discover_and_select_qtpy(
     else:
         return (selected_device, None)
 
-    transport_message = f"port '{selected_device.com_port}' on '{selected_device.drive_root}\\'"
+    if selected_transport == ConnectionTransport.UART_Serial:
+        transport_message = f"port '{selected_device.com_port}' on '{selected_device.drive_root}\\'"
+    else:
+        transport_message = f"MQTT node '{selected_device.node_id}' on '{selected_device.ip_address}'"
 
     logger.info(f"{selected_reason} '{selected_device.device_description}' as {transport_message}")
     return (selected_device, selected_transport)
@@ -466,8 +513,8 @@ def _format_port_table(qtpy_devices: dict[str, QTPyDevice]) -> list[str]:
     """Return a list of text lines that present a table of the specified qtpy_devices."""
     lines = []
     lines.append("")
-    lines.append("      {:5}  {:5}  {:35}".format("Port", "Drive", "QT Py device"))
-    lines.append("      {:5}  {:5}  {:35}".format("-" * 5, "-" * 5, "-" * 35))
+    lines.append("      {:5}  {:5}  {:35}  {:20}".format("Port", "Drive", "QT Py device", "Node ID"))
+    lines.append("      {:5}  {:5}  {:35}  {:20}".format("-" * 5, "-" * 5, "-" * 35, "-" * 20))
     sorted_devices = sorted(qtpy_devices.keys())
     for index, qtpy_device in enumerate([qtpy_devices[serial_number] for serial_number in sorted_devices]):
         drive_letter = ""
