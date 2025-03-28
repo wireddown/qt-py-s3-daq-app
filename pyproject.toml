@@ -21,6 +21,7 @@ findimports = "^2.5.2"
 packaging = "^24.2"
 beautifulsoup4 = "^4.13.3"
 gmqtt = "^0.7.0"
+psutil = "^7.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
