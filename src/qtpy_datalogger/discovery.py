@@ -69,9 +69,9 @@ class QTPyDevice:
     snsr_version: str
 
 
-def handle_connect(behavior: Behavior, port: str) -> None:
+def handle_connect(behavior: Behavior, node: str, port: str) -> None:
     """Connect to a QT Py sensor node."""
-    logger.debug(f"behavior: '{behavior}', port: '{port}'")
+    logger.debug(f"behavior: '{behavior}', node: '{node}', port: '{port}'")
 
     if os.name != "nt":
         logger.error(f"Support for {sys.platform} is not implemented.")
@@ -88,7 +88,9 @@ def handle_connect(behavior: Behavior, port: str) -> None:
         raise SystemExit(ExitCode.Success)
 
     communication_transport = ConnectionTransport.AutoSelect
-    if port:
+    if node:
+        communication_transport = ConnectionTransport.MQTT_WiFi
+    elif port:
         communication_transport = ConnectionTransport.UART_Serial
 
     if communication_transport == ConnectionTransport.AutoSelect:
@@ -109,6 +111,8 @@ def handle_connect(behavior: Behavior, port: str) -> None:
 
     if communication_transport == ConnectionTransport.UART_Serial:
         open_session_on_port(port)
+    elif communication_transport == ConnectionTransport.MQTT_WiFi:
+        logger.info(f"Reconnect with 'qtpy-datalogger connect --node {node}'")
 
 
 def discover_qtpy_devices() -> dict[str, QTPyDevice]:
@@ -237,8 +241,22 @@ def discover_and_select_qtpy(
         selected_reason = "User-selected"
 
     has_uart = len(selected_device.com_port) > 0
-    if has_uart:
+    has_mqtt = len(selected_device.node_id) > 0
+
+    if transport == ConnectionTransport.AutoSelect:
+        if all([has_uart, has_mqtt]):
+            logger.info(
+                f"QT Py device '{selected_device.device_description}' has UART and MQTT available, select a connection transport to continue"
+            )
+            selected_transport = ConnectionTransport.UART_Serial
+        elif has_uart:
+            selected_transport = ConnectionTransport.UART_Serial
+        else:
+            selected_transport = ConnectionTransport.MQTT_WiFi
+    elif transport == ConnectionTransport.UART_Serial and has_uart:
         selected_transport = ConnectionTransport.UART_Serial
+    elif transport == ConnectionTransport.MQTT_WiFi and has_mqtt:
+        selected_transport = ConnectionTransport.MQTT_WiFi
     else:
         return (selected_device, None)
 

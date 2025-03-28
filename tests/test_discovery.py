@@ -66,21 +66,22 @@ def select_last_from_prompt(text: str, type: click.Choice, default: str, show_de
 
 # These cases are always true for connect() no matter how many devices have been discovered, 0 to many
 universal_discovery_test_cases = [
-    # Arguments:    behavior,   port,   raised_exception,   expected_exit_code
-    # Using --discover-only always exits successfully because --port is ignored
-    (discovery.Behavior.DiscoverOnly, "", SystemExit, ExitCode.Success),
-    (discovery.Behavior.DiscoverOnly, "COM2", SystemExit, ExitCode.Success),
-    (discovery.Behavior.DiscoverOnly, "COM1", SystemExit, ExitCode.Success),
-    (discovery.Behavior.DiscoverOnly, "99", SystemExit, ExitCode.Success),
+    # Arguments:      behavior,     node,  port,   raised_exception,   expected_exit_code
+    # Using --discover-only always exits successfully because both --node and --port are ignored
+    (discovery.Behavior.DiscoverOnly, "", "", SystemExit, ExitCode.Success),
+    (discovery.Behavior.DiscoverOnly, "", "COM2", SystemExit, ExitCode.Success),
+    (discovery.Behavior.DiscoverOnly, "", "COM1", SystemExit, ExitCode.Success),
+    (discovery.Behavior.DiscoverOnly, "", "99", SystemExit, ExitCode.Success),
+    (discovery.Behavior.DiscoverOnly, "node-bb88bb88bb88-0", "", SystemExit, ExitCode.Success),
 ]
 
 
 universal_usb_test_cases = [
-    # Arguments:      behavior,     port,   raised_exception,   expected_exit_code
+    # Arguments:      behavior,     node,  port,   raised_exception,   expected_exit_code
     # Using '--port COM1' always exits with error because it is not supported
-    (discovery.Behavior.AutoConnect, "COM1", SystemExit, ExitCode.COM1_Failure),
+    (discovery.Behavior.AutoConnect, "", "COM1", SystemExit, ExitCode.COM1_Failure),
     # Using a name for --port that doesn't start with 'COM' always exits with error because only Windows is supported
-    (discovery.Behavior.AutoConnect, "88", click.BadParameter, 2),
+    (discovery.Behavior.AutoConnect, "", "88", click.BadParameter, 2),
 ]
 
 
@@ -97,21 +98,23 @@ def assert_universal_test_cases(excinfo: pytest.ExceptionInfo, expected_exit_cod
 
 
 @pytest.mark.parametrize(
-    ("behavior", "port", "raised_exception", "expected_exit_code"),
+    ("behavior", "node", "port", "raised_exception", "expected_exit_code"),
     [
         *universal_discovery_test_cases,
         *universal_usb_test_cases,
         (
             discovery.Behavior.AutoConnect,
             "",
+            "",
             SystemExit,
             ExitCode.Discovery_Failure,
         ),  # This exception means connect() failed because no QT Py devices were discovered
     ],
 )
-def test_handle_connect_with_no_devices(
+def test_handle_connect_with_no_devices(  # noqa: PLR0913 -- allow more than 5 parameters
     monkeypatch: pytest.MonkeyPatch,
     behavior: discovery.Behavior,
+    node: str,
     port: str,
     raised_exception: type,
     expected_exit_code: int,
@@ -121,27 +124,29 @@ def test_handle_connect_with_no_devices(
     expected_port = port
 
     with pytest.raises(raised_exception) as excinfo:
-        discovery.handle_connect(behavior, port)
+        discovery.handle_connect(behavior, node, port)
 
     assert_universal_test_cases(excinfo, expected_exit_code, expected_port)
 
 
 @pytest.mark.parametrize(
-    ("behavior", "port", "raised_exception", "expected_exit_code"),
+    ("behavior", "node", "port", "raised_exception", "expected_exit_code"),
     [
         *universal_discovery_test_cases,
         *universal_usb_test_cases,
         (
             discovery.Behavior.AutoConnect,
             "",
+            "",
             serial.SerialException,
             -1,
         ),  # This exception means connect() tried to correctly open the (monkeypatched) port
     ],
 )
-def test_handle_connect_with_one_usb_device(
+def test_handle_connect_with_one_usb_device(  # noqa: PLR0913 -- allow more than 5 parameters
     monkeypatch: pytest.MonkeyPatch,
     behavior: discovery.Behavior,
+    node: str,
     port: str,
     raised_exception: type,
     expected_exit_code: int,
@@ -152,7 +157,7 @@ def test_handle_connect_with_one_usb_device(
     expected_port = port if port else discovered_port
 
     with pytest.raises(raised_exception) as excinfo:
-        discovery.handle_connect(behavior, port)
+        discovery.handle_connect(behavior, node, port)
 
     assert_universal_test_cases(excinfo, expected_exit_code, expected_port)
     if excinfo.value is serial.SerialException:
@@ -164,35 +169,37 @@ def test_handle_connect_with_one_usb_device(
 
 
 @pytest.mark.parametrize(
-    ("behavior", "port", "raised_exception", "expected_exit_code"),
+    ("behavior", "node", "port", "raised_exception", "expected_exit_code"),
     [
         *universal_discovery_test_cases,
         *universal_usb_test_cases,
         (
             discovery.Behavior.AutoConnect,
             "",
+            "",
             serial.SerialException,
             -1,
         ),  # This exception means connect() tried to correctly open the (monkeypatched) port
     ],
 )
-def test_handle_connect_with_two_usb_devices(
+def test_handle_connect_with_two_usb_devices(  # noqa: PLR0913 -- allow more than 5 parameters
     monkeypatch: pytest.MonkeyPatch,
     behavior: discovery.Behavior,
+    node: str,
     port: str,
     raised_exception: type,
     expected_exit_code: int,
 ) -> None:
     """Does it correctly handle connect() when there are two QT Py devices?"""
     monkeypatch.setattr(discovery, "discover_qtpy_devices", two_usb_qtpy_devices)
-    monkeypatch.setattr(click, "prompt", select_last_from_prompt)
+    monkeypatch.setattr(click, "prompt", select_last_from_prompt)  # Choose second device to exercise the user-choice
     discovered_devices = discovery.discover_qtpy_devices()
     selected_device = sorted(discovered_devices)[-1]
     selected_port = discovered_devices[selected_device].com_port
     expected_port = port if port else selected_port
 
     with pytest.raises(raised_exception) as excinfo:
-        discovery.handle_connect(behavior, port)
+        discovery.handle_connect(behavior, node, port)
 
     assert_universal_test_cases(excinfo, expected_exit_code, expected_port)
     if excinfo.value is serial.SerialException:
