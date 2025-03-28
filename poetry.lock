@@ -425,6 +425,20 @@ files = [
 ]
 
 [[package]]
+name = "gmqtt"
+version = "0.7.0"
+description = "Client for MQTT protocol"
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "gmqtt-0.7.0-py3-none-any.whl", hash = "sha256:3e5571a20e9c115d83d600caa228b06f716087653e241035e29cec73277b52cc"},
+    {file = "gmqtt-0.7.0.tar.gz", hash = "sha256:bedfec7bac26b6b4ce1f0c4c32cff3d663526a54c882d323d41560fc3b9b44a2"},
+]
+
+[package.extras]
+test = ["atomicwrites (>=1.3.0)", "attrs (>=19.1.0)", "codecov (>=2.0.15)", "coverage (>=4.5.3)", "more-itertools (>=7.0.0)", "pluggy (>=0.11.0)", "py (>=1.8.0)", "pytest (>=5.4.0)", "pytest-asyncio (>=0.12.0)", "pytest-cov (>=2.7.1)", "six (>=1.12.0)", "uvloop (>=0.14.0)"]
+
+[[package]]
 name = "idna"
 version = "3.10"
 description = "Internationalized Domain Names in Applications (IDNA)"
@@ -756,4 +770,4 @@ tests = ["pytest"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "3768227bd3ab930119f8013765559ec15bacce0d77a4731b8eb137abd3860fa1"
+content-hash = "fe9a553b7f7c43d825afbf705e1e510fd56fb0725f0b879f37d57ff6b42fdd89"
