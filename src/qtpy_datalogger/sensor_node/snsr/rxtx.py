@@ -168,7 +168,7 @@ def get_descriptor_payload(role: str, serial_number: str, ip_address: str) -> st
 
 
 def build_descriptor_information(role: str, serial_number: str, ip_address: str) -> DescriptorInformation:
-    """Return a DescriptorInformation instance describing the client's current state."""
+    """Return a DescriptorInformation instance describing and identifying the client."""
     from os import uname
     from sys import implementation, version_info
 
@@ -195,7 +195,7 @@ def build_descriptor_information(role: str, serial_number: str, ip_address: str)
 
 
 def build_sender_information(descriptor_topic: str) -> SenderInformation:
-    """Return a SenderInformation instance describing the system's current state."""
+    """Return a SenderInformation instance describing the client's current state."""
     import gc
     from time import monotonic
 
