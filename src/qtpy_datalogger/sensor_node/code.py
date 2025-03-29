@@ -1,13 +1,15 @@
 """code.py file is the main loop from qtpy_datalogger.sensor_node."""  # noqa: INP001 -- this is the entry point for CircuitPython devices
 
 import os
-from time import sleep
+from time import monotonic, sleep
 
 from microcontroller import cpu
 from snsr.core import get_memory_info, paint_uart_line, read_one_uart_line
 from snsr.rxtx import connect_and_subscribe, connect_to_wifi, create_mqtt_client, unsubscribe_and_disconnect
 from supervisor import runtime
 
+boot_time = monotonic()
+print(f"Booted at {boot_time:.3f}")  # noqa: T201 -- use direct IO for user REPL
 radio = connect_to_wifi()
 
 node_group = os.getenv("QTPY_NODE_GROUP", "")
@@ -22,10 +24,12 @@ connect_and_subscribe(mqtt_client, mqtt_topics)
 
 response = ""
 while response.lower() not in ["exit", "quit"]:
-    paint_uart_line("   Poll UART     [ Poll MQTT ]")
+    uptime = monotonic() - boot_time
+    paint_uart_line(f"  {uptime:>12.3f}    Poll UART     [ Poll MQTT ]     ")
     mqtt_client.loop()
 
-    paint_uart_line(" [ Poll UART ]     Poll MQTT  ")
+    uptime = monotonic() - boot_time
+    paint_uart_line(f"  {uptime:>12.3f}  [ Poll UART ]     Poll MQTT       ")
     sleep(0.2)
     if runtime.usb_connected and runtime.serial_connected and runtime.serial_bytes_available > 0:
         print()  # noqa: T201 -- use direct IO for user REPL
