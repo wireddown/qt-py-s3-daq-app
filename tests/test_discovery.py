@@ -6,6 +6,7 @@ import serial
 
 from qtpy_datalogger import discovery, network
 from qtpy_datalogger.datatypes import DetailKey, ExitCode
+from qtpy_datalogger.sensor_node.snsr.node import classes as node_classes
 
 usb_qtpy_1 = discovery.QTPyDevice(
     com_id="USB VID:PID=239A:811A SER=00AA00AA00AA LOCATION=1-7:x.0",
@@ -461,4 +462,11 @@ def test_QTPyDevice_uses_DetailKeys() -> None:  # noqa: N802 -- allow upper case
     """Do the properties in QTPyDevice match DetailKey names?"""
     DetailKey_names = sorted(DetailKey.__members__)  # noqa: N806 -- allow upper case letters in variable name
     instance_property_names = sorted(discovery.QTPyDevice.__annotations__)
+    assert set(DetailKey_names) > set(instance_property_names)
+
+
+def test_DescriptorInformation_uses_DetailKeys() -> None:  # noqa: N802 -- allow upper case letters in function name
+    """Do the properties in DescriptorInformation match DetailKey names?"""
+    DetailKey_names = sorted(DetailKey.__members__)  # noqa: N806 -- allow upper case letters in variable name
+    instance_property_names = sorted(node_classes.DescriptorInformation.__annotations__)
     assert set(DetailKey_names) > set(instance_property_names)
