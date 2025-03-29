@@ -29,12 +29,41 @@ class ExitCode(enum.IntEnum):
     """Exit codes for commands."""
 
     Success = 0
+    Equip_Without_USB_Failure = 31
     Discovery_Failure = 41
     COM1_Failure = 42
     Board_Lookup_Failure = 51
     Server_Missing_Failure = 61
     Server_Offline_Failure = 62
     Server_Inaccessible_Failure = 63
+
+
+class ConnectionTransport(enum.StrEnum):
+    """Supported communication types when connecting to a sensor_node."""
+
+    AutoSelect = "Auto select"
+    UART_Serial = "UART  (serial)"
+    MQTT_WiFi = "MQTT  (WiFi)"
+
+
+class DetailKey(enum.StrEnum):
+    """Names of property details for QTPyDevice instances."""
+
+    com_id = "com_id"
+    com_port = "com_port"
+    device_description = "device_description"
+    disk_id = "disk_id"
+    drive_label = "drive_label"
+    drive_partition = "drive_partition"
+    drive_root = "drive_root"
+    ip_address = "ip_address"
+    node_id = "node_id"
+    python_implementation = "python_implementation"
+    serial_number = "serial_number"
+    snsr_commit = "snsr_commit"
+    snsr_timestamp = "snsr_timestamp"
+    snsr_version = "snsr_version"
+    system_name = "system_name"
 
 
 class CaptionCorrections:
