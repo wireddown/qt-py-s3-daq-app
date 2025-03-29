@@ -1,4 +1,4 @@
-"""Classes and functions for control communication over MQTT."""
+"""Classes and functions for control and communication over MQTT."""
 
 import os
 

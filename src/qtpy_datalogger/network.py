@@ -1,4 +1,4 @@
-"""Functions for communicating with QT Py sensor nodes on the network."""
+"""Functions and classes for communicating with QT Py sensor nodes on the network."""
 
 import asyncio
 import json

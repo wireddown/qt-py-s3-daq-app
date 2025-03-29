@@ -6,6 +6,7 @@ Supported host platforms
 
 Supported connection types
 - serial / UART
+- network / MQTT
 """
 
 import contextlib
