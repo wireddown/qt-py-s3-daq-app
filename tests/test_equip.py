@@ -6,8 +6,9 @@ import shutil
 
 import pytest
 import toml
+from test_discovery import one_mqtt_qtpy_device
 
-from qtpy_datalogger import equip
+from qtpy_datalogger import discovery, equip
 from qtpy_datalogger.datatypes import ExitCode, SnsrNotice, SnsrPath
 
 
@@ -96,12 +97,27 @@ def test_compare(tmp_path: pathlib.Path) -> None:
     assert exception.code == ExitCode.Success
 
 
+def test_cannot_install_with_mqtt(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Does it exit with error when the device only has MQTT transport?"""
+    monkeypatch.setattr(discovery, "discover_qtpy_devices", one_mqtt_qtpy_device)
+
+    with pytest.raises(SystemExit) as excinfo:
+        equip.handle_equip(behavior=equip.Behavior.Upgrade, root=None)
+
+    assert excinfo
+    exception = excinfo.value
+    exception_type = type(exception)
+    assert exception_type is SystemExit
+    assert exception.code == ExitCode.Equip_Without_USB_Failure
+
+
 def test_install_new(tmp_path: pathlib.Path) -> None:
     """Does it install when the device isn't a sensor node?"""
     equip.handle_equip(behavior=equip.Behavior.Upgrade, root=tmp_path)
 
     comparison_results = get_bundle_comparison(tmp_path)
     assert_device_matches_self(comparison_results)
+    assert tmp_path.joinpath("lib").exists()
 
 
 def test_upgrade(tmp_path: pathlib.Path) -> None:
@@ -120,6 +136,7 @@ def test_upgrade(tmp_path: pathlib.Path) -> None:
 
     comparison_results = get_bundle_comparison(tmp_path)
     assert_device_matches_self(comparison_results)
+    assert tmp_path.joinpath("lib").exists()
 
 
 def test_skip_upgrade(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -160,6 +177,7 @@ def test_force_install(tmp_path: pathlib.Path) -> None:
 
     comparison_results = get_bundle_comparison(tmp_path)
     assert_device_matches_self(comparison_results)
+    assert tmp_path.joinpath("lib").exists()
 
 
 def test_only_newer_files(

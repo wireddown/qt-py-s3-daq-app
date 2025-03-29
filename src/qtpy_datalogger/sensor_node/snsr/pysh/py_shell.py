@@ -115,6 +115,15 @@ def prompt(message: str = "", *, in_stream: BinaryIO, out_stream: BinaryIO) -> s
     return _prompt(message, in_stream, out_stream)
 
 
+def redraw_line(line: str, out_stream: BinaryIO) -> None:
+    """Erase and redraw the current line with terminal control codes."""
+    _redraw_from_column(
+        from_column=0,
+        ords_to_draw=[ord(c) for c in line],
+        output=out_stream,
+    )
+
+
 def _set_cursor_column(new_column: int, output: BinaryIO) -> None:
     """Set the cursor column in the remote console."""
     # ESC[##G to set cursor column

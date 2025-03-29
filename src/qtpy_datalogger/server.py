@@ -10,6 +10,7 @@ from enum import StrEnum
 from typing import Callable, NamedTuple
 
 from .datatypes import ExitCode, Links
+from .sensor_node.snsr.node import mqtt as node_mqtt
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +118,7 @@ def handle_server(behavior: Behavior, publish: tuple[str, str]) -> None:
             "--unsubscribe",
             "$SYS/#",
             "--topic",
-            "qtpy/#",
+            f"{node_mqtt.get_domain()}/#",
             "-F",
             "%j",
         ]
