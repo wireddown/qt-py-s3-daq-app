@@ -18,7 +18,7 @@ def get_api_version() -> str:
 def get_mqtt_topics(group_id: str, node_id: str) -> dict[str, str]:
     """Return all the MQTT topics for the node specified by its group_id and node_id."""
     return {
-        "acquired_data": f"qtpy/v1/{group_id}/acquired_data",
+        "acquired_data": f"qtpy/v1/{group_id}/acquired-data",
         "broadcast": f"qtpy/v1/{group_id}/broadcast",
         "command": f"qtpy/v1/{group_id}/{node_id}/command",
         "descriptor": f"qtpy/v1/{group_id}/{node_id}/$DESCRIPTOR",
@@ -29,7 +29,7 @@ def get_mqtt_topics(group_id: str, node_id: str) -> dict[str, str]:
 
 def get_acquired_data_topic(group_id: str) -> str:
     """Get the acquired_data topic for the specified group_id."""
-    return f"qtpy/v1/{group_id}/acquired_data"
+    return f"qtpy/v1/{group_id}/acquired-data"
 
 
 def get_broadcast_topic(group_id: str) -> str:
