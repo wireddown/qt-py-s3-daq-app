@@ -8,6 +8,7 @@ import wifi
 
 from snsr.core import get_new_descriptor, get_notice_info
 from snsr.node.classes import DescriptorInformation, NoticeInformation, SenderInformation
+from snsr.node.mqtt import get_descriptor_topic, get_result_topic
 
 
 def connect_to_wifi() -> wifi.Radio:
@@ -72,7 +73,7 @@ def on_message(client: minimqtt.MQTT, topic: str, message: str) -> None:
         from wifi import radio
 
         context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
-        descriptor_topic = f"qtpy/v1/{context['node_group']}/{context['node_identifier']}/$DESCRIPTOR"
+        descriptor_topic = get_descriptor_topic(context["node_group"], context["node_identifier"])
         descriptor_message = get_descriptor_payload("node", cpu.uid.hex().lower(), str(radio.ipv4_address))
         client.publish(descriptor_topic, descriptor_message)
     elif last_part == "command":
@@ -81,11 +82,11 @@ def on_message(client: minimqtt.MQTT, topic: str, message: str) -> None:
         from .node.classes import ActionInformation, ActionPayload
 
         context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
-        result_topic = f"qtpy/v1/{context['node_group']}/{context['node_identifier']}/result"
         action_payload_information = loads(message)
         action_payload = ActionPayload.from_dict(action_payload_information)
         action = action_payload.action
-        sender = build_sender_information(f"qtpy/v1/{context['node_group']}/{context['node_identifier']}/$DESCRIPTOR")
+        descriptor_topic = get_descriptor_topic(context["node_group"], context["node_identifier"])
+        sender = build_sender_information(descriptor_topic)
         result_payload = ActionPayload(
             action=ActionInformation(
                 command=action.command,
@@ -97,6 +98,7 @@ def on_message(client: minimqtt.MQTT, topic: str, message: str) -> None:
             ),
             sender=sender,
         )
+        result_topic = get_result_topic(context["node_group"], context["node_identifier"])
         client.publish(result_topic, dumps(result_payload.as_dict()))
 
 
