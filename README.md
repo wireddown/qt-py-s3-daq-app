@@ -58,7 +58,7 @@ python -m venv --upgrade-deps .venv
 
 # Install a build artifact
 # https://github.com/wireddown/qt-py-s3-daq-app/actions?query=branch%3Amain
-pip install C:\Users\name\Downloads\qtpy_datalogger-0.1.0-py3-none-any.whl
+pip install C:\Users\name\Downloads\qtpy_datalogger-*-py3-none-any.whl
 
 # Show the package help
 qtpy-datalogger --help
