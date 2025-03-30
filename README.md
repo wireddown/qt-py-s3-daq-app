@@ -40,7 +40,7 @@ Supported connection types
 
 Entry points
 - Host program: [`qtpy_datalogger/console.py`](./src/qtpy_datalogger/console.py)
-- QT Py program: [`qtpy_sensor_node/sensor_node/code.py`](./src/qtpy_datalogger/sensor_node/code.py)
+- QT Py program: [`qtpy_datalogger/sensor_node/code.py`](./src/qtpy_datalogger/sensor_node/code.py)
 
 ## Preview in 60 seconds
 
