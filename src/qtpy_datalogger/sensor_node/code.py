@@ -12,7 +12,7 @@ boot_time = monotonic()
 print(f"Booted at {boot_time:.3f}")  # noqa: T201 -- use direct IO for user REPL
 radio = connect_to_wifi()
 
-node_group = os.getenv("QTPY_NODE_GROUP", "")
+node_group = os.getenv("QTPY_NODE_GROUP", "zone1")  # See https://github.com/wireddown/qt-py-s3-daq-app/issues/60
 node_identifier = f"node-{cpu.uid.hex().lower()}-0"  # Matches boot_out.txt
 mqtt_topics = [
     f"qtpy/v1/{node_group}/broadcast",
