@@ -28,7 +28,7 @@ def reference_descriptor_payload() -> str:
                 }
             },
             "sender": {
-                "descriptor_topic": "qtpy/v1/centrifuge/host-12ab34cd56ef-1213/$DESCRIPTOR",
+                "descriptor_topic": "qtpy/v1/zone1/host-12ab34cd56ef-1213/$DESCRIPTOR",
                 "sent_at": "2025-03-14T17:15:25-07:00",
                 "status": {
                     "used_memory": "1889785610",
@@ -51,7 +51,7 @@ def reference_identify_payload() -> str:
                 "message_id": "identify-1"
             },
             "sender": {
-                "descriptor_topic": "qtpy/v1/centrifuge/host-12ab34cd56ef-1213/$DESCRIPTOR",
+                "descriptor_topic": "qtpy/v1/zone1/host-12ab34cd56ef-1213/$DESCRIPTOR",
                 "sent_at": "2025-03-14T17:15:25-07:00",
                 "status": {
                     "used_memory": "1889785610",

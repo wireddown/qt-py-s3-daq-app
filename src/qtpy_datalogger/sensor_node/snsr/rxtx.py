@@ -157,7 +157,7 @@ def get_descriptor_payload(role: str, serial_number: str, ip_address: str) -> st
     from snsr.node.mqtt import format_mqtt_client_id, get_descriptor_topic
 
     pid = 0
-    group_id = "centrifuge"
+    group_id = os.getenv("QTPY_NODE_GROUP", "zone1")  # See https://github.com/wireddown/qt-py-s3-daq-app/issues/60
 
     descriptor = build_descriptor_information(role, serial_number, ip_address)
     client_id = format_mqtt_client_id(role, serial_number, pid)
