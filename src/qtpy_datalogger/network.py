@@ -358,7 +358,7 @@ def open_session_on_node(node_id: str) -> None:
 async def _query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
     """Use a new QTPyController to scan the network for sensor_nodes."""
     broker_host = "localhost"
-    group_id = "centrifuge"
+    group_id = "zone1"  # See https://github.com/wireddown/qt-py-s3-daq-app/issues/60
     mac_address = hex(uuid.getnode())[2:]
     ip_address = socket.gethostbyname(socket.gethostname())
     controller = QTPyController(
@@ -378,7 +378,7 @@ async def _query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
 async def _open_session_on_node(node_id: str) -> None:
     """Use a new QTPyController to open a terminal session on the specified node_id."""
     broker_host = "localhost"
-    group_id = "centrifuge"
+    group_id = "zone1"  # See https://github.com/wireddown/qt-py-s3-daq-app/issues/60
     mac_address = hex(uuid.getnode())[2:]
     ip_address = socket.gethostbyname(socket.gethostname())
     controller = QTPyController(
