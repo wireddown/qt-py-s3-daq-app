@@ -26,7 +26,7 @@ psutil = "^7.0.0"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
 ruff = "^0.11.2"
-pyright = "^1.1.395"
+pyright = "^1.1.398"
 
 [tool.poetry.group.circup.dependencies]
 circuitpython-stubs = "==9.2.1"
