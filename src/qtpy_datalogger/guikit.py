@@ -69,16 +69,54 @@ class DemoWithAnimation(AsyncWindow):
         self.root = ttk.Frame(self.root_window, padding=10)
 
         self.label = ttk.Label(self.root, text="")
-        self.label.grid(row=0, columnspan=2, padx=(8, 8), pady=(8, 0))
+        self.label.grid(
+            row=0,
+            columnspan=2,
+            padx=(8, 8),
+            pady=(8, 0),
+        )
 
-        self.progressbar = ttk.Progressbar(self.root, length=280, style=(bootstyle.STRIPED, bootstyle.SUCCESS))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
-        self.progressbar.grid(row=1, columnspan=2, padx=(8, 8), pady=(16, 0))
+        self.progressbar = ttk.Progressbar(
+            self.root,
+            length=280,
+            style=(bootstyle.STRIPED, bootstyle.SUCCESS),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
+        )
+        self.progressbar.grid(
+            row=1,
+            columnspan=2,
+            padx=(8, 8),
+            pady=(16, 0),
+        )
 
-        button_block = ttk.Button(self.root, text="Sync", width=10, style=bootstyle.PRIMARY, command=self.calculate_sync)
-        button_block.grid(row=2, column=0, sticky=tk.W, padx=8, pady=8)
+        button_block = ttk.Button(
+            self.root,
+            text="Sync",
+            width=10,
+            style=bootstyle.PRIMARY,
+            command=self.calculate_sync,
+        )
+        button_block.grid(
+            row=2,
+            column=0,
+            sticky=tk.W,
+            padx=8,
+            pady=8,
+        )
 
-        button_non_block = ttk.Button(self.root, text="Async", width=10, style=bootstyle.INFO, command=lambda: self.io_loop.create_task(self.calculate_async()))
-        button_non_block.grid(row=2, column=1, sticky=tk.E, padx=8, pady=8)
+        button_non_block = ttk.Button(
+            self.root,
+            text="Async",
+            width=10,
+            style=bootstyle.INFO,
+            command=lambda: self.io_loop.create_task(self.calculate_async()),
+        )
+        button_non_block.grid(
+            row=2,
+            column=1,
+            sticky=tk.E,
+            padx=8,
+            pady=8
+        )
 
         self.root.pack()
 
