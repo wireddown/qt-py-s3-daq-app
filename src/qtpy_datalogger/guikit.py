@@ -52,7 +52,7 @@ class AsyncWindow:
     def __init__(self) -> None:
         """Initialize a new Tk root and cache the asyncio event loop."""
         self.root_window = ttk.Window(iconphoto=None)  # pyright: ignore reportArgumentType -- the type hint for library is incorrect
-        self.io_loop = asyncio.get_event_loop()
+        self.io_loop = asyncio.get_running_loop()
 
         self.should_run_loop = True
         self.root_window.protocol("WM_DELETE_WINDOW", self.on_closing)
