@@ -29,7 +29,25 @@ class AsyncApp:
 
 
 class AsyncWindow:
-    """A Tk root window wrapper that cooperates with asyncio."""
+    """
+    A Tk root window wrapper that cooperates with asyncio.
+
+    Define a subclass of AsyncWindow to create a GUI with Tk that cooperates with asyncio code.
+
+    Required overrides
+    - create_user_interface(self) -> None
+
+    Remaining overrides
+    - async def on_loop(self) -> None
+    - def on_closing(self) -> None
+
+    Helper methods
+    - self.exit()
+
+    Example:
+    asyncio.run(AsyncApp.create_and_run(AsyncWindowSubclass))
+
+    """
 
     def __init__(self) -> None:
         """Initialize a new Tk root and cache the asyncio event loop."""
