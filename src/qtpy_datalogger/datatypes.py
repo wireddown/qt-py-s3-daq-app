@@ -36,6 +36,7 @@ class ExitCode(enum.IntEnum):
     Server_Missing_Failure = 61
     Server_Offline_Failure = 62
     Server_Inaccessible_Failure = 63
+    App_Lookup_Failure = 71
 
 
 class ConnectionTransport(enum.StrEnum):
