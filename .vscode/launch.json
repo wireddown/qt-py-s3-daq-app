@@ -26,6 +26,7 @@
                 // "equip",
                 // "--compare",
                 "run",
+                "scanner",
                 // "--help",
             ],
             // Useful options to toggle in some situations
