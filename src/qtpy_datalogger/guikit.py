@@ -12,18 +12,20 @@ class AsyncApp:
     """A Tk application wrapper that cooperates with asyncio."""
 
     @staticmethod
-    async def create_and_run(ui_window_type: type) -> None:
+    async def create_and_run(async_window_type: type) -> None:
         """
-        Run the Tk Window cooperatively with asyncio.
+        Create and run an AsyncWindow cooperatively with asyncio.
 
-        Create a new instance of ui_window within an asynchronous function so that
+        Create a new instance of async_window_type within an asynchronous function so that
         the new instance can use the asyncio event loop. Creating one outside an
         asynchronous function prevents the new instance from using async code
         because asyncio has not created or started an event loop.
 
-        The base type of ui_window must be an AsyncWindow to use cooperative event handling.
+        The base type of async_window_type must be an AsyncWindow to use cooperative event handling.
         """
-        window = ui_window_type()
+        if not issubclass(async_window_type, AsyncWindow):
+            raise TypeError()
+        window = async_window_type()
         window.create_user_interface()
         await window.show()
 
