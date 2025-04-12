@@ -21,10 +21,11 @@
             // Update the arugments to match the debug case
             "args": [
                 // "--verbose",
-                "connect",
-                "--discover-only",
+                // "connect",
+                // "--discover-only",
                 // "equip",
                 // "--compare",
+                "run",
                 // "--help",
             ],
             // Useful options to toggle in some situations
