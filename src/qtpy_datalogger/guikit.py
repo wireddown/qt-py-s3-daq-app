@@ -55,7 +55,12 @@ class AsyncWindow:
         self.io_loop = asyncio.get_running_loop()
 
         self.should_run_loop = True
-        self.root_window.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+        def __on_closing() -> None:
+            self.on_closing()
+            self.exit()
+
+        self.root_window.protocol("WM_DELETE_WINDOW", __on_closing)
 
     async def show(self) -> None:
         """Show the UI and cooperatively run with asyncio."""
@@ -142,7 +147,7 @@ class DemoWithAnimation(AsyncWindow):
             column=1,
             sticky=tk.E,
             padx=8,
-            pady=8
+            pady=8,
         )
 
         self.root.pack()
@@ -152,10 +157,6 @@ class DemoWithAnimation(AsyncWindow):
         self.label["text"] = self.animation
         self.animation = self.animation[-1] + self.animation[0:-1]
         await asyncio.sleep(0.06)
-
-    def on_closing(self) -> None:
-        """Handle the click event for the title bar's close button."""
-        self.exit()
 
     def calculate_sync(self) -> None:
         """Run without yielding to other waiting tasks."""
