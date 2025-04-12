@@ -32,6 +32,7 @@ class Catalog:
     index = frozenset(
         {
             default_app,
+            AppInformation("empty", "qtpy_datalogger.apps.empty"),
             AppInformation("async-demo", "qtpy_datalogger.guikit"),
             AppInformation("scanner", "qtpy_datalogger.apps.scanner"),
             AppInformation("data-viewer", "qtpy_datalogger.apps.data_viewer"),
