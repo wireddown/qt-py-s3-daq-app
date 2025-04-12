@@ -76,7 +76,10 @@ def cli(
         cli(["--help"])
 
 
-@cli.command(epilog=f"Help and home page: {DEFAULT_HELP_URL}")
+@cli.command(
+    epilog=f"Help and home page: {DEFAULT_HELP_URL}",
+    short_help="Connect to a serial port or MQTT sensor_node.",
+)
 @click.option(
     "--auto-connect",
     "behavior",
