@@ -5,6 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
             // https://code.visualstudio.com/docs/python/debugging#_set-configuration-options
             "name": "qtpy_datalogger [with args]",
             "type": "debugpy",
@@ -19,7 +27,7 @@
                 // "--compare",
                 // "--help",
             ],
-            // Useful options to enable in some situations
+            // Useful options to toggle in some situations
             "justMyCode": false,
             "stopOnEntry": false,
             "autoReload": {
