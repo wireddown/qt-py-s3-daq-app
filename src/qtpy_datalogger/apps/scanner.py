@@ -53,7 +53,14 @@ class ScannerApp(guikit.AsyncWindow):
         results_frame = ttk.Frame(self.root, name="result_frame", padding=8)
         self.result_menu = ttk.Menu(self.root)
         self.result_menu.add_radiobutton(label="(none)", value=-1)
-        scan_results_table = ttk_tableview.Tableview(results_frame, coldata=[], rowdata=[])
+        result_columns = [
+            {"text": "Group", "stretch": False, "width": 60},
+            {"text": "Node ID", "stretch": False, "width": 100},
+            {"text": "Device", "stretch": True},
+            {"text": "Snsr Version", "stretch": False, "width": 80},
+            {"text": "UART Port", "stretch": False, "width": 80},
+        ]
+        scan_results_table = ttk_tableview.Tableview(results_frame, coldata=result_columns, rowdata=[])
         scan_results_table.pack(expand=True, fill=tk.X)
         results_frame.pack(expand=True, fill=tk.X, pady=(8, 0))
 
