@@ -44,45 +44,45 @@ class ScannerApp(guikit.AsyncWindow):
 
         # Scan group
         scan_frame = ttk.Frame(self.root, name="scan_frame", padding=8)
-        scan_frame.pack(expand=True, fill=tk.X)
         group_input_label = ttk.Label(scan_frame, text="Group name", background=background)
-        group_input_label.pack(side=tk.LEFT)
         self.group_input = ttk.Entry(scan_frame)
-        self.group_input.pack(expand=True, fill=tk.X, side=tk.LEFT, padx=8)
         scan_button = ttk.Button(scan_frame, command=self.start_scan, text="Scan group")
+        group_input_label.pack(side=tk.LEFT)
+        self.group_input.pack(expand=True, fill=tk.X, side=tk.LEFT, padx=8)
         scan_button.pack(side=tk.LEFT)
+        scan_frame.pack(expand=True, fill=tk.X)
 
-        # Scan results group
+        # Results group
+        results_frame = ttk.Frame(self.root, name="result_frame", padding=8)
         self.result_menu = ttk.Menu(self.root)
         self.result_menu.add_radiobutton(label="(none)", value=-1)
-        results_frame = ttk.Frame(self.root, name="result_frame", padding=8)
-        results_frame.pack(expand=True, fill=tk.X, pady=(8, 0))
         scan_results_table = ttk_tableview.Tableview(results_frame, coldata=[], rowdata=[])
         scan_results_table.pack(expand=True, fill=tk.X)
+        results_frame.pack(expand=True, fill=tk.X, pady=(8, 0))
 
         # Node communication
         comms_frame = ttk.Frame(self.root, name="comms_frame", padding=8)
-        comms_frame.pack(expand=True, fill=tk.X, pady=(8, 0))
         selected_node_combobox = ttk.Combobox(comms_frame, values=["(none)"], width=20, state="readonly")
         selected_node_combobox.current(0)
         selected_node_combobox.pack(side=tk.TOP, anchor=tk.W)
 
         message_frame = ttk.Frame(comms_frame, name="message_frame")
-        message_frame.pack(side=tk.TOP, pady=(8, 0), expand=True, fill=tk.X)
         self.message_input = ttk.Entry(message_frame)
-        self.message_input.pack(side=tk.LEFT, expand=True, fill=tk.X)
         send_message_button = ttk.Button(message_frame, command=self.send_message, text="Send message")
+        self.message_input.pack(side=tk.LEFT, expand=True, fill=tk.X)
         send_message_button.pack(side=tk.LEFT, padx=(8, 0))
+        message_frame.pack(side=tk.TOP, pady=(8, 0), expand=True, fill=tk.X)
 
         message_log = ttk.ScrolledText(comms_frame, state="disabled")
         message_log.pack(side=tk.TOP, pady=(8, 0), expand=True, fill=tk.X)
+        comms_frame.pack(expand=True, fill=tk.X, pady=(8, 0))
 
         # App commands and status
         exit_button = ttk.Button(self.root, text="Quit", style=bootstyle.DANGER, command=self.exit)
-        exit_button.pack(side=tk.RIGHT, padx=8, pady=(8, 0))
         help_button = ttk.Button(self.root, text="Online help", style=bootstyle.OUTLINE, command=self.launch_help)
-        help_button.pack(side=tk.RIGHT, padx=(8, 0), pady=(8, 0))
         self.status_message = ttk.Label(self.root, text="OK", style=bootstyle.SUCCESS, background=background)
+        exit_button.pack(side=tk.RIGHT, padx=8, pady=(8, 0))
+        help_button.pack(side=tk.RIGHT, padx=(8, 0), pady=(8, 0))
         self.status_message.pack(side=tk.RIGHT, padx=8, pady=(8, 0))
 
         # Finalize layout
