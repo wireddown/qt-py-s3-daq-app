@@ -25,9 +25,16 @@ class AsyncApp:
         """
         if not issubclass(async_window_type, AsyncWindow):
             raise TypeError()
-        window = async_window_type()
-        window.create_user_interface()
-        await window.show()
+        app = async_window_type()
+
+        # Create and layout the UI
+        app.root_window.withdraw()
+        app.create_user_interface()
+        app.root_window.update()
+
+        # Present the UI
+        app.root_window.deiconify()
+        await app.show()
 
 
 class AsyncWindow:
