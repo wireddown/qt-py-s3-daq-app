@@ -27,7 +27,7 @@ class ScannerApp(guikit.AsyncWindow):
 
         # Window properties
         app_name = "QT Py Sensor Node Scanner"
-        self.root_window.minsize(width=600, height=720)
+        self.root_window.minsize(width=560, height=572)
         self.root_window.title(app_name)
         icon = tk.PhotoImage(master=self.root_window, data=ttk_icons.Icon.question)
         self.root_window.iconphoto(True, icon)
@@ -60,9 +60,9 @@ class ScannerApp(guikit.AsyncWindow):
             {"text": "Snsr Version", "stretch": False, "width": 80},
             {"text": "UART Port", "stretch": False, "width": 80},
         ]
-        scan_results_table = ttk_tableview.Tableview(results_frame, coldata=result_columns, rowdata=[], height=15)
-        scan_results_table.pack(expand=True, fill=tk.X)
-        results_frame.grid(column=0, row=2, sticky=(tk.E, tk.W), pady=(8, 0))
+        self.scan_results_table = ttk_tableview.Tableview(results_frame, coldata=result_columns, rowdata=[], height=9)
+        self.scan_results_table.pack(expand=True, fill=tk.X)
+        results_frame.grid(column=0, row=2, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))
 
         # Node communication
         comms_frame = ttk.Frame(self.main, name="comms_frame", borderwidth=0, relief=tk.SOLID)
@@ -77,8 +77,8 @@ class ScannerApp(guikit.AsyncWindow):
         send_message_button.pack(side=tk.LEFT, padx=(8, 0))
         message_frame.pack(side=tk.TOP, pady=(8, 0), expand=True, fill=tk.X, anchor=tk.N)
 
-        message_log = ttk.ScrolledText(comms_frame, state="disabled", wrap="word")
-        message_log.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
+        self.message_log = ttk.ScrolledText(comms_frame, state="disabled", wrap="word")
+        self.message_log.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
         comms_frame.grid(column=0, row=3, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))
 
         # App commands and status
@@ -96,9 +96,9 @@ class ScannerApp(guikit.AsyncWindow):
         self.main.columnconfigure(0, weight=1)
         self.main.rowconfigure(0, weight=0)
         self.main.rowconfigure(1, weight=0)
-        self.main.rowconfigure(2, weight=0)
+        self.main.rowconfigure(2, weight=1, minsize=190)
         self.main.rowconfigure(3, weight=1, minsize=200)
-        self.main.rowconfigure(4, weight=1)
+        self.main.rowconfigure(4, weight=10000)  # Extra strong row so that the results stable remains in place when vertically resizing
         self.main.rowconfigure(5, weight=0)
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
