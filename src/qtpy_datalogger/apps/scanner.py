@@ -37,7 +37,7 @@ class ScannerApp(guikit.AsyncWindow):
         icon_emoji = ttk_icons.Emoji.get("telescope")
         title_font = font.Font(weight="bold", size=24)
         title_label = ttk.Label(self.main, font=title_font, text=f"{icon_emoji} {app_name}", padding=16, borderwidth=0, relief=tk.SOLID)
-        title_label.pack(side=tk.TOP)
+        title_label.grid(column=0, row=0)
 
         # Scan group
         scan_frame = ttk.Frame(self.main, name="scan_frame", borderwidth=0, relief=tk.SOLID)
@@ -47,7 +47,7 @@ class ScannerApp(guikit.AsyncWindow):
         group_input_label.pack(side=tk.LEFT)
         self.group_input.pack(expand=True, fill=tk.X, side=tk.LEFT, padx=8)
         scan_button.pack(side=tk.LEFT)
-        scan_frame.pack(side=tk.TOP, expand=True, fill=tk.X, anchor=tk.N, pady=(8, 0))
+        scan_frame.grid(column=0, row=1, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))
 
         # Results group
         results_frame = ttk.Frame(self.main, name="result_frame", borderwidth=0, relief=tk.SOLID)
@@ -62,7 +62,7 @@ class ScannerApp(guikit.AsyncWindow):
         ]
         scan_results_table = ttk_tableview.Tableview(results_frame, coldata=result_columns, rowdata=[], height=15)
         scan_results_table.pack(expand=True, fill=tk.X)
-        results_frame.pack(side=tk.TOP, expand=True, fill=tk.X, anchor=tk.N, pady=(8, 0))
+        results_frame.grid(column=0, row=2, sticky=(tk.E, tk.W), pady=(8, 0))
 
         # Node communication
         comms_frame = ttk.Frame(self.main, name="comms_frame", borderwidth=0, relief=tk.SOLID)
@@ -77,9 +77,9 @@ class ScannerApp(guikit.AsyncWindow):
         send_message_button.pack(side=tk.LEFT, padx=(8, 0))
         message_frame.pack(side=tk.TOP, pady=(8, 0), expand=True, fill=tk.X, anchor=tk.N)
 
-        message_log = ttk.ScrolledText(comms_frame, state="disabled", height=10)
-        message_log.pack(side=tk.TOP, expand=True, fill=tk.X)
-        comms_frame.pack(side=tk.TOP, expand=True, fill=tk.X, pady=(24, 0), anchor=tk.N)
+        message_log = ttk.ScrolledText(comms_frame, state="disabled", wrap="word")
+        message_log.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
+        comms_frame.grid(column=0, row=3, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))
 
         # App commands and status
         action_frame = ttk.Frame(self.main, name="action_frame", borderwidth=0, relief=tk.SOLID)
@@ -89,10 +89,19 @@ class ScannerApp(guikit.AsyncWindow):
         exit_button.pack(side=tk.RIGHT, padx=(8, 0))
         help_button.pack(side=tk.RIGHT, padx=(8, 0))
         self.status_message.pack(side=tk.RIGHT, padx=8)
-        action_frame.pack(expand=True, fill=tk.X, pady=(8, 0), anchor=tk.S)
+        action_frame.grid(column=0, row=5, sticky=(tk.S, tk.E, tk.W), pady=(8, 0))
 
         # Finalize layout
-        self.main.pack(side=tk.TOP, expand=True, fill=tk.BOTH, anchor=tk.N)
+        self.main.grid(column=0, row=0, sticky=(tk.N, tk.S, tk.E, tk.W))
+        self.main.columnconfigure(0, weight=1)
+        self.main.rowconfigure(0, weight=0)
+        self.main.rowconfigure(1, weight=0)
+        self.main.rowconfigure(2, weight=0)
+        self.main.rowconfigure(3, weight=1, minsize=200)
+        self.main.rowconfigure(4, weight=1)
+        self.main.rowconfigure(5, weight=0)
+        self.root_window.columnconfigure(0, weight=1)
+        self.root_window.rowconfigure(0, weight=1)
 
     async def on_loop(self) -> None:
         """Update the UI with new information."""
