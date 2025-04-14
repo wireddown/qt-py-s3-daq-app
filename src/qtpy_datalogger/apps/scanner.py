@@ -59,21 +59,20 @@ class ScannerApp(guikit.AsyncWindow):
             {"text": "UART Port", "stretch": False, "width": 80},
         ]
         self.scan_results = {}
-        self.scan_results_table = ttk_tableview.Tableview(results_frame, coldata=result_columns, rowdata=self.scan_results, height=9)
+        self.scan_results_table = ttk_tableview.Tableview(results_frame, coldata=result_columns, height=9)
         self.scan_results_table.pack(expand=True, fill=tk.X)
         results_frame.grid(column=0, row=2, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))
 
         # Node communication
         comms_frame = ttk.Frame(self.main, name="comms_frame", borderwidth=0, relief=tk.SOLID)
-        selected_node_combobox = ttk.Combobox(comms_frame, values=["(none)"], width=20, state="readonly")
-        selected_node_combobox.current(0)
-        selected_node_combobox.pack(side=tk.TOP, anchor=tk.W)
+        self.selected_node_combobox = ttk.Combobox(comms_frame, width=20, state="readonly")
+        self.selected_node_combobox.pack(side=tk.TOP, anchor=tk.W)
 
         message_frame = ttk.Frame(comms_frame, name="message_frame")
         self.message_input = ttk.Entry(message_frame)
-        send_message_button = ttk.Button(message_frame, command=self.send_message, text="Send message")
+        self.send_message_button = ttk.Button(message_frame, command=self.send_message, text="Send message")
         self.message_input.pack(side=tk.LEFT, expand=True, fill=tk.X)
-        send_message_button.pack(side=tk.LEFT, padx=(8, 0))
+        self.send_message_button.pack(side=tk.LEFT, padx=(8, 0))
         message_frame.pack(side=tk.TOP, pady=(8, 0), expand=True, fill=tk.X, anchor=tk.N)
 
         self.message_log = ttk.ScrolledText(comms_frame, state="disabled", wrap="word")
@@ -102,12 +101,39 @@ class ScannerApp(guikit.AsyncWindow):
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
 
+        self.update_scan_results()
+        self.update_send_message_button()
+
     async def on_loop(self) -> None:
         """Update the UI with new information."""
         await asyncio.sleep(0.01)
 
     def on_closing(self) -> None:
         """Clean up before exiting."""
+
+    def update_scan_results(self) -> None:
+        """Add or update discovered sensor_nodes in the scan results table."""
+        self.scan_results_table.load_table_data()
+        self.update_selected_node_combobox()
+
+    def update_selected_node_combobox(self) -> None:
+        """Enable or disable the combobox and update its choices depending on the app's state."""
+        choices = ("(none)",)
+        if self.scan_results:
+            self.selected_node_combobox.configure(state=tk.NORMAL)
+            self.selected_node_combobox["values"] = sorted(*choices, *self.scan_results)
+        else:
+            self.selected_node_combobox.configure(state=tk.DISABLED)
+            self.selected_node_combobox["values"] = choices
+            self.selected_node_combobox.current(0)
+
+    def update_send_message_button(self) -> None:
+        """Enable or disable the send message button depending on the app's state."""
+        choice = self.selected_node_combobox.get()
+        if choice == "(none)":
+            self.send_message_button.configure(state=tk.DISABLED)
+        else:
+            self.send_message_button.configure(state=tk.NORMAL)
 
     def start_scan(self) -> None:
         """Start a scan for QT Py sensor_nodes in the group specified by the user."""
