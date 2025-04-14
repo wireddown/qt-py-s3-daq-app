@@ -115,6 +115,11 @@ class ScannerApp(guikit.AsyncWindow):
 
     def update_scan_results(self) -> None:
         """Add or update discovered sensor_nodes in the scan results table."""
+        rows = [
+            ("1a", "1b", "1c", "1d", "1e")
+            for x in self.scan_results
+        ]
+        self.scan_results_table.insert_rows("end", rows)
         self.scan_results_table.load_table_data()
         self.update_selected_node_combobox()
 
@@ -123,7 +128,7 @@ class ScannerApp(guikit.AsyncWindow):
         choices = ("(none)",)
         if self.scan_results:
             self.selected_node_combobox.configure(state=tk.NORMAL)
-            self.selected_node_combobox["values"] = sorted(*choices, *self.scan_results)
+            self.selected_node_combobox["values"] = sorted([*choices, *self.scan_results])
         else:
             self.selected_node_combobox.configure(state=tk.DISABLED)
             self.selected_node_combobox["values"] = choices
@@ -143,6 +148,8 @@ class ScannerApp(guikit.AsyncWindow):
         async def report_new_scan(new_device) -> None:
             await asyncio.sleep(0.5)
             self.scan_results.update(new_device)
+            self.update_scan_results()
+            self.update_send_message_button()
         update_task = asyncio.create_task(report_new_scan(new_device=discovered_device))
         self.background_tasks.add(update_task)
         update_task.add_done_callback(self.background_tasks.discard)
