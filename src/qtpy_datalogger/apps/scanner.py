@@ -21,6 +21,8 @@ class ScannerApp(guikit.AsyncWindow):
 
     def create_user_interface(self) -> None:
         """Create the main window and connect event handlers."""
+        self.background_tasks = set()
+
         # Theme
         style = ttk.Style()
         style.theme_use("sandstone")
@@ -137,6 +139,13 @@ class ScannerApp(guikit.AsyncWindow):
 
     def start_scan(self) -> None:
         """Start a scan for QT Py sensor_nodes in the group specified by the user."""
+        discovered_device = {"node1": "im just a lil node"}
+        async def report_new_scan(new_device) -> None:
+            await asyncio.sleep(0.5)
+            self.scan_results.update(new_device)
+        update_task = asyncio.create_task(report_new_scan(new_device=discovered_device))
+        self.background_tasks.add(update_task)
+        update_task.add_done_callback(self.background_tasks.discard)
 
     def send_message(self) -> None:
         """Send the message text to the node specified by the user."""
