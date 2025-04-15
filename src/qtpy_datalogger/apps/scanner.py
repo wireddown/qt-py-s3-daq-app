@@ -70,7 +70,7 @@ class ScannerApp(guikit.AsyncWindow):
         # Node communication
         comms_frame = ttk.Frame(self.main, name="comms_frame", borderwidth=0, relief=tk.SOLID)
         self.selected_node_combobox = ttk.Combobox(comms_frame, width=20, state="readonly")
-        self.selected_node_combobox.bind("<<ComboboxSelected>>", self.on_node_selected)
+        self.selected_node_combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected)
         self.selected_node_combobox.pack(side=tk.TOP, anchor=tk.W)
 
         message_frame = ttk.Frame(comms_frame, name="message_frame")
@@ -117,7 +117,6 @@ class ScannerApp(guikit.AsyncWindow):
     def on_closing(self) -> None:
         """Clean up before exiting."""
 
-    def on_node_selected(self, event_args) -> None:
     # widget.exists( item )
     #   Returns 1 if the specified item is present in the tree, 0 otherwise
     # widget.selection( ?selop , itemList? )
@@ -129,7 +128,10 @@ class ScannerApp(guikit.AsyncWindow):
         selected_index = event_args.widget.selection()[0]
         self.update_status_message_and_style(f"Selected {selected_index}", bootstyle.SUCCESS)
 
+    def on_combobox_selected(self, event_args) -> None:
         """Handle the user selecting a new entry in the Combobox."""
+        selected_index = event_args.widget.get()
+        self.update_status_message_and_style(f"Selected {selected_index}", bootstyle.SUCCESS)
         self.update_send_message_button()
         self.selected_node_combobox.configure(state="readonly")
         self.selected_node_combobox.selection_clear()
