@@ -17,6 +17,37 @@ from qtpy_datalogger.datatypes import DetailKey
 logger = logging.getLogger(pathlib.Path(__file__).stem)
 
 
+class ScannerData:
+    """A model class for holding the state of a ScannerApp instance."""
+
+    def __init__(self) -> None:
+        """Initialize a new model class for a ScannerApp instance."""
+        self.devices_by_group: dict[str, dict[str, dict[DetailKey, str]]] = {}
+
+    def process_group_scan(self, group_id: str, discovered_devices: dict[str, dict[DetailKey, str]]) -> tuple[set[str], set[str]]:
+        """Update known devices with a new group scan."""
+        known_group_devices = self.devices_by_group.get(group_id, {})
+        known_group_node_serial_numbers = set(known_group_devices.keys())
+        discovered_node_serial_numbers_in_group = set(discovered_devices.keys())
+
+        # Identify new devices
+        new_serial_numbers = discovered_node_serial_numbers_in_group - known_group_node_serial_numbers
+
+        # Identify removed devices
+        offline_serial_numbers = known_group_node_serial_numbers - discovered_node_serial_numbers_in_group
+
+        # Apply changes
+        for new_serial_number in new_serial_numbers:
+            device_info = discovered_devices[new_serial_number]
+            known_group_devices[device_info[DetailKey.serial_number]] = device_info
+        for offline_serial_number in offline_serial_numbers:
+            device_info = known_group_devices[offline_serial_number]
+            _ = known_group_devices.pop(device_info[DetailKey.serial_number])
+        self.devices_by_group[group_id] = known_group_devices
+
+        return new_serial_numbers, offline_serial_numbers
+
+
 class ScannerApp(guikit.AsyncWindow):
     """A GUI for discovering and communicating with QT Py sensor nodes."""
 
@@ -62,7 +93,7 @@ class ScannerApp(guikit.AsyncWindow):
             {"text": "Snsr Version", "stretch": False, "width": 80},
             {"text": "UART Port", "stretch": False, "width": 80},
         ]
-        self.scan_results = {}
+        self.scan_db = ScannerData()
         self.scan_results_table = ttk_tableview.Tableview(results_frame, coldata=result_columns, height=9)
         self.scan_results_table.view.configure(selectmode=tk.BROWSE)
         self.scan_results_table.view.bind("<<TreeviewSelect>>", self.on_row_selected)
@@ -108,7 +139,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
 
-        self.update_scan_results_table()
+        self.update_scan_results_table(set(), set())
         self.update_send_message_button()
         self.update_status_message_and_style("OK", bootstyle.SUCCESS)
 
@@ -142,27 +173,36 @@ class ScannerApp(guikit.AsyncWindow):
         """Set the status message to a new string and style."""
         self.status_message.configure(text=new_message, bootstyle=new_style)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
 
-    def update_scan_results_table(self) -> None:
+    def update_scan_results_table(self, added_node_serials: set[str], removed_node_serials: set[str]) -> None:
         """Add or update discovered sensor_nodes in the scan results table."""
-        rows = [
-            (
-                "group-a",
-                node_info[DetailKey.node_id],
-                node_info[DetailKey.device_description],
-                node_info[DetailKey.snsr_version],
-                "(unknown)",
-            )
-            for _, node_info in self.scan_results.items()
-        ]
-        self.scan_results_table.insert_rows("end", rows)
+        if removed_node_serials:
+            # Find and remove the rows
+            pass
+        if added_node_serials:
+            rows = [
+                (
+                    group_id,
+                    node_info[DetailKey.node_id],
+                    node_info[DetailKey.device_description],
+                    node_info[DetailKey.snsr_version],
+                    "(unknown)",
+                )
+                for group_id, nodes_by_serial_number in self.scan_db.devices_by_group.items()
+                for serial_number, node_info in nodes_by_serial_number.items() if serial_number in added_node_serials
+            ]
+            self.scan_results_table.insert_rows("end", rows)
         self.scan_results_table.load_table_data()
         self.update_selected_node_combobox()
 
     def update_selected_node_combobox(self) -> None:
         """Enable or disable the combobox and update its choices depending on the app's state."""
         none_choice = ("(none)",)
-        if self.scan_results:
-            node_ids = [entry[DetailKey.node_id] for entry in self.scan_results.values()]
+        if self.scan_db.devices_by_group:
+            node_ids = [
+                entry[DetailKey.node_id]
+                for group_nodes in self.scan_db.devices_by_group.values()
+                for entry in group_nodes.values()
+            ]
             self.selected_node_combobox.configure(state=tk.NORMAL)
             self.selected_node_combobox["values"] = sorted([*none_choice, *node_ids])
         else:
@@ -214,9 +254,8 @@ class ScannerApp(guikit.AsyncWindow):
 
         async def report_new_scan() -> None:
             await asyncio.sleep(0.5)  # Mimic the network call
-            self.scan_results.update(discovered_devices)
-            self.process_new_scan(group_id, discovered_devices)
-            self.update_scan_results_table()
+            added_nodes, removed_nodes = self.process_new_scan(group_id, discovered_devices)
+            self.update_scan_results_table(added_nodes, removed_nodes)
             self.update_send_message_button()
 
         def finalize_task(task_coroutine) -> None:
@@ -227,8 +266,9 @@ class ScannerApp(guikit.AsyncWindow):
         self.background_tasks.add(update_task)
         update_task.add_done_callback(finalize_task)
 
-    def process_new_scan(self, group_id: str, discovered_devices: dict[str, dict[DetailKey, str]]) -> None:
+    def process_new_scan(self, group_id: str, discovered_devices: dict[str, dict[DetailKey, str]]) -> tuple[set[str], set[str]]:
         """Update the discovered devices with details from a new scan."""
+        return self.scan_db.process_group_scan(group_id, discovered_devices)
 
     def send_message(self) -> None:
         """Send the message text to the node specified by the user."""
