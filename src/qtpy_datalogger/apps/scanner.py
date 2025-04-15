@@ -107,7 +107,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
 
-        self.update_scan_results()
+        self.update_scan_results_table()
         self.update_send_message_button()
         self.update_status_message_and_style("OK", bootstyle.SUCCESS)
 
@@ -141,7 +141,7 @@ class ScannerApp(guikit.AsyncWindow):
         """Set the status message to a new string and style."""
         self.status_message.configure(text=new_message, bootstyle=new_style)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
 
-    def update_scan_results(self) -> None:
+    def update_scan_results_table(self) -> None:
         """Add or update discovered sensor_nodes in the scan results table."""
         rows = [
             (
@@ -213,7 +213,8 @@ class ScannerApp(guikit.AsyncWindow):
         async def report_new_scan() -> None:
             await asyncio.sleep(0.5)  # Mimic the network call
             self.scan_results.update(discovered_devices)
-            self.update_scan_results()
+            self.process_new_scan(group_id, discovered_devices)
+            self.update_scan_results_table()
             self.update_send_message_button()
 
         def finalize_task(task_coroutine) -> None:
@@ -223,6 +224,9 @@ class ScannerApp(guikit.AsyncWindow):
         update_task = asyncio.create_task(report_new_scan())
         self.background_tasks.add(update_task)
         update_task.add_done_callback(finalize_task)
+
+    def process_new_scan(self, group_id: str, discovered_devices: dict[str, dict[DetailKey, str]]) -> None:
+        """Update the discovered devices with details from a new scan."""
 
     def send_message(self) -> None:
         """Send the message text to the node specified by the user."""
