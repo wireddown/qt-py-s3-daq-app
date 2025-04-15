@@ -12,6 +12,7 @@ import ttkbootstrap.tableview as ttk_tableview
 from ttkbootstrap import constants as bootstyle
 
 from qtpy_datalogger import guikit
+from qtpy_datalogger.datatypes import DetailKey
 
 logger = logging.getLogger(pathlib.Path(__file__).stem)
 
@@ -143,8 +144,14 @@ class ScannerApp(guikit.AsyncWindow):
     def update_scan_results(self) -> None:
         """Add or update discovered sensor_nodes in the scan results table."""
         rows = [
-            ("1a", "1b", "1c", "1d", "1e")
-            for x in self.scan_results
+            (
+                "group-a",
+                node_info[DetailKey.node_id],
+                node_info[DetailKey.device_description],
+                node_info[DetailKey.snsr_version],
+                "(unknown)",
+            )
+            for _, node_info in self.scan_results.items()
         ]
         self.scan_results_table.insert_rows("end", rows)
         self.scan_results_table.load_table_data()
@@ -152,14 +159,17 @@ class ScannerApp(guikit.AsyncWindow):
 
     def update_selected_node_combobox(self) -> None:
         """Enable or disable the combobox and update its choices depending on the app's state."""
-        choices = ("(none)",)
+        none_choice = ("(none)",)
         if self.scan_results:
+            node_ids = [entry[DetailKey.node_id] for entry in self.scan_results.values()]
             self.selected_node_combobox.configure(state=tk.NORMAL)
-            self.selected_node_combobox["values"] = sorted([*choices, *self.scan_results])
+            self.selected_node_combobox["values"] = sorted([*none_choice, *node_ids])
         else:
             self.selected_node_combobox.configure(state=tk.DISABLED)
-            self.selected_node_combobox["values"] = choices
+            self.selected_node_combobox["values"] = none_choice
             self.selected_node_combobox.current(0)
+        self.selected_node_combobox.configure(state="readonly")
+        self.selected_node_combobox.selection_clear()
 
     def update_send_message_button(self) -> None:
         """Enable or disable the send message button depending on the app's state."""
@@ -172,11 +182,37 @@ class ScannerApp(guikit.AsyncWindow):
     def start_scan(self) -> None:
         """Start a scan for QT Py sensor_nodes in the group specified by the user."""
         self.update_status_message_and_style("Scaninng....", bootstyle.INFO)
-        discovered_device = {"node1": "im just a lil node"}
+        discovered_device_1 = {
+            "device_description": "CircuitPython device",
+            "ip_address": "192.168.0.0",
+            "node_id": "node-abcdef-0",
+            "python_implementation": "9.2.1",
+            "serial_number": "abcdef",
+            "snsr_commit": "123abc",
+            "snsr_timestamp": "",
+            "snsr_version": "0.1.0",
+            "system_name": "mpy 3.4",
+        }
+        discovered_device_2 = {
+            "device_description": "SparkFun device",
+            "ip_address": "172.16.0.0",
+            "node_id": "node-123456-0",
+            "python_implementation": "9.1.3",
+            "serial_number": "123456",
+            "snsr_commit": "456def",
+            "snsr_timestamp": "",
+            "snsr_version": "0.2.0",
+            "system_name": "mpy 3.4",
+        }
 
-        async def report_new_scan(new_device) -> None:
-            await asyncio.sleep(0.5)
-            self.scan_results.update(new_device)
+        discovered_devices = {
+            node_info["serial_number"]: node_info
+            for node_info in [discovered_device_1, discovered_device_2]
+        }
+
+        async def report_new_scan() -> None:
+            await asyncio.sleep(0.5)  # Mimic the network call
+            self.scan_results.update(discovered_devices)
             self.update_scan_results()
             self.update_send_message_button()
 
@@ -184,7 +220,7 @@ class ScannerApp(guikit.AsyncWindow):
             self.background_tasks.discard(task_coroutine)
             self.update_status_message_and_style("Scan complete", bootstyle.SUCCESS)
 
-        update_task = asyncio.create_task(report_new_scan(new_device=discovered_device))
+        update_task = asyncio.create_task(report_new_scan())
         self.background_tasks.add(update_task)
         update_task.add_done_callback(finalize_task)
 
