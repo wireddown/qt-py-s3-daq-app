@@ -87,7 +87,7 @@ class ScannerApp(guikit.AsyncWindow):
         action_frame = ttk.Frame(self.main, name="action_frame", borderwidth=0, relief=tk.SOLID)
         exit_button = ttk.Button(action_frame, text="Quit", style=bootstyle.DANGER, command=self.exit)
         help_button = ttk.Button(action_frame, text="Online help", style=bootstyle.OUTLINE, command=self.launch_help)
-        self.status_message = ttk.Label(action_frame, text="OK", style=bootstyle.SUCCESS)
+        self.status_message = ttk.Label(action_frame)
         exit_button.pack(side=tk.RIGHT, padx=(8, 0))
         help_button.pack(side=tk.RIGHT, padx=(8, 0))
         self.status_message.pack(side=tk.RIGHT, padx=8)
@@ -107,6 +107,7 @@ class ScannerApp(guikit.AsyncWindow):
 
         self.update_scan_results()
         self.update_send_message_button()
+        self.update_status_message_and_style("OK", bootstyle.SUCCESS)
 
     async def on_loop(self) -> None:
         """Update the UI with new information."""
@@ -120,6 +121,10 @@ class ScannerApp(guikit.AsyncWindow):
         self.update_send_message_button()
         self.selected_node_combobox.configure(state="readonly")
         self.selected_node_combobox.selection_clear()
+
+    def update_status_message_and_style(self, new_message: str, new_style: str) -> None:
+        """Set the status message to a new string and style."""
+        self.status_message.configure(text=new_message, bootstyle=new_style)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
 
     def update_scan_results(self) -> None:
         """Add or update discovered sensor_nodes in the scan results table."""
