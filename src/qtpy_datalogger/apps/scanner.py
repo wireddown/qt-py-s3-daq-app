@@ -46,6 +46,7 @@ class ScannerApp(guikit.AsyncWindow):
         scan_frame = ttk.Frame(self.main, name="scan_frame", borderwidth=0, relief=tk.SOLID)
         group_input_label = ttk.Label(scan_frame, text="Group name")
         self.group_input = ttk.Entry(scan_frame)
+        self.group_input.insert(0, "group-a")
         scan_button = ttk.Button(scan_frame, command=self.start_scan, text="Scan group")
         group_input_label.pack(side=tk.LEFT)
         self.group_input.pack(expand=True, fill=tk.X, side=tk.LEFT, padx=8)
@@ -181,32 +182,33 @@ class ScannerApp(guikit.AsyncWindow):
 
     def start_scan(self) -> None:
         """Start a scan for QT Py sensor_nodes in the group specified by the user."""
-        self.update_status_message_and_style("Scaninng....", bootstyle.INFO)
+        self.update_status_message_and_style("Scanning....", bootstyle.INFO)
+        group_id = self.group_input.get() if self.group_input.get() else "group-j"
         discovered_device_1 = {
-            "device_description": "CircuitPython device",
-            "ip_address": "192.168.0.0",
-            "node_id": "node-abcdef-0",
-            "python_implementation": "9.2.1",
-            "serial_number": "abcdef",
-            "snsr_commit": "123abc",
-            "snsr_timestamp": "",
-            "snsr_version": "0.1.0",
-            "system_name": "mpy 3.4",
+            DetailKey.device_description: "CircuitPython device",
+            DetailKey.ip_address: "192.168.0.0",
+            DetailKey.node_id: "node-abcdef-0",
+            DetailKey.python_implementation: "9.2.1",
+            DetailKey.serial_number: "abcdef",
+            DetailKey.snsr_commit: "123abc",
+            DetailKey.snsr_timestamp: "",
+            DetailKey.snsr_version: "0.1.0",
+            DetailKey.system_name: "mpy 3.4",
         }
         discovered_device_2 = {
-            "device_description": "SparkFun device",
-            "ip_address": "172.16.0.0",
-            "node_id": "node-123456-0",
-            "python_implementation": "9.1.3",
-            "serial_number": "123456",
-            "snsr_commit": "456def",
-            "snsr_timestamp": "",
-            "snsr_version": "0.2.0",
-            "system_name": "mpy 3.4",
+            DetailKey.device_description: "SparkFun device",
+            DetailKey.ip_address: "172.16.0.0",
+            DetailKey.node_id: "node-123456-0",
+            DetailKey.python_implementation: "9.1.3",
+            DetailKey.serial_number: "123456",
+            DetailKey.snsr_commit: "456def",
+            DetailKey.snsr_timestamp: "",
+            DetailKey.snsr_version: "0.2.0",
+            DetailKey.system_name: "mpy 3.4",
         }
 
         discovered_devices = {
-            node_info["serial_number"]: node_info
+            node_info[DetailKey.serial_number]: node_info
             for node_info in [discovered_device_1, discovered_device_2]
         }
 
