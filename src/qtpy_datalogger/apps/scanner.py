@@ -157,15 +157,22 @@ class ScannerApp(guikit.AsyncWindow):
 
     def start_scan(self) -> None:
         """Start a scan for QT Py sensor_nodes in the group specified by the user."""
+        self.update_status_message_and_style("Scaninng....", bootstyle.INFO)
         discovered_device = {"node1": "im just a lil node"}
+
         async def report_new_scan(new_device) -> None:
             await asyncio.sleep(0.5)
             self.scan_results.update(new_device)
             self.update_scan_results()
             self.update_send_message_button()
+
+        def finalize_task(task_coroutine) -> None:
+            self.background_tasks.discard(task_coroutine)
+            self.update_status_message_and_style("Scan complete", bootstyle.SUCCESS)
+
         update_task = asyncio.create_task(report_new_scan(new_device=discovered_device))
         self.background_tasks.add(update_task)
-        update_task.add_done_callback(self.background_tasks.discard)
+        update_task.add_done_callback(finalize_task)
 
     def send_message(self) -> None:
         """Send the message text to the node specified by the user."""
