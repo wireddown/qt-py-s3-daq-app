@@ -63,6 +63,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.scan_results = {}
         self.scan_results_table = ttk_tableview.Tableview(results_frame, coldata=result_columns, height=9)
         self.scan_results_table.view.configure(selectmode=tk.BROWSE)
+        self.scan_results_table.view.bind("<<TreeviewSelect>>", self.on_row_selected)
         self.scan_results_table.pack(expand=True, fill=tk.X)
         results_frame.grid(column=0, row=2, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
@@ -117,6 +118,17 @@ class ScannerApp(guikit.AsyncWindow):
         """Clean up before exiting."""
 
     def on_node_selected(self, event_args) -> None:
+    # widget.exists( item )
+    #   Returns 1 if the specified item is present in the tree, 0 otherwise
+    # widget.selection( ?selop , itemList? )
+    #   If selop is not specified, returns the list of selected items
+    #   selop: set, add, remove, toggle
+
+    def on_row_selected(self, event_args) -> None:
+        """Handle the user selecting a row in the results table."""
+        selected_index = event_args.widget.selection()[0]
+        self.update_status_message_and_style(f"Selected {selected_index}", bootstyle.SUCCESS)
+
         """Handle the user selecting a new entry in the Combobox."""
         self.update_send_message_button()
         self.selected_node_combobox.configure(state="readonly")
