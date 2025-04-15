@@ -49,7 +49,7 @@ class ScannerApp(guikit.AsyncWindow):
         group_input_label.pack(side=tk.LEFT)
         self.group_input.pack(expand=True, fill=tk.X, side=tk.LEFT, padx=8)
         scan_button.pack(side=tk.LEFT)
-        scan_frame.grid(column=0, row=1, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))
+        scan_frame.grid(column=0, row=1, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
         # Results group
         results_frame = ttk.Frame(self.main, name="result_frame", borderwidth=0, relief=tk.SOLID)
@@ -64,7 +64,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.scan_results_table = ttk_tableview.Tableview(results_frame, coldata=result_columns, height=9)
         self.scan_results_table.view.configure(selectmode=tk.BROWSE)
         self.scan_results_table.pack(expand=True, fill=tk.X)
-        results_frame.grid(column=0, row=2, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))
+        results_frame.grid(column=0, row=2, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
         # Node communication
         comms_frame = ttk.Frame(self.main, name="comms_frame", borderwidth=0, relief=tk.SOLID)
@@ -81,7 +81,7 @@ class ScannerApp(guikit.AsyncWindow):
 
         self.message_log = ttk.ScrolledText(comms_frame, state="disabled", wrap="word")
         self.message_log.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
-        comms_frame.grid(column=0, row=3, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))
+        comms_frame.grid(column=0, row=3, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
         # App commands and status
         action_frame = ttk.Frame(self.main, name="action_frame", borderwidth=0, relief=tk.SOLID)
@@ -91,10 +91,10 @@ class ScannerApp(guikit.AsyncWindow):
         exit_button.pack(side=tk.RIGHT, padx=(8, 0))
         help_button.pack(side=tk.RIGHT, padx=(8, 0))
         self.status_message.pack(side=tk.RIGHT, padx=8)
-        action_frame.grid(column=0, row=5, sticky=(tk.S, tk.E, tk.W), pady=(8, 0))
+        action_frame.grid(column=0, row=5, sticky=(tk.S, tk.E, tk.W), pady=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
         # Finalize layout
-        self.main.grid(column=0, row=0, sticky=(tk.N, tk.S, tk.E, tk.W))
+        self.main.grid(column=0, row=0, sticky=(tk.N, tk.S, tk.E, tk.W))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         self.main.columnconfigure(0, weight=1)
         self.main.rowconfigure(0, weight=0)
         self.main.rowconfigure(1, weight=0)
