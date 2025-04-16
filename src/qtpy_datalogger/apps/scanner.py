@@ -97,6 +97,9 @@ class ScannerApp(guikit.AsyncWindow):
         self.scan_results_table = ttk_tableview.Tableview(results_frame, coldata=result_columns, height=9)
         self.scan_results_table.view.configure(selectmode=tk.BROWSE)
         self.scan_results_table.view.bind("<<TreeviewSelect>>", self.on_row_selected)
+        self.scan_results_table.view.unbind("<Double-Button-1>")  # Disable header-row handlers added by ttkbootstrap
+        self.scan_results_table.view.unbind("<Button-1>")
+        self.scan_results_table.view.unbind("<Button-3>")
         self.scan_results_table.pack(expand=True, fill=tk.X)
         results_frame.grid(column=0, row=2, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
