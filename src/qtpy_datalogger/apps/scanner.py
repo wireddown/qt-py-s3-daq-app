@@ -12,8 +12,7 @@ import ttkbootstrap.icons as ttk_icons
 import ttkbootstrap.tableview as ttk_tableview
 from ttkbootstrap import constants as bootstyle
 
-from qtpy_datalogger import guikit
-from qtpy_datalogger.datatypes import DetailKey
+from qtpy_datalogger import discovery, guikit
 
 logger = logging.getLogger(pathlib.Path(__file__).stem)
 
@@ -30,10 +29,15 @@ class ScannerData:
 
     def __init__(self) -> None:
         """Initialize a new model class for a ScannerApp instance."""
-        self.devices_by_group: dict[str, dict[str, dict[DetailKey, str]]] = {}
+        self.devices_by_group: dict[str, dict[str, discovery.QTPyDevice]] = {}
 
-    def process_group_scan(self, group_id: str, discovered_devices: dict[str, dict[DetailKey, str]]) -> tuple[set[str], set[str]]:
-        """Update known devices with a new group scan."""
+    def process_group_scan(self, group_id: str, discovered_devices: dict[str, discovery.QTPyDevice]) -> tuple[set[str], set[str]]:
+        """
+        Update known devices with a new group scan.
+
+        Return two sets of serial numbers as a tuple
+        (added_serial_numbers, removed_serial_numbers)
+        """
         known_group_devices = self.devices_by_group.get(group_id, {})
         known_group_node_serial_numbers = set(known_group_devices.keys())
         discovered_node_serial_numbers_in_group = set(discovered_devices.keys())
@@ -47,10 +51,10 @@ class ScannerData:
         # Apply changes
         for new_serial_number in new_serial_numbers:
             device_info = discovered_devices[new_serial_number]
-            known_group_devices[device_info[DetailKey.serial_number]] = device_info
+            known_group_devices[device_info.serial_number] = device_info
         for offline_serial_number in offline_serial_numbers:
             device_info = known_group_devices[offline_serial_number]
-            _ = known_group_devices.pop(device_info[DetailKey.serial_number])
+            _ = known_group_devices.pop(device_info.serial_number)
         self.devices_by_group[group_id] = known_group_devices
 
         return new_serial_numbers, offline_serial_numbers
@@ -218,10 +222,10 @@ class ScannerApp(guikit.AsyncWindow):
             rows = [
                 (
                     group_id,
-                    node_info[DetailKey.node_id],
-                    node_info[DetailKey.device_description],
-                    node_info[DetailKey.snsr_version],
-                    "(unknown)",
+                    node_info.node_id,
+                    node_info.device_description,
+                    node_info.snsr_version,
+                    node_info.com_port,
                 )
                 for group_id, nodes_by_serial_number in self.scan_db.devices_by_group.items()
                 for serial_number, node_info in nodes_by_serial_number.items() if serial_number in added_node_serials
@@ -234,7 +238,7 @@ class ScannerApp(guikit.AsyncWindow):
         none_choice = (Constants.NoneChoice,)
         if self.scan_db.devices_by_group:
             node_ids = [
-                entry[DetailKey.node_id]
+                entry.node_id
                 for group_nodes in self.scan_db.devices_by_group.values()
                 for entry in group_nodes.values()
             ]
@@ -263,37 +267,10 @@ class ScannerApp(guikit.AsyncWindow):
             return
 
         self.update_status_message_and_style("Scanning....", bootstyle.INFO)
-        discovered_device_1 = {
-            DetailKey.device_description: "CircuitPython device",
-            DetailKey.ip_address: "192.168.0.0",
-            DetailKey.node_id: "node-abcdef-0",
-            DetailKey.python_implementation: "9.2.1",
-            DetailKey.serial_number: "abcdef",
-            DetailKey.snsr_commit: "123abc",
-            DetailKey.snsr_timestamp: "",
-            DetailKey.snsr_version: "0.1.0",
-            DetailKey.system_name: "mpy 3.4",
-        }
-        discovered_device_2 = {
-            DetailKey.device_description: "SparkFun device",
-            DetailKey.ip_address: "172.16.0.0",
-            DetailKey.node_id: "node-123456-0",
-            DetailKey.python_implementation: "9.1.3",
-            DetailKey.serial_number: "123456",
-            DetailKey.snsr_commit: "456def",
-            DetailKey.snsr_timestamp: "",
-            DetailKey.snsr_version: "0.2.0",
-            DetailKey.system_name: "mpy 3.4",
-        }
-
-        discovered_devices = {
-            node_info[DetailKey.serial_number]: node_info
-            for node_info in [discovered_device_1, discovered_device_2]
-        }
 
         async def report_new_scan() -> None:
-            await asyncio.sleep(0.5)  # Mimic the network call
-            self.process_new_scan(group_id, discovered_devices)
+            qtpy_devices_in_group = await discovery.discover_qtpy_devices_async()
+            self.process_new_scan(group_id, qtpy_devices_in_group)
 
         def finalize_task(task_coroutine: asyncio.Task) -> None:
             self.background_tasks.discard(task_coroutine)
@@ -303,7 +280,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.background_tasks.add(update_task)
         update_task.add_done_callback(finalize_task)
 
-    def process_new_scan(self, group_id: str, discovered_devices: dict[str, dict[DetailKey, str]]) -> None:
+    def process_new_scan(self, group_id: str, discovered_devices: dict[str, discovery.QTPyDevice]) -> None:
         """Update the discovered devices with details from a new scan."""
         added_nodes, removed_nodes = self.scan_db.process_group_scan(group_id, discovered_devices)
         self.update_scan_results_table(added_nodes, removed_nodes)
