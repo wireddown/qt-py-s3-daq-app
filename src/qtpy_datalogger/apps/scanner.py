@@ -103,10 +103,10 @@ class ScannerApp(guikit.AsyncWindow):
         results_frame = ttk.Frame(main, name="result_frame", borderwidth=0, relief=tk.SOLID)
         result_columns = [
             {"text": "Group", "stretch": False, "width": 60},
-            {"text": "Node ID", "stretch": False, "width": 100},
-            {"text": "Device", "stretch": True},
-            {"text": "Snsr Version", "stretch": False, "width": 80},
-            {"text": "UART Port", "stretch": False, "width": 80},
+            {"text": "Node ID", "stretch": False, "width": 150},
+            {"text": "Device", "stretch": True, "width": 220},
+            {"text": "Snsr Version", "stretch": False, "width": 100},
+            {"text": "UART Port", "stretch": False, "width": 70},
         ]
         self.scan_results_table = ttk_tableview.Tableview(results_frame, coldata=result_columns, height=9, stripecolor=(colors.light, None))  # pyright: ignore reportAttributeAccessIssue -- the type hint for bootstrap omits its own additions
         self.scan_results_table.view.configure(selectmode=tk.BROWSE)
