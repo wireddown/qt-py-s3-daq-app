@@ -153,7 +153,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.root_window.rowconfigure(0, weight=1)
 
         self.update_scan_results_table(set(), set())
-        self.update_selected_node_combobox()
+        self.update_combobox_values()
         self.update_send_message_button()
         self.update_status_message_and_style("OK", bootstyle.SUCCESS)
 
@@ -212,7 +212,7 @@ class ScannerApp(guikit.AsyncWindow):
     def update_scan_results_table(self, added_node_serials: set[str], removed_node_serials: set[str]) -> None:
         """Add or update discovered sensor_nodes in the scan results table."""
         if removed_node_serials:
-            # Find and remove the rows
+            # TODO: Find and remove the rows
             pass
         if added_node_serials:
             rows = [
@@ -229,7 +229,7 @@ class ScannerApp(guikit.AsyncWindow):
             self.scan_results_table.insert_rows("end", rows)
         self.scan_results_table.load_table_data()
 
-    def update_selected_node_combobox(self) -> None:
+    def update_combobox_values(self) -> None:
         """Enable or disable the combobox and update its choices depending on the app's state."""
         none_choice = (Constants.NoneChoice,)
         if self.scan_db.devices_by_group:
@@ -307,7 +307,7 @@ class ScannerApp(guikit.AsyncWindow):
         """Update the discovered devices with details from a new scan."""
         added_nodes, removed_nodes = self.scan_db.process_group_scan(group_id, discovered_devices)
         self.update_scan_results_table(added_nodes, removed_nodes)
-        self.update_selected_node_combobox()
+        self.update_combobox_values()
         self.update_send_message_button()
 
     def send_message(self) -> None:
