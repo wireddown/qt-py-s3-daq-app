@@ -51,13 +51,17 @@ class ScannerData:
 class ScannerApp(guikit.AsyncWindow):
     """A GUI for discovering and communicating with QT Py sensor nodes."""
 
-    def create_user_interface(self) -> None:
+    def create_user_interface(self) -> None:  # noqa: PLR0915 -- allow long function to create the UI
         """Create the main window and connect event handlers."""
+        # State
+        self.scan_db = ScannerData()
+        self.selected_node = "(none)"
         self.background_tasks = set()
 
         # Theme
         style = ttk.Style()
         style.theme_use("sandstone")
+        colors = style.colors
 
         # Window title bar
         app_name = "QT Py Sensor Node Scanner"
@@ -93,8 +97,7 @@ class ScannerApp(guikit.AsyncWindow):
             {"text": "Snsr Version", "stretch": False, "width": 80},
             {"text": "UART Port", "stretch": False, "width": 80},
         ]
-        self.scan_db = ScannerData()
-        self.scan_results_table = ttk_tableview.Tableview(results_frame, coldata=result_columns, height=9)
+        self.scan_results_table = ttk_tableview.Tableview(results_frame, coldata=result_columns, height=9, stripecolor=(colors.light, None))
         self.scan_results_table.view.configure(selectmode=tk.BROWSE)
         self.scan_results_table.view.bind("<<TreeviewSelect>>", self.on_row_selected)
         self.scan_results_table.view.unbind("<Double-Button-1>")  # Disable header-row handlers added by ttkbootstrap
@@ -159,18 +162,46 @@ class ScannerApp(guikit.AsyncWindow):
     #   If selop is not specified, returns the list of selected items
     #   selop: set, add, remove, toggle
 
-    def on_row_selected(self, event_args) -> None:
+    def on_row_selected(self, event_args: tk.Event) -> None:
         """Handle the user selecting a row in the results table."""
-        selected_index = event_args.widget.selection()[0]
-        self.update_status_message_and_style(f"Selected {selected_index}", bootstyle.SUCCESS)
+        selected_rows = event_args.widget.selection()
+        if not selected_rows:
+            return
 
-    def on_combobox_selected(self, event_args) -> None:
-        """Handle the user selecting a new entry in the Combobox."""
-        selected_index = event_args.widget.get()
-        self.update_status_message_and_style(f"Selected {selected_index}", bootstyle.SUCCESS)
-        self.update_send_message_button()
+        new_selected_index = selected_rows[0]
+        selected_row = self.scan_results_table.iidmap[new_selected_index]
+        selected_node = selected_row.values[1]
+        if selected_node == self.selected_node:
+            return
+
+        self.on_node_selected(selected_node)
+
+    def on_combobox_selected(self, event_args: tk.Event) -> None:
+        """Handle the user selecting a new entry in the combobox."""
+        selected_node = event_args.widget.get()
+        self.on_node_selected(selected_node)
+
+    def on_node_selected(self, selected_node: str) -> None:
+        """Update the UI state for the selected node."""
+        self.selected_node = selected_node
+
+        # Always clear table selection
+        selected = self.scan_results_table.view.selection()
+        self.scan_results_table.view.selection_remove(selected)
+        if selected_node != "(none)":
+            index_for_node = {
+                row.values[1]: index
+                for index, row in self.scan_results_table.iidmap.items()
+            }
+            self.scan_results_table.view.selection_add(index_for_node[selected_node])
+
+        # Update the selected combobox entry
+        self.selected_node_combobox.set(selected_node)
         self.selected_node_combobox.configure(state="readonly")
         self.selected_node_combobox.selection_clear()
+
+        self.update_send_message_button()
+        self.update_status_message_and_style(f"Selected {selected_node}", bootstyle.SUCCESS)
 
     def update_status_message_and_style(self, new_message: str, new_style: str) -> None:
         """Set the status message to a new string and style."""
@@ -265,7 +296,7 @@ class ScannerApp(guikit.AsyncWindow):
             self.update_scan_results_table(added_nodes, removed_nodes)
             self.update_send_message_button()
 
-        def finalize_task(task_coroutine) -> None:
+        def finalize_task(task_coroutine: asyncio.Task) -> None:
             self.background_tasks.discard(task_coroutine)
             self.update_status_message_and_style("Scan complete", bootstyle.SUCCESS)
 
