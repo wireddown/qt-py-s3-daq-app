@@ -4,6 +4,7 @@ import asyncio
 import logging
 import pathlib
 import tkinter as tk
+from enum import StrEnum
 from tkinter import font
 
 import ttkbootstrap as ttk
@@ -16,6 +17,13 @@ from qtpy_datalogger.datatypes import DetailKey
 
 logger = logging.getLogger(pathlib.Path(__file__).stem)
 
+
+class Constants(StrEnum):
+    """Constants for the scanner app."""
+
+    AppName = "QT Py Sensor Node Scanner"
+    DefaultGroup = "zone1"
+    NoneChoice = "(none)"
 
 class ScannerData:
     """A model class for holding the state of a ScannerApp instance."""
@@ -55,7 +63,7 @@ class ScannerApp(guikit.AsyncWindow):
         """Create the main window and connect event handlers."""
         # State
         self.scan_db = ScannerData()
-        self.selected_node = "(none)"
+        self.selected_node = Constants.NoneChoice
         self.background_tasks = set()
 
         # Theme
@@ -64,9 +72,8 @@ class ScannerApp(guikit.AsyncWindow):
         colors = style.colors
 
         # Window title bar
-        app_name = "QT Py Sensor Node Scanner"
         self.root_window.minsize(width=560, height=572)
-        self.root_window.title(app_name)
+        self.root_window.title(Constants.AppName)
         icon = tk.PhotoImage(master=self.root_window, data=ttk_icons.Icon.question)
         self.root_window.iconphoto(True, icon)
 
@@ -74,14 +81,14 @@ class ScannerApp(guikit.AsyncWindow):
         main = ttk.Frame(self.root_window, name="root_frame", padding=16)
         icon_emoji = ttk_icons.Emoji.get("telescope")
         title_font = font.Font(weight="bold", size=24)
-        title_label = ttk.Label(main, font=title_font, text=f"{icon_emoji} {app_name}", padding=16, borderwidth=0, relief=tk.SOLID)
+        title_label = ttk.Label(main, font=title_font, text=f"{icon_emoji} {Constants.AppName}", padding=16, borderwidth=0, relief=tk.SOLID)
         title_label.grid(column=0, row=0)
 
         # Scan group
         scan_frame = ttk.Frame(main, name="scan_frame", borderwidth=0, relief=tk.SOLID)
         group_input_label = ttk.Label(scan_frame, text="Group name")
         self.group_input = ttk.Entry(scan_frame)
-        self.group_input.insert(0, "zone1")
+        self.group_input.insert(0, Constants.DefaultGroup)
         scan_button = ttk.Button(scan_frame, command=self.start_scan, text="Scan group")
         group_input_label.pack(side=tk.LEFT)
         self.group_input.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=8)
@@ -97,7 +104,7 @@ class ScannerApp(guikit.AsyncWindow):
             {"text": "Snsr Version", "stretch": False, "width": 80},
             {"text": "UART Port", "stretch": False, "width": 80},
         ]
-        self.scan_results_table = ttk_tableview.Tableview(results_frame, coldata=result_columns, height=9, stripecolor=(colors.light, None))
+        self.scan_results_table = ttk_tableview.Tableview(results_frame, coldata=result_columns, height=9, stripecolor=(colors.light, None))  # pyright: ignore reportAttributeAccessIssue -- the type hint for bootstrap omits its own additions
         self.scan_results_table.view.configure(selectmode=tk.BROWSE)
         self.scan_results_table.view.bind("<<TreeviewSelect>>", self.on_row_selected)
         self.scan_results_table.view.unbind("<Double-Button-1>")  # Disable header-row handlers added by ttkbootstrap
@@ -156,12 +163,6 @@ class ScannerApp(guikit.AsyncWindow):
     def on_closing(self) -> None:
         """Clean up before exiting."""
 
-    # widget.exists( item )
-    #   Returns 1 if the specified item is present in the tree, 0 otherwise
-    # widget.selection( ?selop , itemList? )
-    #   If selop is not specified, returns the list of selected items
-    #   selop: set, add, remove, toggle
-
     def on_row_selected(self, event_args: tk.Event) -> None:
         """Handle the user selecting a row in the results table."""
         selected_rows = event_args.widget.selection()
@@ -188,7 +189,7 @@ class ScannerApp(guikit.AsyncWindow):
         # Always clear table selection
         selected = self.scan_results_table.view.selection()
         self.scan_results_table.view.selection_remove(selected)
-        if selected_node != "(none)":
+        if selected_node != Constants.NoneChoice:
             index_for_node = {
                 row.values[1]: index
                 for index, row in self.scan_results_table.iidmap.items()
@@ -230,7 +231,7 @@ class ScannerApp(guikit.AsyncWindow):
 
     def update_selected_node_combobox(self) -> None:
         """Enable or disable the combobox and update its choices depending on the app's state."""
-        none_choice = ("(none)",)
+        none_choice = (Constants.NoneChoice,)
         if self.scan_db.devices_by_group:
             node_ids = [
                 entry[DetailKey.node_id]
@@ -249,7 +250,7 @@ class ScannerApp(guikit.AsyncWindow):
     def update_send_message_button(self) -> None:
         """Enable or disable the send message button depending on the app's state."""
         choice = self.selected_node_combobox.get()
-        if choice == "(none)":
+        if choice == Constants.NoneChoice:
             self.send_message_button.configure(state=tk.DISABLED)
         else:
             self.send_message_button.configure(state=tk.NORMAL)
