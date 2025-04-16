@@ -9,6 +9,7 @@ Supported connection types
 - network / MQTT
 """
 
+import asyncio
 import contextlib
 import dataclasses
 import logging
@@ -119,6 +120,25 @@ def handle_connect(behavior: Behavior, node: str, port: str) -> None:
         network.open_session_on_node(node)
         logger.info("")
         logger.info(f"Reconnect with 'qtpy-datalogger connect --node {node}'")
+
+
+async def discover_qtpy_devices_async() -> dict[str, QTPyDevice]:
+    """Scan for QT Py devices and return a dictionary of QTPyDevice instances indexed by serial_number."""
+    # A QT Py COM port has a serial number
+    # And its network MAC address uses the same serial number
+    logger.info("Discovering serial ports")
+    logger.info("Discovering sensor_node devices on the network")
+    discovered_serial_ports, discovered_nodes = await asyncio.gather(
+        asyncio.to_thread(_query_ports_from_serial),
+        network.query_nodes_from_mqtt_async(),
+    )
+
+    # And its disk drive uses the same serial number
+    logger.info("Discovering disk volumes")
+    discovered_disk_volumes = _query_volumes_from_wmi()  # Using asyncio.to_thread confuses win32 COM
+
+    qtpy_devices = _process_query_results(discovered_serial_ports, discovered_disk_volumes, discovered_nodes)
+    return qtpy_devices
 
 
 def discover_qtpy_devices() -> dict[str, QTPyDevice]:
