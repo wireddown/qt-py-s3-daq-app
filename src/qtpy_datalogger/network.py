@@ -346,7 +346,7 @@ def query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
     - snsr_version
     - system_name
     """
-    discovered_nodes = asyncio.run(_query_nodes_from_mqtt())
+    discovered_nodes = asyncio.run(query_nodes_from_mqtt_async())
     return discovered_nodes
 
 
@@ -355,7 +355,7 @@ def open_session_on_node(node_id: str) -> None:
     asyncio.run(_open_session_on_node(node_id))
 
 
-async def _query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
+async def query_nodes_from_mqtt_async() -> dict[str, dict[DetailKey, str]]:
     """Use a new QTPyController to scan the network for sensor_nodes."""
     broker_host = "localhost"
     group_id = "zone1"  # See https://github.com/wireddown/qt-py-s3-daq-app/issues/60
