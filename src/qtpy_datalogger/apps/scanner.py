@@ -153,6 +153,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.root_window.rowconfigure(0, weight=1)
 
         self.update_scan_results_table(set(), set())
+        self.update_selected_node_combobox()
         self.update_send_message_button()
         self.update_status_message_and_style("OK", bootstyle.SUCCESS)
 
@@ -227,7 +228,6 @@ class ScannerApp(guikit.AsyncWindow):
             ]
             self.scan_results_table.insert_rows("end", rows)
         self.scan_results_table.load_table_data()
-        self.update_selected_node_combobox()
 
     def update_selected_node_combobox(self) -> None:
         """Enable or disable the combobox and update its choices depending on the app's state."""
@@ -293,9 +293,7 @@ class ScannerApp(guikit.AsyncWindow):
 
         async def report_new_scan() -> None:
             await asyncio.sleep(0.5)  # Mimic the network call
-            added_nodes, removed_nodes = self.process_new_scan(group_id, discovered_devices)
-            self.update_scan_results_table(added_nodes, removed_nodes)
-            self.update_send_message_button()
+            self.process_new_scan(group_id, discovered_devices)
 
         def finalize_task(task_coroutine: asyncio.Task) -> None:
             self.background_tasks.discard(task_coroutine)
@@ -305,9 +303,12 @@ class ScannerApp(guikit.AsyncWindow):
         self.background_tasks.add(update_task)
         update_task.add_done_callback(finalize_task)
 
-    def process_new_scan(self, group_id: str, discovered_devices: dict[str, dict[DetailKey, str]]) -> tuple[set[str], set[str]]:
+    def process_new_scan(self, group_id: str, discovered_devices: dict[str, dict[DetailKey, str]]) -> None:
         """Update the discovered devices with details from a new scan."""
-        return self.scan_db.process_group_scan(group_id, discovered_devices)
+        added_nodes, removed_nodes = self.scan_db.process_group_scan(group_id, discovered_devices)
+        self.update_scan_results_table(added_nodes, removed_nodes)
+        self.update_selected_node_combobox()
+        self.update_send_message_button()
 
     def send_message(self) -> None:
         """Send the message text to the node specified by the user."""
