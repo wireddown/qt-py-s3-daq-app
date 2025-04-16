@@ -225,8 +225,12 @@ class ScannerApp(guikit.AsyncWindow):
 
     def start_scan(self) -> None:
         """Start a scan for QT Py sensor_nodes in the group specified by the user."""
+        group_id = self.group_input.get()
+        if not group_id:
+            self.update_status_message_and_style("Cannot scan. Specify a group name.", bootstyle.WARNING)
+            return
+
         self.update_status_message_and_style("Scanning....", bootstyle.INFO)
-        group_id = self.group_input.get() if self.group_input.get() else "group-j"
         discovered_device_1 = {
             DetailKey.device_description: "CircuitPython device",
             DetailKey.ip_address: "192.168.0.0",
