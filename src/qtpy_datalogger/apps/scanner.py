@@ -81,7 +81,7 @@ class ScannerApp(guikit.AsyncWindow):
         scan_frame = ttk.Frame(main, name="scan_frame", borderwidth=0, relief=tk.SOLID)
         group_input_label = ttk.Label(scan_frame, text="Group name")
         self.group_input = ttk.Entry(scan_frame)
-        self.group_input.insert(0, "group-a")
+        self.group_input.insert(0, "zone1")
         scan_button = ttk.Button(scan_frame, command=self.start_scan, text="Scan group")
         group_input_label.pack(side=tk.LEFT)
         self.group_input.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=8)
