@@ -135,6 +135,16 @@ def discover_qtpy_devices() -> dict[str, QTPyDevice]:
     logger.info("Discovering sensor_node devices on the network")
     discovered_nodes = network.query_nodes_from_mqtt()
 
+    qtpy_devices = _process_query_results(discovered_serial_ports, discovered_disk_volumes, discovered_nodes)
+    return qtpy_devices
+
+
+def _process_query_results(
+        discovered_serial_ports: dict[str, dict[DetailKey, str]],
+        discovered_disk_volumes: dict[str, dict[DetailKey, str]],
+        discovered_nodes: dict[str, dict[DetailKey, str]],
+    ) -> dict[str, QTPyDevice]:
+    """Combine the results and identify QT Py devices."""
     logger.info("Identifying QT Py devices")
     qtpy_devices: dict[str, QTPyDevice] = {}
     for drive_info in discovered_disk_volumes.values():
