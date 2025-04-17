@@ -160,10 +160,10 @@ def discover_qtpy_devices(group_id: str) -> dict[str, QTPyDevice]:
 
 
 def _process_query_results(
-        discovered_serial_ports: dict[str, dict[DetailKey, str]],
-        discovered_disk_volumes: dict[str, dict[DetailKey, str]],
-        discovered_nodes: dict[str, dict[DetailKey, str]],
-    ) -> dict[str, QTPyDevice]:
+    discovered_serial_ports: dict[str, dict[DetailKey, str]],
+    discovered_disk_volumes: dict[str, dict[DetailKey, str]],
+    discovered_nodes: dict[str, dict[DetailKey, str]],
+) -> dict[str, QTPyDevice]:
     """Combine the results and identify QT Py devices."""
     logger.info("Identifying QT Py devices")
     qtpy_devices: dict[str, QTPyDevice] = {}

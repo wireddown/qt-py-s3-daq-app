@@ -314,7 +314,9 @@ def test_handle_connect_with_one_mqtt_device(  # noqa: PLR0913 -- allow more tha
     """Does it correctly handle connect() when there is only one QT Py device?"""
     monkeypatch.setattr(discovery, "discover_qtpy_devices", one_mqtt_qtpy_device)
     exception_message = "connect() tried to correctly open the (monkeypatched) node"
-    monkeypatch.setattr(network, "open_session_on_node", lambda group, node: raise_exception(raised_exception, exception_message))
+    monkeypatch.setattr(
+        network, "open_session_on_node", lambda group, node: raise_exception(raised_exception, exception_message)
+    )
     discovered_node = discovery.discover_qtpy_devices(Default.MqttGroup).popitem()[1].node_id
     expected_node = node if node else discovered_node
 
@@ -350,7 +352,9 @@ def test_handle_connect_with_two_dual_mode_devices(  # noqa: PLR0913 -- allow mo
     """Does it correctly handle connect() when there are two QT Py devices with both USB and WiFi?"""
     monkeypatch.setattr(discovery, "discover_qtpy_devices", two_dual_mode_qtpy_devices)
     exception_message = "connect() tried to correctly open the (monkeypatched) node"
-    monkeypatch.setattr(network, "open_session_on_node", lambda group, node: raise_exception(raised_exception, exception_message))
+    monkeypatch.setattr(
+        network, "open_session_on_node", lambda group, node: raise_exception(raised_exception, exception_message)
+    )
     monkeypatch.setattr(click, "prompt", select_first_from_prompt)  # Choose WiFi connection
     discovered_devices = discovery.discover_qtpy_devices(Default.MqttGroup)
     selected_device = sorted(discovered_devices)[-1]

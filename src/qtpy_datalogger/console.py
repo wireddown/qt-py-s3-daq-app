@@ -93,7 +93,13 @@ def cli(
     flag_value=discovery.Behavior.DiscoverOnly,
     help="Behavior: List discovered devices and exit.",
 )
-@click.option("-n", "--group", default=Default.MqttGroup, metavar="GROUP-ID", help=f"MQTT group to use. Default: {Default.MqttGroup}")
+@click.option(
+    "-n",
+    "--group",
+    default=Default.MqttGroup,
+    metavar="GROUP-ID",
+    help=f"MQTT group to use. Default: {Default.MqttGroup}",
+)
 @click.option("-n", "--node", default="", metavar="NODE-ID", help="MQTT node to use for connection.")
 @click.option("-p", "--port", default="", metavar="COM#", help="Serial COM port to use for connection.")
 @click.help_option()
