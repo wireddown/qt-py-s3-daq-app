@@ -331,7 +331,7 @@ class QTPyController:
         return f"{action_name}-{self.named_counter.count(action_name)}"
 
 
-def query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
+def query_nodes_from_mqtt(group_id: str) -> dict[str, dict[DetailKey, str]]:
     """
     Scan the MQTT broker on the network for sensor nodes and return a dictionary of information.
 
@@ -346,19 +346,18 @@ def query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
     - snsr_version
     - system_name
     """
-    discovered_nodes = asyncio.run(query_nodes_from_mqtt_async())
+    discovered_nodes = asyncio.run(query_nodes_from_mqtt_async(group_id))
     return discovered_nodes
 
 
-def open_session_on_node(node_id: str) -> None:
+def open_session_on_node(group_id: str, node_id: str) -> None:
     """Open a terminal connection to the sensor_node with the specified node_id."""
-    asyncio.run(_open_session_on_node(node_id))
+    asyncio.run(_open_session_on_node(group_id, node_id))
 
 
-async def query_nodes_from_mqtt_async() -> dict[str, dict[DetailKey, str]]:
+async def query_nodes_from_mqtt_async(group_id: str) -> dict[str, dict[DetailKey, str]]:
     """Use a new QTPyController to scan the network for sensor_nodes."""
     broker_host = "localhost"
-    group_id = "zone1"  # See https://github.com/wireddown/qt-py-s3-daq-app/issues/60
     mac_address = hex(uuid.getnode())[2:]
     ip_address = socket.gethostbyname(socket.gethostname())
     controller = QTPyController(
@@ -375,10 +374,9 @@ async def query_nodes_from_mqtt_async() -> dict[str, dict[DetailKey, str]]:
     return node_information
 
 
-async def _open_session_on_node(node_id: str) -> None:
+async def _open_session_on_node(group_id: str, node_id: str) -> None:
     """Use a new QTPyController to open a terminal session on the specified node_id."""
     broker_host = "localhost"
-    group_id = "zone1"  # See https://github.com/wireddown/qt-py-s3-daq-app/issues/60
     mac_address = hex(uuid.getnode())[2:]
     ip_address = socket.gethostbyname(socket.gethostname())
     controller = QTPyController(

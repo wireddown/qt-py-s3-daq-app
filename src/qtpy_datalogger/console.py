@@ -8,7 +8,7 @@ import click
 from . import apps, discovery, tracelog
 from . import equip as _equip
 from . import server as _server
-from .datatypes import Links
+from .datatypes import Default, Links
 
 logger = logging.getLogger(__name__)
 
@@ -93,13 +93,14 @@ def cli(
     flag_value=discovery.Behavior.DiscoverOnly,
     help="Behavior: List discovered devices and exit.",
 )
+@click.option("-n", "--group", default=Default.MqttGroup, metavar="GROUP-ID", help=f"MQTT group to use. Default: {Default.MqttGroup}")
 @click.option("-n", "--node", default="", metavar="NODE-ID", help="MQTT node to use for connection.")
 @click.option("-p", "--port", default="", metavar="COM#", help="Serial COM port to use for connection.")
 @click.help_option()
-def connect(behavior: str, node: str, port: str) -> None:
+def connect(behavior: str, group: str, node: str, port: str) -> None:
     """Connect to a serial port, preferring a CircuitPython device, or to an MQTT sensor_node on the network."""
     discovery_behavior = discovery.Behavior(behavior)
-    discovery.handle_connect(discovery_behavior, node, port)
+    discovery.handle_connect(discovery_behavior, group, node, port)
 
 
 @cli.command(epilog=f"The default app is {apps.Catalog.default_app.name}\n\nHelp and home page: {DEFAULT_HELP_URL}")

@@ -39,6 +39,12 @@ class ExitCode(enum.IntEnum):
     App_Lookup_Failure = 71
 
 
+class Default(enum.StrEnum):
+    """Default values for the package."""
+
+    MqttGroup = "zone1"
+
+
 class ConnectionTransport(enum.StrEnum):
     """Supported communication types when connecting to a sensor_node."""
 

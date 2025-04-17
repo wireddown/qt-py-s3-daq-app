@@ -13,6 +13,7 @@ import ttkbootstrap.tableview as ttk_tableview
 from ttkbootstrap import constants as bootstyle
 
 from qtpy_datalogger import discovery, guikit
+from qtpy_datalogger.datatypes import Default
 
 logger = logging.getLogger(pathlib.Path(__file__).stem)
 
@@ -21,7 +22,6 @@ class Constants(StrEnum):
     """Constants for the scanner app."""
 
     AppName = "QT Py Sensor Node Scanner"
-    DefaultGroup = "zone1"
     NoneChoice = "(none)"
 
 class ScannerData:
@@ -90,7 +90,7 @@ class ScannerApp(guikit.AsyncWindow):
         scan_frame = ttk.Frame(main, name="scan_frame", borderwidth=0, relief=tk.SOLID)
         group_input_label = ttk.Label(scan_frame, text="Group name")
         self.group_input = ttk.Entry(scan_frame)
-        self.group_input.insert(0, Constants.DefaultGroup)
+        self.group_input.insert(0, Default.MqttGroup)
         scan_button = ttk.Button(scan_frame, command=self.start_scan, text="Scan group")
         group_input_label.pack(side=tk.LEFT)
         self.group_input.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=8)
@@ -269,7 +269,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.update_status_message_and_style("Scanning....", bootstyle.INFO)
 
         async def report_new_scan() -> None:
-            qtpy_devices_in_group = await discovery.discover_qtpy_devices_async()
+            qtpy_devices_in_group = await discovery.discover_qtpy_devices_async(group_id)
             self.process_new_scan(group_id, qtpy_devices_in_group)
 
         def finalize_task(task_coroutine: asyncio.Task) -> None:

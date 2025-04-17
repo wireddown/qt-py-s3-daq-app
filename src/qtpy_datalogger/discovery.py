@@ -73,9 +73,9 @@ class QTPyDevice:
     snsr_version: str
 
 
-def handle_connect(behavior: Behavior, node: str, port: str) -> None:
+def handle_connect(behavior: Behavior, group_id: str, node: str, port: str) -> None:
     """Connect to a QT Py sensor node."""
-    logger.debug(f"behavior: '{behavior}', node: '{node}', port: '{port}'")
+    logger.debug(f"behavior: '{behavior}', group: '{group_id}', node: '{node}', port: '{port}'")
 
     if os.name != "nt":
         logger.error(f"Support for {sys.platform} is not implemented.")
@@ -83,9 +83,9 @@ def handle_connect(behavior: Behavior, node: str, port: str) -> None:
         raise click.UsageError(message)
 
     if behavior == Behavior.DiscoverOnly:
-        qtpy_devices = discover_qtpy_devices()
+        qtpy_devices = discover_qtpy_devices(group_id)
         if qtpy_devices:
-            formatted_lines = _format_port_table(qtpy_devices)
+            formatted_lines = _format_port_table(qtpy_devices, group_id)
             _ = [logger.info(line) for line in formatted_lines]
         else:
             logger.warning("No QT Py devices found!")
@@ -98,7 +98,7 @@ def handle_connect(behavior: Behavior, node: str, port: str) -> None:
         communication_transport = ConnectionTransport.UART_Serial
 
     if communication_transport == ConnectionTransport.AutoSelect:
-        qtpy_device, communication_transport = discover_and_select_qtpy()
+        qtpy_device, communication_transport = discover_and_select_qtpy(group_id)
         if not qtpy_device:
             logger.error("No QT Py devices found!")
             raise SystemExit(ExitCode.Discovery_Failure)
@@ -117,20 +117,20 @@ def handle_connect(behavior: Behavior, node: str, port: str) -> None:
     if communication_transport == ConnectionTransport.UART_Serial:
         open_session_on_port(port)
     elif communication_transport == ConnectionTransport.MQTT_WiFi:
-        network.open_session_on_node(node)
+        network.open_session_on_node(group_id, node)
         logger.info("")
         logger.info(f"Reconnect with 'qtpy-datalogger connect --node {node}'")
 
 
-async def discover_qtpy_devices_async() -> dict[str, QTPyDevice]:
+async def discover_qtpy_devices_async(group_id: str) -> dict[str, QTPyDevice]:
     """Scan for QT Py devices and return a dictionary of QTPyDevice instances indexed by serial_number."""
     # A QT Py COM port has a serial number
     # And its network MAC address uses the same serial number
     logger.info("Discovering serial ports")
-    logger.info("Discovering sensor_node devices on the network")
+    logger.info(f"Scanning the network for sensor_node devices in group '{group_id}'")
     discovered_serial_ports, discovered_nodes = await asyncio.gather(
         asyncio.to_thread(_query_ports_from_serial),
-        network.query_nodes_from_mqtt_async(),
+        network.query_nodes_from_mqtt_async(group_id),
     )
 
     # And its disk drive uses the same serial number
@@ -141,7 +141,7 @@ async def discover_qtpy_devices_async() -> dict[str, QTPyDevice]:
     return qtpy_devices
 
 
-def discover_qtpy_devices() -> dict[str, QTPyDevice]:
+def discover_qtpy_devices(group_id: str) -> dict[str, QTPyDevice]:
     """Scan for QT Py devices and return a dictionary of QTPyDevice instances indexed by serial_number."""
     # A QT Py COM port has a serial number
     logger.info("Discovering serial ports")
@@ -152,8 +152,8 @@ def discover_qtpy_devices() -> dict[str, QTPyDevice]:
     discovered_disk_volumes = _query_volumes_from_wmi()
 
     # And its network MAC address uses the same serial number
-    logger.info("Discovering sensor_node devices on the network")
-    discovered_nodes = network.query_nodes_from_mqtt()
+    logger.info(f"Scanning the network for sensor_node devices in group '{group_id}'")
+    discovered_nodes = network.query_nodes_from_mqtt(group_id)
 
     qtpy_devices = _process_query_results(discovered_serial_ports, discovered_disk_volumes, discovered_nodes)
     return qtpy_devices
@@ -274,6 +274,7 @@ def open_session_on_port(port: str) -> None:
 
 
 def discover_and_select_qtpy(
+    group_id: str,
     transport: ConnectionTransport = ConnectionTransport.AutoSelect,
 ) -> tuple[QTPyDevice | None, ConnectionTransport | None]:
     """
@@ -281,7 +282,7 @@ def discover_and_select_qtpy(
 
     Ask the user for input when there is more than one device available or when a device has more than one transport available.
     """
-    qtpy_devices = discover_qtpy_devices()
+    qtpy_devices = discover_qtpy_devices(group_id)
     if not qtpy_devices:
         return (None, None)
 
@@ -290,7 +291,7 @@ def discover_and_select_qtpy(
     selected_reason = "Auto-selected"
     if len(selectable_devices) > 1:
         logger.info(f"Found {len(selectable_devices)} QT Py devices, select a device to continue")
-        formatted_lines = _format_port_table(qtpy_devices)
+        formatted_lines = _format_port_table(qtpy_devices, group_id)
         _ = [print(line) for line in formatted_lines]  # noqa: T201 -- use direct IO for user prompt
 
         choices = click.Choice([f"{index + 1}" for index in range(len(selectable_devices))])
@@ -542,19 +543,19 @@ def _parse_boot_out_file(main_folder: pathlib.Path) -> dict[DetailKey, str]:
     }
 
 
-def _format_port_table(qtpy_devices: dict[str, QTPyDevice]) -> list[str]:
+def _format_port_table(qtpy_devices: dict[str, QTPyDevice], group_id: str) -> list[str]:
     """Return a list of text lines that present a table of the specified qtpy_devices."""
     lines = []
     lines.append("")
-    lines.append("      {:5}  {:5}  {:35}  {:20}".format("Port", "Drive", "QT Py device", "Node ID"))
-    lines.append("      {:5}  {:5}  {:35}  {:20}".format("-" * 5, "-" * 5, "-" * 35, "-" * 20))
+    lines.append("      {:5}  {:5}  {:35}  {:20}  {:12}".format("Port", "Drive", "QT Py device", "Node ID", "Group ID"))
+    lines.append("      {:5}  {:5}  {:35}  {:20}  {:12}".format("-" * 5, "-" * 5, "-" * 35, "-" * 20, "-" * 12))
     sorted_devices = sorted(qtpy_devices.keys())
     for index, qtpy_device in enumerate([qtpy_devices[serial_number] for serial_number in sorted_devices]):
         drive_letter = ""
         if qtpy_device.drive_root:
             drive_letter = f"{qtpy_device.drive_root}\\"
         lines.append(
-            f"{index + 1:3}:  {qtpy_device.com_port:5}  {drive_letter:5}  {qtpy_device.device_description:35}  {qtpy_device.node_id:20}"
+            f"{index + 1:3}:  {qtpy_device.com_port:5}  {drive_letter:5}  {qtpy_device.device_description:35}  {qtpy_device.node_id:20}  {group_id:12}"
         )
     lines.append("")
     return lines
