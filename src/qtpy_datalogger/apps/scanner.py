@@ -24,6 +24,7 @@ class Constants(StrEnum):
     AppName = "QT Py Sensor Node Scanner"
     NoneChoice = "(none)"
 
+
 class ScannerData:
     """A model class for holding the state of a ScannerApp instance."""
 
@@ -83,7 +84,14 @@ class ScannerApp(guikit.AsyncWindow):
         main = ttk.Frame(self.root_window, name="root_frame", padding=16)
         icon_emoji = ttk_icons.Emoji.get("telescope")
         title_font = font.Font(weight="bold", size=24)
-        title_label = ttk.Label(main, font=title_font, text=f"{icon_emoji} {Constants.AppName}", padding=16, borderwidth=0, relief=tk.SOLID)
+        title_label = ttk.Label(
+            main,
+            font=title_font,
+            text=f"{icon_emoji} {Constants.AppName}",
+            padding=16,
+            borderwidth=0,
+            relief=tk.SOLID,
+        )
         title_label.grid(column=0, row=0)
 
         # Scan group
@@ -106,7 +114,12 @@ class ScannerApp(guikit.AsyncWindow):
             {"text": "Snsr Version", "stretch": False, "width": 100},
             {"text": "UART Port", "stretch": False, "width": 70},
         ]
-        self.scan_results_table = ttk_tableview.Tableview(results_frame, coldata=result_columns, height=9, stripecolor=(colors.light, None))  # pyright: ignore reportAttributeAccessIssue -- the type hint for bootstrap omits its own additions
+        self.scan_results_table = ttk_tableview.Tableview(
+            results_frame,
+            coldata=result_columns,
+            height=9,
+            stripecolor=(colors.light, None),  # pyright: ignore reportAttributeAccessIssue -- the type hint for bootstrap omits its own additions
+        )
         self.scan_results_table.view.configure(selectmode=tk.BROWSE)
         self.scan_results_table.view.bind("<<TreeviewSelect>>", self.on_row_selected)
         self.scan_results_table.view.unbind("<Double-Button-1>")  # Disable header-row handlers added by ttkbootstrap
@@ -149,7 +162,10 @@ class ScannerApp(guikit.AsyncWindow):
         main.rowconfigure(1, weight=0)
         main.rowconfigure(2, weight=1, minsize=190)
         main.rowconfigure(3, weight=1, minsize=200)
-        main.rowconfigure(4, weight=10000)  # Extra strong row so that the results stable remains in place when vertically resizing
+        main.rowconfigure(
+            4,
+            weight=10000,
+        )  # Extra strong row so that the results stable remains in place when vertically resizing
         main.rowconfigure(5, weight=0)
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
