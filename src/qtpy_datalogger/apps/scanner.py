@@ -31,7 +31,7 @@ class ScannerData:
         """Initialize a new model class for a ScannerApp instance."""
         self.devices_by_group: dict[str, dict[str, discovery.QTPyDevice]] = {}
 
-    def process_group_scan(self, group_id: str, discovered_devices: dict[str, discovery.QTPyDevice]) -> tuple[set[str], set[str]]:
+    def process_group_scan(self, group_id: str, discovered_devices: dict[str, discovery.QTPyDevice]) -> None:
         """
         Update known devices with a new group scan.
 
@@ -56,8 +56,6 @@ class ScannerData:
             device_info = known_group_devices[offline_serial_number]
             _ = known_group_devices.pop(device_info.serial_number)
         self.devices_by_group[group_id] = known_group_devices
-
-        return new_serial_numbers, offline_serial_numbers
 
 
 class ScannerApp(guikit.AsyncWindow):
@@ -156,7 +154,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
 
-        self.update_scan_results_table(set(), set())
+        self.update_scan_results_table()
         self.update_combobox_values()
         self.update_send_message_button()
         self.update_status_message_and_style("OK", bootstyle.SUCCESS)
@@ -213,25 +211,27 @@ class ScannerApp(guikit.AsyncWindow):
         """Set the status message to a new string and style."""
         self.status_message.configure(text=new_message, bootstyle=new_style)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
 
-    def update_scan_results_table(self, added_node_serials: set[str], removed_node_serials: set[str]) -> None:
-        """Add or update discovered sensor_nodes in the scan results table."""
-        if removed_node_serials:
-            # TODO: Find and remove the rows
-            pass
-        if added_node_serials:
-            rows = [
-                (
-                    group_id,
-                    node_info.node_id,
-                    node_info.device_description,
-                    node_info.snsr_version,
-                    node_info.com_port,
+    def update_scan_results_table(self) -> None:
+        """Update the contents of the result stable depending on the app's state."""
+        new_selection = Constants.NoneChoice
+        rows = []
+        for group_id, nodes_by_serial_number in self.scan_db.devices_by_group.items():
+            for _, node_info in nodes_by_serial_number.items():
+                if node_info.node_id == self.selected_node:
+                    new_selection = self.selected_node
+                rows.append(
+                    (
+                        group_id,
+                        node_info.node_id,
+                        node_info.device_description,
+                        node_info.snsr_version,
+                        node_info.com_port,
+                    )
                 )
-                for group_id, nodes_by_serial_number in self.scan_db.devices_by_group.items()
-                for serial_number, node_info in nodes_by_serial_number.items() if serial_number in added_node_serials
-            ]
-            self.scan_results_table.insert_rows("end", rows)
+        self.scan_results_table.delete_rows()
+        self.scan_results_table.insert_rows("end", rows)
         self.scan_results_table.load_table_data()
+        self.on_node_selected(new_selection)
 
     def update_combobox_values(self) -> None:
         """Enable or disable the combobox and update its choices depending on the app's state."""
@@ -282,8 +282,8 @@ class ScannerApp(guikit.AsyncWindow):
 
     def process_new_scan(self, group_id: str, discovered_devices: dict[str, discovery.QTPyDevice]) -> None:
         """Update the discovered devices with details from a new scan."""
-        added_nodes, removed_nodes = self.scan_db.process_group_scan(group_id, discovered_devices)
-        self.update_scan_results_table(added_nodes, removed_nodes)
+        self.scan_db.process_group_scan(group_id, discovered_devices)
+        self.update_scan_results_table()
         self.update_combobox_values()
         self.update_send_message_button()
 
