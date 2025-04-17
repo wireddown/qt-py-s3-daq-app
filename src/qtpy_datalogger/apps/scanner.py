@@ -100,9 +100,16 @@ class ScannerApp(guikit.AsyncWindow):
         self.group_input = ttk.Entry(scan_frame)
         self.group_input.insert(0, Default.MqttGroup)
         scan_button = ttk.Button(scan_frame, command=self.start_scan, text="Scan group")
+        clear_button = ttk.Button(
+            scan_frame,
+            style=(bootstyle.OUTLINE, bootstyle.WARNING),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
+            command=self.clear_results,
+            text="Clear results",
+        )
         group_input_label.pack(side=tk.LEFT)
-        self.group_input.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=8)
-        scan_button.pack(side=tk.LEFT)
+        self.group_input.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(8, 0))
+        scan_button.pack(side=tk.LEFT, padx=(8, 0))
+        clear_button.pack(side=tk.LEFT, padx=(8, 0))
         scan_frame.grid(column=0, row=1, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
         # Results group
@@ -299,6 +306,13 @@ class ScannerApp(guikit.AsyncWindow):
     def process_new_scan(self, group_id: str, discovered_devices: dict[str, discovery.QTPyDevice]) -> None:
         """Update the discovered devices with details from a new scan."""
         self.scan_db.process_group_scan(group_id, discovered_devices)
+        self.update_scan_results_table()
+        self.update_combobox_values()
+        self.update_send_message_button()
+
+    def clear_results(self) -> None:
+        """Clear the scan results."""
+        self.scan_db.devices_by_group.clear()
         self.update_scan_results_table()
         self.update_combobox_values()
         self.update_send_message_button()
