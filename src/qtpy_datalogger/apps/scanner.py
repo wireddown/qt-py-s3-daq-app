@@ -297,7 +297,10 @@ class ScannerApp(guikit.AsyncWindow):
 
         def finalize_task(task_coroutine: asyncio.Task) -> None:
             self.background_tasks.discard(task_coroutine)
-            self.update_status_message_and_style("Scan complete", bootstyle.SUCCESS)
+            self.update_status_message_and_style(
+                f"Scan complete. Found {len(self.scan_db.devices_by_group[group_id])} nodes in {group_id}."
+                , bootstyle.SUCCESS,
+            )
 
         update_task = asyncio.create_task(report_new_scan())
         self.background_tasks.add(update_task)
