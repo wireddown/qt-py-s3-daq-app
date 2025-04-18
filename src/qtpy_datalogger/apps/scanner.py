@@ -263,10 +263,10 @@ class ScannerApp(guikit.AsyncWindow):
         """Update the contents of the result stable depending on the app's state."""
         new_selection = Constants.NoneChoice
         rows = []
-        ordered_by_group = reversed(self.scan_db.devices_by_group.keys())
+        ordered_by_group = sorted(self.scan_db.devices_by_group.keys())
         for group_id in ordered_by_group:
             nodes_by_serial_number = self.scan_db.devices_by_group[group_id]
-            ordered_by_serial_number = reversed(nodes_by_serial_number.keys())
+            ordered_by_serial_number = sorted(nodes_by_serial_number.keys())
             for serial_number in ordered_by_serial_number:
                 node_info = nodes_by_serial_number[serial_number]
                 if serial_number == self.selected_node:
@@ -282,7 +282,8 @@ class ScannerApp(guikit.AsyncWindow):
                     )
                 )
         self.scan_results_table.delete_rows()
-        self.scan_results_table.insert_rows("end", rows)
+        for row in rows:
+            self.scan_results_table.insert_row("end", row)
         self.scan_results_table.load_table_data()
         self.on_node_selected(new_selection)
 
