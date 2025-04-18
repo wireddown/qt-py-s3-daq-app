@@ -86,7 +86,7 @@ class ScannerApp(guikit.AsyncWindow):
 
         # Theme
         style = ttk.Style()
-        style.theme_use("sandstone")
+        style.theme_use("cosmo")
         colors = style.colors
 
         # Window title bar
