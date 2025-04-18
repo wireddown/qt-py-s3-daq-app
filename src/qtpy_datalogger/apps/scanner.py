@@ -212,11 +212,11 @@ class ScannerApp(guikit.AsyncWindow):
 
         new_selected_index = selected_rows[0]
         selected_row = self.scan_results_table.iidmap[new_selected_index]
-        selected_node = selected_row.values[-1]
-        if selected_node == self.selected_node:
+        selected_serial_number = selected_row.values[-1]
+        if selected_serial_number == self.selected_node:
             return
 
-        self.on_node_selected(selected_node)
+        self.on_node_selected(selected_serial_number)
 
     def on_combobox_selected(self, event_args: tk.Event) -> None:
         """Handle the user selecting a new entry in the combobox."""
