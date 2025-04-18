@@ -93,6 +93,7 @@ class SnsrPath(enum.StrEnum):
 
     root = "snsr"
     notice = "snsr/notice.toml"
+    settings = "settings.toml"
 
 
 class SnsrNotice(NamedTuple):
