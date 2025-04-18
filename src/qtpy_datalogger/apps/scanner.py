@@ -32,6 +32,14 @@ class ScannerData:
         """Initialize a new model class for a ScannerApp instance."""
         self.devices_by_group: dict[str, dict[str, discovery.QTPyDevice]] = {}
 
+    def get_node(self, serial_number: str) -> discovery.QTPyDevice | None:
+        """Return the sensor_node that matches the specified serial_number."""
+        for devices_in_group in self.devices_by_group.values():
+            for device_serial_number, device_info in devices_in_group.items():
+                if serial_number == device_serial_number:
+                    return device_info
+        return None
+
     def process_group_scan(self, group_id: str, discovered_devices: dict[str, discovery.QTPyDevice]) -> None:
         """
         Update known devices with a new group scan.
