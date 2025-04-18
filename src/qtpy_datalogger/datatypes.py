@@ -64,6 +64,7 @@ class DetailKey(enum.StrEnum):
     drive_partition = "drive_partition"
     drive_root = "drive_root"
     ip_address = "ip_address"
+    mqtt_group_id = "mqtt_group_id"
     node_id = "node_id"
     python_implementation = "python_implementation"
     serial_number = "serial_number"
