@@ -153,7 +153,12 @@ class ScannerApp(guikit.AsyncWindow):
         selection_status_frame = ttk.Frame(comms_frame, name="selection_frame", borderwidth=0, relief=tk.SOLID)
         self.status_icon_label = ttk.Label(selection_status_frame)
         self.status_message = ttk.Label(selection_status_frame, borderwidth=0, relief=tk.SOLID)
-        self.selected_node_combobox = ttk.Combobox(selection_status_frame, width=20, state="readonly", style=bootstyle.PRIMARY)
+        self.selected_node_combobox = ttk.Combobox(
+            selection_status_frame,
+            width=20,
+            state="readonly",
+            style=bootstyle.PRIMARY,
+        )
         self.selected_node_combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected)
         self.status_icon_label.pack(side=tk.LEFT)
         self.status_message.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(8, 0))
@@ -346,8 +351,8 @@ class ScannerApp(guikit.AsyncWindow):
         def finalize_task(task_coroutine: asyncio.Task) -> None:
             self.background_tasks.discard(task_coroutine)
             self.update_status_message_and_style(
-                f"Scan complete: found {len(self.scan_db.devices_by_group[group_id])} nodes in {group_id}."
-                , bootstyle.SUCCESS,
+                f"Scan complete: found {len(self.scan_db.devices_by_group[group_id])} nodes in {group_id}.",
+                bootstyle.SUCCESS,
             )
 
         update_task = asyncio.create_task(report_new_scan())

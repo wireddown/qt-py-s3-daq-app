@@ -177,7 +177,9 @@ def _process_query_results(
 
             if port_serial_number and port_serial_number == drive_serial_number:
                 serial_number = port_serial_number.lower()
-                python_implementation, snsr_version, mqtt_group = _query_node_info_from_drive(drive_info[DetailKey.drive_root])
+                python_implementation, snsr_version, mqtt_group = _query_node_info_from_drive(
+                    drive_info[DetailKey.drive_root]
+                )
                 qtpy_devices[serial_number] = QTPyDevice(
                     com_id=port_info[DetailKey.com_id],
                     com_port=port_info[DetailKey.com_port],
