@@ -42,12 +42,7 @@ class ScannerData:
         return None
 
     def process_group_scan(self, group_id: str, discovered_devices: dict[str, discovery.QTPyDevice]) -> None:
-        """
-        Update known devices with a new group scan.
-
-        Return two sets of serial numbers as a tuple
-        (added_serial_numbers, removed_serial_numbers)
-        """
+        """Update known devices with a new group scan."""
         known_group_devices = self.devices_by_group.get(group_id, {})
         known_group_node_serial_numbers = set(known_group_devices.keys())
         discovered_node_serial_numbers_in_group = {
@@ -194,8 +189,8 @@ class ScannerApp(guikit.AsyncWindow):
         main.rowconfigure(3, weight=1, minsize=200)
         main.rowconfigure(
             4,
-            weight=10000,
-        )  # Extra strong row so that the results stable remains in place when vertically resizing
+            weight=10000,  # Extra strong row so that the results stable remains in place when vertically resizing
+        )
         main.rowconfigure(5, weight=0)
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
@@ -213,7 +208,7 @@ class ScannerApp(guikit.AsyncWindow):
         """Clean up before exiting."""
 
     def run_command_on_enter(self, event_args: tk.Event) -> None:
-        """Handle a key press for an entry widget."""
+        """Handle the Enter key press for an entry widget and run its command."""
         key_character = event_args.char
         if key_character not in ["\r"]:
             return
