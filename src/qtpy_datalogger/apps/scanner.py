@@ -276,13 +276,13 @@ class ScannerApp(guikit.AsyncWindow):
         """Enable or disable the combobox and update its choices depending on the app's state."""
         none_choice = (Constants.NoneChoice,)
         if self.scan_db.devices_by_group:
-            node_ids = [
-                entry.node_id
-                for group_nodes in self.scan_db.devices_by_group.values()
-                for entry in group_nodes.values()
-            ]
+            node_resource_names = []
+            for group_nodes in self.scan_db.devices_by_group.values():
+                for entry in group_nodes.values():
+                    resource_name = entry.node_id if entry.node_id else entry.com_port
+                    node_resource_names.append(resource_name)
             self.selected_node_combobox.configure(state=tk.NORMAL)
-            self.selected_node_combobox["values"] = sorted([*none_choice, *node_ids])
+            self.selected_node_combobox["values"] = sorted([*none_choice, *node_resource_names])
         else:
             self.selected_node_combobox.configure(state=tk.DISABLED)
             self.selected_node_combobox["values"] = none_choice
