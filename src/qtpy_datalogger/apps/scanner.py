@@ -268,7 +268,7 @@ class ScannerApp(guikit.AsyncWindow):
                     )
                 )
         self.scan_results_table.delete_rows()
-        self.scan_results_table.insert_rows("end", rows)
+        self.scan_results_table.insert_rows("end", sorted(rows))
         self.scan_results_table.load_table_data()
         self.on_node_selected(new_selection)
 
