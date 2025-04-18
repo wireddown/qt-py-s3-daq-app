@@ -46,8 +46,7 @@ class ScannerData:
         known_group_devices = self.devices_by_group.get(group_id, {})
         known_group_node_serial_numbers = set(known_group_devices.keys())
         discovered_node_serial_numbers_in_group = {
-            serial_number
-            for serial_number, device in discovered_devices.items() if device.mqtt_group_id == group_id
+            serial_number for serial_number, device in discovered_devices.items() if device.mqtt_group_id == group_id
         }
 
         # Identify new devices
@@ -256,10 +255,7 @@ class ScannerApp(guikit.AsyncWindow):
         selected = self.scan_results_table.view.selection()
         self.scan_results_table.view.selection_remove(selected)
         if node_serial_number != Constants.NoneChoice:
-            index_for_node = {
-                row.values[-1]: index
-                for index, row in self.scan_results_table.iidmap.items()
-            }
+            index_for_node = {row.values[-1]: index for index, row in self.scan_results_table.iidmap.items()}
             self.scan_results_table.view.selection_add(index_for_node[node_serial_number])
 
         selected_resource_name = Constants.NoneChoice
