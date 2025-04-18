@@ -199,7 +199,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.update_scan_results_table()
         self.update_combobox_values()
         self.update_send_message_button()
-        self.update_status_message_and_style("OK", bootstyle.SUCCESS)
+        self.update_status_message_and_style("Waiting for scan", bootstyle.SUCCESS)
 
     async def on_loop(self) -> None:
         """Update the UI with new information."""
@@ -319,7 +319,7 @@ class ScannerApp(guikit.AsyncWindow):
         """Start a scan for QT Py sensor_nodes in the group specified by the user."""
         group_id = self.group_input.get()
         if not group_id:
-            self.update_status_message_and_style("Cannot scan. Specify a group name.", bootstyle.WARNING)
+            self.update_status_message_and_style("Cannot scan: specify a group name.", bootstyle.WARNING)
             return
 
         self.update_status_message_and_style("Scanning....", bootstyle.INFO)
@@ -331,7 +331,7 @@ class ScannerApp(guikit.AsyncWindow):
         def finalize_task(task_coroutine: asyncio.Task) -> None:
             self.background_tasks.discard(task_coroutine)
             self.update_status_message_and_style(
-                f"Scan complete. Found {len(self.scan_db.devices_by_group[group_id])} nodes in {group_id}."
+                f"Scan complete: found {len(self.scan_db.devices_by_group[group_id])} nodes in {group_id}."
                 , bootstyle.SUCCESS,
             )
 
@@ -352,6 +352,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.update_scan_results_table()
         self.update_combobox_values()
         self.update_send_message_button()
+        self.update_status_message_and_style("Waiting for scan", bootstyle.SUCCESS)
 
     def send_message(self) -> None:
         """Send the message text to the node specified by the user."""
