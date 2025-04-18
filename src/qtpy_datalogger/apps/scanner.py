@@ -4,6 +4,7 @@ import asyncio
 import logging
 import pathlib
 import tkinter as tk
+import webbrowser
 from enum import StrEnum
 from tkinter import font
 
@@ -13,7 +14,7 @@ import ttkbootstrap.tableview as ttk_tableview
 from ttkbootstrap import constants as bootstyle
 
 from qtpy_datalogger import discovery, guikit
-from qtpy_datalogger.datatypes import Default
+from qtpy_datalogger.datatypes import Default, Links
 
 logger = logging.getLogger(pathlib.Path(__file__).stem)
 
@@ -356,6 +357,7 @@ class ScannerApp(guikit.AsyncWindow):
 
     def launch_help(self) -> None:
         """Open online help for the app."""
+        webbrowser.open_new_tab(Links.Homepage)
 
 
 if __name__ == "__main__":
