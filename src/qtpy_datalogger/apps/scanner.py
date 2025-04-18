@@ -144,6 +144,7 @@ class ScannerApp(guikit.AsyncWindow):
             stripecolor=(colors.light, None),  # pyright: ignore reportAttributeAccessIssue -- the type hint for bootstrap omits its own additions
         )
         self.scan_results_table.view.configure(selectmode=tk.BROWSE)
+        self.scan_results_table.hbar.pack_forget()
         self.scan_results_table.view.bind("<<TreeviewSelect>>", self.on_row_selected)
         self.scan_results_table.view.unbind("<Double-Button-1>")  # Disable header-row handlers added by ttkbootstrap
         self.scan_results_table.view.unbind("<Button-1>")
@@ -159,7 +160,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.status_message = ttk.Label(selection_status_frame, borderwidth=0, relief=tk.SOLID)
         self.status_message.pack(side=tk.LEFT, expand=True, fill=tk.X)
         self.selected_node_combobox.pack(side=tk.LEFT, padx=(8, 0))
-        selection_status_frame.pack(side=tk.TOP, pady=(8, 0), expand=True, fill=tk.X)
+        selection_status_frame.pack(side=tk.TOP, expand=True, fill=tk.X)
 
         message_frame = ttk.Frame(comms_frame, name="message_frame")
         self.message_input = ttk.Entry(message_frame)
@@ -170,7 +171,7 @@ class ScannerApp(guikit.AsyncWindow):
 
         self.message_log = ttk.ScrolledText(comms_frame, state="disabled", wrap="word")
         self.message_log.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
-        comms_frame.grid(column=0, row=3, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
+        comms_frame.grid(column=0, row=3, sticky=(tk.N, tk.E, tk.W))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
         # App commands
         action_frame = ttk.Frame(main, name="action_frame", borderwidth=0, relief=tk.SOLID)
