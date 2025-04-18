@@ -41,7 +41,10 @@ class ScannerData:
         """
         known_group_devices = self.devices_by_group.get(group_id, {})
         known_group_node_serial_numbers = set(known_group_devices.keys())
-        discovered_node_serial_numbers_in_group = set(discovered_devices.keys())
+        discovered_node_serial_numbers_in_group = {
+            serial_number
+            for serial_number, device in discovered_devices.items() if device.mqtt_group_id == group_id
+        }
 
         # Identify new devices
         new_serial_numbers = discovered_node_serial_numbers_in_group - known_group_node_serial_numbers
@@ -120,6 +123,7 @@ class ScannerApp(guikit.AsyncWindow):
             {"text": "Device", "stretch": True, "width": 220},
             {"text": "Snsr Version", "stretch": False, "width": 100},
             {"text": "UART Port", "stretch": False, "width": 70},
+            {"text": "Serial Number", "stretch": False, "width": 0},
         ]
         self.scan_results_table = ttk_tableview.Tableview(
             results_frame,
@@ -197,7 +201,7 @@ class ScannerApp(guikit.AsyncWindow):
 
         new_selected_index = selected_rows[0]
         selected_row = self.scan_results_table.iidmap[new_selected_index]
-        selected_node = selected_row.values[1]
+        selected_node = selected_row.values[-1]
         if selected_node == self.selected_node:
             return
 
@@ -217,7 +221,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.scan_results_table.view.selection_remove(selected)
         if selected_node != Constants.NoneChoice:
             index_for_node = {
-                row.values[1]: index
+                row.values[-1]: index
                 for index, row in self.scan_results_table.iidmap.items()
             }
             self.scan_results_table.view.selection_add(index_for_node[selected_node])
@@ -239,9 +243,9 @@ class ScannerApp(guikit.AsyncWindow):
         new_selection = Constants.NoneChoice
         rows = []
         for group_id, nodes_by_serial_number in self.scan_db.devices_by_group.items():
-            for _, node_info in nodes_by_serial_number.items():
-                if node_info.node_id == self.selected_node:
-                    new_selection = self.selected_node
+            for serial_number, node_info in nodes_by_serial_number.items():
+                if serial_number == self.selected_node:
+                    new_selection = self.selected_node  # Retain the original selection
                 rows.append(
                     (
                         group_id,
@@ -249,6 +253,7 @@ class ScannerApp(guikit.AsyncWindow):
                         node_info.device_description,
                         node_info.snsr_version,
                         node_info.com_port,
+                        node_info.serial_number,
                     )
                 )
         self.scan_results_table.delete_rows()
