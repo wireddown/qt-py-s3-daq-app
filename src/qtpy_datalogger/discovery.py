@@ -48,6 +48,7 @@ class QTPyDevice:
     - serial_number:  -- The serial number for the QT Py device
 
     When the device has qtpy_datalogger installed, these details are available:
+    - mqtt_group_id -- The MQTT group that the QT Py device joins
     - snsr_version -- The version of qtpy_datalogger installed on the QT Py device
 
     When the device is connected with USB, these details are available:
@@ -67,6 +68,7 @@ class QTPyDevice:
     drive_label: str
     drive_root: str
     ip_address: str
+    mqtt_group_id: str
     node_id: str
     python_implementation: str
     serial_number: str
@@ -183,6 +185,7 @@ def _process_query_results(
                     drive_label=drive_info[DetailKey.drive_label],
                     drive_root=drive_info[DetailKey.drive_root],
                     ip_address="",
+                    mqtt_group_id=mqtt_group,
                     node_id="",
                     python_implementation=python_implementation,
                     serial_number=serial_number,
@@ -206,6 +209,7 @@ def _process_query_results(
             drive_label="",
             drive_root="",
             ip_address=mqtt_only_device[DetailKey.ip_address],
+            mqtt_group_id=mqtt_only_device[DetailKey.mqtt_group_id],
             node_id=mqtt_only_device[DetailKey.node_id],
             python_implementation=mqtt_only_device[DetailKey.python_implementation],
             serial_number=serial_number,

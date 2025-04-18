@@ -132,6 +132,7 @@ class QTPyController:
         Returned entries, grouped by serial_number:
         - device_description
         - ip_address
+        - mqtt_group_id
         - node_id
         - python_implementation
         - serial_number
@@ -147,6 +148,7 @@ class QTPyController:
             node.descriptor.serial_number: {
                 DetailKey.device_description: CaptionCorrections.get_corrected(node.descriptor.hardware_name),
                 DetailKey.ip_address: node.descriptor.ip_address,
+                DetailKey.mqtt_group_id: self.group_id,
                 DetailKey.node_id: node.descriptor.node_id,
                 DetailKey.python_implementation: node.descriptor.python_implementation,
                 DetailKey.serial_number: node.descriptor.serial_number,
@@ -338,6 +340,7 @@ def query_nodes_from_mqtt(group_id: str) -> dict[str, dict[DetailKey, str]]:
     Returned entries, grouped by serial_number:
     - device_description
     - ip_address
+    - mqtt_group_id
     - node_id
     - python_implementation
     - serial_number
