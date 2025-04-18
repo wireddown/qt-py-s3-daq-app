@@ -114,6 +114,7 @@ class ScannerApp(guikit.AsyncWindow):
         group_input_label = ttk.Label(scan_frame, text="Group name")
         self.group_input = ttk.Entry(scan_frame)
         self.group_input.insert(0, Default.MqttGroup)
+        self.group_input.bind("<KeyPress>", self.run_command_on_enter)
         scan_button = ttk.Button(scan_frame, command=self.start_scan, text="Scan group")
         clear_button = ttk.Button(
             scan_frame,
@@ -155,7 +156,7 @@ class ScannerApp(guikit.AsyncWindow):
         # Node communication
         comms_frame = ttk.Frame(main, name="comms_frame", borderwidth=0, relief=tk.SOLID)
         selection_status_frame = ttk.Frame(comms_frame, name="selection_frame", borderwidth=0, relief=tk.SOLID)
-        self.selected_node_combobox = ttk.Combobox(selection_status_frame, width=20, state="readonly")
+        self.selected_node_combobox = ttk.Combobox(selection_status_frame, width=20, state="readonly", style=bootstyle.PRIMARY)
         self.selected_node_combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected)
         self.status_message = ttk.Label(selection_status_frame, borderwidth=0, relief=tk.SOLID)
         self.status_message.pack(side=tk.LEFT, expand=True, fill=tk.X)
@@ -164,6 +165,7 @@ class ScannerApp(guikit.AsyncWindow):
 
         message_frame = ttk.Frame(comms_frame, name="message_frame")
         self.message_input = ttk.Entry(message_frame)
+        self.message_input.bind("<KeyPress>", self.run_command_on_enter)
         self.send_message_button = ttk.Button(message_frame, command=self.send_message, text="Send message")
         self.message_input.pack(side=tk.LEFT, expand=True, fill=tk.X)
         self.send_message_button.pack(side=tk.LEFT, padx=(8, 0))
@@ -207,6 +209,18 @@ class ScannerApp(guikit.AsyncWindow):
 
     def on_closing(self) -> None:
         """Clean up before exiting."""
+
+    def run_command_on_enter(self, event_args: tk.Event) -> None:
+        """Handle a key press for an entry widget."""
+        key_character = event_args.char
+        if key_character not in ["\r"]:
+            return
+        if key_character == "\r":
+            parent = event_args.widget.winfo_parent()
+            if "scan_frame" in parent:
+                self.start_scan()
+            elif "message_frame" in parent:
+                self.send_message()
 
     def on_row_selected(self, event_args: tk.Event) -> None:
         """Handle the user selecting a row in the results table."""
