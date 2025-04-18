@@ -152,9 +152,13 @@ class ScannerApp(guikit.AsyncWindow):
 
         # Node communication
         comms_frame = ttk.Frame(main, name="comms_frame", borderwidth=0, relief=tk.SOLID)
-        self.selected_node_combobox = ttk.Combobox(comms_frame, width=20, state="readonly")
+        selection_status_frame = ttk.Frame(comms_frame, name="selection_frame", borderwidth=0, relief=tk.SOLID)
+        self.selected_node_combobox = ttk.Combobox(selection_status_frame, width=20, state="readonly")
         self.selected_node_combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected)
-        self.selected_node_combobox.pack(side=tk.TOP, anchor=tk.W)
+        self.status_message = ttk.Label(selection_status_frame, borderwidth=0, relief=tk.SOLID)
+        self.status_message.pack(side=tk.LEFT, expand=True, fill=tk.X)
+        self.selected_node_combobox.pack(side=tk.LEFT, padx=(8, 0))
+        selection_status_frame.pack(side=tk.TOP, pady=(8, 0), expand=True, fill=tk.X)
 
         message_frame = ttk.Frame(comms_frame, name="message_frame")
         self.message_input = ttk.Entry(message_frame)
@@ -167,14 +171,12 @@ class ScannerApp(guikit.AsyncWindow):
         self.message_log.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
         comms_frame.grid(column=0, row=3, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
-        # App commands and status
+        # App commands
         action_frame = ttk.Frame(main, name="action_frame", borderwidth=0, relief=tk.SOLID)
         exit_button = ttk.Button(action_frame, text="Quit", style=bootstyle.DANGER, command=self.exit)
         help_button = ttk.Button(action_frame, text="Online help", style=bootstyle.OUTLINE, command=self.launch_help)
-        self.status_message = ttk.Label(action_frame)
         exit_button.pack(side=tk.RIGHT, padx=(8, 0))
         help_button.pack(side=tk.RIGHT, padx=(8, 0))
-        self.status_message.pack(side=tk.RIGHT, padx=8)
         action_frame.grid(column=0, row=5, sticky=(tk.S, tk.E, tk.W), pady=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
         # Finalize layout
