@@ -175,7 +175,7 @@ def _process_query_results(
 
             if port_serial_number and port_serial_number == drive_serial_number:
                 serial_number = port_serial_number.lower()
-                python_implementation, snsr_version = _query_node_info_from_drive(drive_info[DetailKey.drive_root])
+                python_implementation, snsr_version, mqtt_group = _query_node_info_from_drive(drive_info[DetailKey.drive_root])
                 qtpy_devices[serial_number] = QTPyDevice(
                     com_id=port_info[DetailKey.com_id],
                     com_port=port_info[DetailKey.com_port],
@@ -504,23 +504,30 @@ def _query_volumes_from_wmi() -> dict[str, dict[DetailKey, str]]:
     return discovered_storage_volumes
 
 
-def _query_node_info_from_drive(drive_root: str) -> tuple[str, str]:
-    """Return a tuple of (python_implementation, snsr_version) from the candidate device as drive_root."""
+def _query_node_info_from_drive(drive_root: str) -> tuple[str, str, str]:
+    """Return a tuple of (python_implementation, snsr_version, mqtt_group_id) from the candidate device as drive_root."""
     as_path = pathlib.Path(drive_root)
     boot_out_info = _parse_boot_out_file(as_path)
     if not boot_out_info:
         # If there isn't a boot_out.txt file on the device, it's not a CircuitPython device
-        return ("", "")
+        return ("", "", "")
 
     python_implementation = boot_out_info[DetailKey.python_implementation]
     notice_file = as_path.joinpath(SnsrPath.notice)
     if not notice_file.exists():
         # If there isn't a notice.toml file on the device, it's not a qtpy_datalogger sensor_node
-        return (python_implementation, "")
+        return (python_implementation, "", "")
 
     notice_contents = toml.load(notice_file)
     snsr_notice = SnsrNotice(**notice_contents)
-    return (python_implementation, snsr_notice.version)
+    settings_file = as_path.joinpath(SnsrPath.settings)
+    if not settings_file.exists():
+        # If there isn't a settings file on the device, it won't have an MQTT group_id
+        return (python_implementation, snsr_notice.version, "")
+
+    settings_contents = toml.load(settings_file)
+    mqtt_group = settings_contents.get("QTPY_NODE_GROUP", "")
+    return (python_implementation, snsr_notice.version, mqtt_group)
 
 
 def _parse_boot_out_file(main_folder: pathlib.Path) -> dict[DetailKey, str]:
