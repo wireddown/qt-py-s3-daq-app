@@ -220,25 +220,37 @@ class ScannerApp(guikit.AsyncWindow):
 
     def on_combobox_selected(self, event_args: tk.Event) -> None:
         """Handle the user selecting a new entry in the combobox."""
-        selected_node = event_args.widget.get()
-        self.on_node_selected(selected_node)
+        selected_value = event_args.widget.get()
+        selected_serial_number = Constants.NoneChoice
+        for _, devices_in_group in self.scan_db.devices_by_group.items():
+            for serial_number, device_info in devices_in_group.items():
+                if selected_value == device_info.node_id:
+                    selected_serial_number = serial_number
+                    break
+                if selected_value == device_info.com_port:
+                    selected_serial_number = serial_number
+                    break
+        self.on_node_selected(selected_serial_number)
 
-    def on_node_selected(self, selected_node: str) -> None:
+    def on_node_selected(self, node_serial_number: str) -> None:
         """Update the UI state for the selected node."""
-        self.selected_node = selected_node
+        self.selected_node = node_serial_number
 
         # Always clear table selection
         selected = self.scan_results_table.view.selection()
         self.scan_results_table.view.selection_remove(selected)
-        if selected_node != Constants.NoneChoice:
+        if node_serial_number != Constants.NoneChoice:
             index_for_node = {
                 row.values[-1]: index
                 for index, row in self.scan_results_table.iidmap.items()
             }
-            self.scan_results_table.view.selection_add(index_for_node[selected_node])
+            self.scan_results_table.view.selection_add(index_for_node[node_serial_number])
 
-        # Update the selected combobox entry
-        self.selected_node_combobox.set(selected_node)
+        selected_device = self.scan_db.get_node(node_serial_number)
+        selected_resource_name = Constants.NoneChoice
+        if selected_device:
+            selected_resource_name = selected_device.node_id if selected_device.node_id else selected_device.com_port
+        self.selected_node_combobox.set(selected_resource_name)
         self.selected_node_combobox.configure(state="readonly")
         self.selected_node_combobox.selection_clear()
 
