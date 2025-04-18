@@ -370,6 +370,13 @@ class ScannerApp(guikit.AsyncWindow):
 
     def send_message(self) -> None:
         """Send the message text to the node specified by the user."""
+        message = self.message_input.get()
+        if not message:
+            self.update_status_message_and_style("Cannot send: enter a message.", bootstyle.WARNING)
+            return
+        if self.selected_node in [Constants.NoneChoice, ""]:
+            self.update_status_message_and_style("Cannot send: select a node.", bootstyle.WARNING)
+            return
 
     def launch_help(self) -> None:
         """Open online help for the app."""
