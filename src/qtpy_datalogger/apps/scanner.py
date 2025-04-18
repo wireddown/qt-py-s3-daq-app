@@ -224,12 +224,8 @@ class ScannerApp(guikit.AsyncWindow):
         selected_serial_number = Constants.NoneChoice
         for _, devices_in_group in self.scan_db.devices_by_group.items():
             for serial_number, device_info in devices_in_group.items():
-                if selected_value == device_info.node_id:
+                if selected_value in [device_info.node_id, device_info.com_port]:
                     selected_serial_number = serial_number
-                    break
-                if selected_value == device_info.com_port:
-                    selected_serial_number = serial_number
-                    break
         self.on_node_selected(selected_serial_number)
 
     def on_node_selected(self, node_serial_number: str) -> None:
@@ -246,8 +242,8 @@ class ScannerApp(guikit.AsyncWindow):
             }
             self.scan_results_table.view.selection_add(index_for_node[node_serial_number])
 
-        selected_device = self.scan_db.get_node(node_serial_number)
         selected_resource_name = Constants.NoneChoice
+        selected_device = self.scan_db.get_node(node_serial_number)
         if selected_device:
             selected_resource_name = selected_device.node_id if selected_device.node_id else selected_device.com_port
         self.selected_node_combobox.set(selected_resource_name)
@@ -255,7 +251,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.selected_node_combobox.selection_clear()
 
         self.update_send_message_button()
-        self.update_status_message_and_style(f"Selected {selected_node}", bootstyle.SUCCESS)
+        self.update_status_message_and_style(f"Selected {selected_resource_name}", bootstyle.SUCCESS)
 
     def update_status_message_and_style(self, new_message: str, new_style: str) -> None:
         """Set the status message to a new string and style."""
