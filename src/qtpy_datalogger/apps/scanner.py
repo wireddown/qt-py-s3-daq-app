@@ -62,11 +62,14 @@ class ScannerData:
 
         # Apply changes
         for new_serial_number in new_serial_numbers:
-            device_info = discovered_devices[new_serial_number]
-            known_group_devices[device_info.serial_number] = device_info
+            new_device_info = discovered_devices[new_serial_number]
+            known_group_devices[new_device_info.serial_number] = new_device_info
         for offline_serial_number in offline_serial_numbers:
-            device_info = known_group_devices[offline_serial_number]
-            _ = known_group_devices.pop(device_info.serial_number)
+            offline_device_info = known_group_devices[offline_serial_number]
+            _ = known_group_devices.pop(offline_device_info.serial_number)
+        for refreshed_serial_number in discovered_node_serial_numbers_in_group - new_serial_numbers:
+            refreshed_device_info = discovered_devices[refreshed_serial_number]
+            known_group_devices[refreshed_device_info.serial_number] = refreshed_device_info
         self.devices_by_group[group_id] = known_group_devices
 
 
