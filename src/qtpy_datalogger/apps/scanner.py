@@ -156,10 +156,12 @@ class ScannerApp(guikit.AsyncWindow):
         # Node communication
         comms_frame = ttk.Frame(main, name="comms_frame", borderwidth=0, relief=tk.SOLID)
         selection_status_frame = ttk.Frame(comms_frame, name="selection_frame", borderwidth=0, relief=tk.SOLID)
+        self.status_icon_label = ttk.Label(selection_status_frame)
+        self.status_message = ttk.Label(selection_status_frame, borderwidth=0, relief=tk.SOLID)
         self.selected_node_combobox = ttk.Combobox(selection_status_frame, width=20, state="readonly", style=bootstyle.PRIMARY)
         self.selected_node_combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected)
-        self.status_message = ttk.Label(selection_status_frame, borderwidth=0, relief=tk.SOLID)
-        self.status_message.pack(side=tk.LEFT, expand=True, fill=tk.X)
+        self.status_icon_label.pack(side=tk.LEFT)
+        self.status_message.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(8, 0))
         self.selected_node_combobox.pack(side=tk.LEFT, padx=(8, 0))
         selection_status_frame.pack(side=tk.TOP, expand=True, fill=tk.X)
 
@@ -273,6 +275,10 @@ class ScannerApp(guikit.AsyncWindow):
 
     def update_status_message_and_style(self, new_message: str, new_style: str) -> None:
         """Set the status message to a new string and style."""
+        status_emoji = ttk_icons.Emoji.get("white heavy check mark")
+        if new_style in [bootstyle.WARNING, bootstyle.DANGER]:
+            status_emoji = ttk_icons.Emoji.get("cross mark")
+        self.status_icon_label.configure(text=status_emoji, bootstyle=new_style)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
         self.status_message.configure(text=new_message, bootstyle=new_style)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
 
     def update_scan_results_table(self) -> None:
