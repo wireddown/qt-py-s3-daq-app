@@ -180,7 +180,6 @@ class ScannerApp(guikit.AsyncWindow):
 
         # App commands
         action_frame = ttk.Frame(main, name="action_frame", borderwidth=0, relief=tk.SOLID)
-        exit_button = ttk.Button(action_frame, text="Quit", style=bootstyle.DANGER, command=self.exit)
         help_button = ttk.Button(action_frame, text="Online help", style=bootstyle.OUTLINE, command=self.launch_help)
         exit_button.pack(side=tk.RIGHT, padx=(8, 0))
         help_button.pack(side=tk.RIGHT, padx=(8, 0))
