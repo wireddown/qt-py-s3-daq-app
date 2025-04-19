@@ -175,6 +175,9 @@ class ScannerApp(guikit.AsyncWindow):
         message_frame.pack(side=tk.TOP, pady=(8, 0), expand=True, fill=tk.X, anchor=tk.N)
 
         self.message_log = ttk.ScrolledText(comms_frame, state="disabled", wrap="word")
+        # Add handlers for 'Ctrl-A' / select all
+        self.message_log.select_range = self.select_message_log_range  # pyright: ignore reportAttributeAccessIssue -- we are adding this at run time
+        self.message_log.icursor = self.set_message_log_cursor  # pyright: ignore reportAttributeAccessIssue -- we are adding this at run time
         self.message_log.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
         comms_frame.grid(column=0, row=3, sticky=(tk.N, tk.E, tk.W))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
@@ -467,6 +470,18 @@ class ScannerApp(guikit.AsyncWindow):
         self.message_log.configure(state="disabled")
         self.update_status_message_and_style("Cleared message log.", bootstyle.SUCCESS)
 
+    def select_message_log_range(self, start_index: int | str, end_index: int | str) -> None:
+        """Select the text in the specified range."""
+        # Assume select all
+        self.message_log.selection_clear()
+        if start_index == 0:
+            start_index = "1.0"
+        self.message_log.tag_add("sel", start_index, end_index)
+
+    def set_message_log_cursor(self, index: int | str) -> None:
+        """Move the cursor to the specified index."""
+        # Assume select all
+        self.message_log.mark_set("insert", index)
 
 if __name__ == "__main__":
     logger.debug(f"Launching {__package__}")
