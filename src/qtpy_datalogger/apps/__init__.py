@@ -61,8 +61,12 @@ def handle_run(behavior: Behavior, app_name: str) -> None:
 
     if behavior == Behavior.List:
         app_names = Catalog.get_entries()
-        logger.info("Available QT Py datalogger apps")
-        _ = [logger.info(f"- {name}") for name in app_names]
+        logger.info("Available QT Py datalogger apps   * default")
+        for name in app_names:
+            line = f"- {name}"
+            if name == Catalog.default_app.name:
+                line = f"* {name}"
+            logger.info(line)
         raise SystemExit(ExitCode.Success)
 
     if behavior == Behavior.Module:
