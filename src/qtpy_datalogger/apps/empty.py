@@ -1,4 +1,4 @@
-"""An app that scans for QT Py sensor_nodes."""
+"""An empty template for a qtpy-datalogger app."""
 
 import asyncio
 import logging
