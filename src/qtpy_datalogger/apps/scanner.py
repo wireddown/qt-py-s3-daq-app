@@ -405,7 +405,7 @@ class ScannerApp(guikit.AsyncWindow):
             return
         qtpy_resource = self.selected_node_combobox.get()
 
-        async def send_message_and_get_response() -> None:
+        async def send_message_and_get_response() -> tuple[str, str]:
                 controller = network.QTPyController(
                     broker_host="localhost",
                     group_id=qtpy_device.mqtt_group_id,
@@ -423,6 +423,8 @@ class ScannerApp(guikit.AsyncWindow):
                 self.append_text_to_log(f"{sent_emoji} {message}\n")
                 sent_action = await controller.send_action(qtpy_device.node_id, command_name, custom_parameters)
                 response_complete = False
+                new_status_message = "Communication successful."
+                new_status_style = bootstyle.SUCCESS
                 while not response_complete:
                     try:
                         response_parameters, sender_information = await controller.get_matching_result(qtpy_device.node_id, sent_action)
@@ -434,16 +436,16 @@ class ScannerApp(guikit.AsyncWindow):
                         self.append_text_to_log(f"{received_emoji} {response}\n")
                         self.append_text_to_log(f"{status_emoji} with {used_bytes} bytes used, {free_bytes} bytes remaining, at temperature {cpu_degc} degC\n")
                     except TimeoutError:
-                        self.update_status_message_and_style(
-                            "Node did not respond! Is it online or correctly spelled?",
-                            bootstyle.WARNING
-                        )
+                        new_status_message = f"Node did not respond! Is it online? Scan group {qtpy_device.mqtt_group_id} to verify."
+                        new_status_style = bootstyle.WARNING
                         break
                 await controller.disconnect()
+                return new_status_message, new_status_style
 
         def finalize_task(task_coroutine: asyncio.Task) -> None:
             self.background_tasks.discard(task_coroutine)
-            self.update_status_message_and_style("Communication successful.", bootstyle.SUCCESS)
+            new_status, new_style = task_coroutine.result()
+            self.update_status_message_and_style(new_status, new_style)
 
         if qtpy_resource == qtpy_device.node_id:
             communicate_task = asyncio.create_task(send_message_and_get_response())
