@@ -92,8 +92,8 @@ class CaptionCorrections:
 class SnsrPath(enum.StrEnum):
     """Reserved path names for qtpy_datalogger sensor_node bundles."""
 
-    root = "snsr"
     notice = "snsr/notice.toml"
+    root = "snsr"
     settings = "settings.toml"
 
 
