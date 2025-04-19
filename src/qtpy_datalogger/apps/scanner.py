@@ -334,6 +334,13 @@ class ScannerApp(guikit.AsyncWindow):
         else:
             self.send_message_button.configure(state=tk.NORMAL)
 
+    def append_text_to_log(self, line: str) -> None:
+        """Add the specified text to the end of the log."""
+        self.message_log.configure(state="normal")
+        self.message_log.insert("end", line)
+        self.message_log.configure(state="disabled")
+        self.message_log.see("end")
+
     def start_scan(self) -> None:
         """Start a scan for QT Py sensor_nodes in the group specified by the user."""
         group_id = self.group_input.get()
