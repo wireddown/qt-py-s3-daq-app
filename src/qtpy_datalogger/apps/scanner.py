@@ -304,6 +304,8 @@ class ScannerApp(guikit.AsyncWindow):
         for row in rows:
             self.scan_results_table.insert_row("end", row)
         self.scan_results_table.load_table_data()
+        if len(rows) == 1:
+            new_selection = rows[0][-1]
         self.on_node_selected(new_selection)
 
     def update_combobox_values(self) -> None:
