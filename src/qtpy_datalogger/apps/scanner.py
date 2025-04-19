@@ -200,6 +200,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
 
+        self.group_input.after(100, self.group_input.focus)
         self.update_scan_results_table()
         self.update_combobox_values()
         self.update_send_message_button()
@@ -307,6 +308,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.scan_results_table.load_table_data()
         if len(rows) == 1:
             new_selection = rows[0][-1]
+            self.message_input.focus()
         self.on_node_selected(new_selection)
 
     def update_combobox_values(self) -> None:
