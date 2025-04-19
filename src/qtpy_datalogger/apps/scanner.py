@@ -222,6 +222,7 @@ class ScannerApp(guikit.AsyncWindow):
                 self.start_scan()
             elif "message_frame" in parent:
                 self.send_message()
+                self.message_input.delete(0, "end")
 
     def on_row_selected(self, event_args: tk.Event) -> None:
         """Handle the user selecting a row in the results table."""
