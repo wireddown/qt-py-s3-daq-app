@@ -77,8 +77,8 @@ def cli(
 
 
 @cli.command(
-    epilog=f"Help and home page: {DEFAULT_HELP_URL}",
     short_help="Connect to a serial port or MQTT sensor_node.",
+    epilog=f"Help and home page: {DEFAULT_HELP_URL}",
 )
 @click.option(
     "--auto-connect",
@@ -94,7 +94,7 @@ def cli(
     help="Behavior: List discovered devices and exit.",
 )
 @click.option(
-    "-n",
+    "-g",
     "--group",
     default=Default.MqttGroup,
     metavar="GROUP-ID",
