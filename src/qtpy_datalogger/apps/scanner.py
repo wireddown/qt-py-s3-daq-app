@@ -3,7 +3,9 @@
 import asyncio
 import logging
 import pathlib
+import socket
 import tkinter as tk
+import uuid
 import webbrowser
 from enum import StrEnum
 from tkinter import font
@@ -13,7 +15,7 @@ import ttkbootstrap.icons as ttk_icons
 import ttkbootstrap.tableview as ttk_tableview
 from ttkbootstrap import constants as bootstyle
 
-from qtpy_datalogger import discovery, guikit
+from qtpy_datalogger import discovery, guikit, network
 from qtpy_datalogger.datatypes import Default, Links
 
 logger = logging.getLogger(pathlib.Path(__file__).stem)
@@ -389,6 +391,59 @@ class ScannerApp(guikit.AsyncWindow):
         if self.selected_node in [Constants.NoneChoice, ""]:
             self.update_status_message_and_style("Cannot send: select a node.", bootstyle.WARNING)
             return
+
+        self.update_status_message_and_style("Sending....", bootstyle.INFO)
+        qtpy_device = self.scan_db.get_node(self.selected_node)
+        if not qtpy_device:
+            return
+        qtpy_resource = self.selected_node_combobox.get()
+
+        async def send_message_and_get_response() -> None:
+                controller = network.QTPyController(
+                    broker_host="localhost",
+                    group_id=qtpy_device.mqtt_group_id,
+                    mac_address=hex(uuid.getnode())[2:],
+                    ip_address=socket.gethostbyname(socket.gethostname()),
+                )
+                await controller.connect_and_subscribe()
+                command_name = "custom"
+                custom_parameters = {
+                    "input": message,
+                }
+                sent_emoji = ttk_icons.Emoji.get("black large square")
+                received_emoji = ttk_icons.Emoji.get("leftwards black arrow")
+                status_emoji = ttk_icons.Emoji.get("white large square")
+                self.append_text_to_log(f"{sent_emoji} {message}\n")
+                sent_action = await controller.send_action(qtpy_device.node_id, command_name, custom_parameters)
+                response_complete = False
+                while not response_complete:
+                    try:
+                        response_parameters, sender_information = await controller.get_matching_result(qtpy_device.node_id, sent_action)
+                        response_complete = response_parameters["complete"]
+                        response = response_parameters["output"]
+                        used_bytes = sender_information.status.used_memory
+                        free_bytes = sender_information.status.free_memory
+                        cpu_degc = sender_information.status.cpu_temperature
+                        self.append_text_to_log(f"{received_emoji} {response}\n")
+                        self.append_text_to_log(f"{status_emoji} with {used_bytes} bytes used, {free_bytes} bytes remaining, at temperature {cpu_degc} degC\n")
+                    except TimeoutError:
+                        self.update_status_message_and_style(
+                            "Node did not respond! Is it online or correctly spelled?",
+                            bootstyle.WARNING
+                        )
+                        break
+                await controller.disconnect()
+
+        def finalize_task(task_coroutine: asyncio.Task) -> None:
+            self.background_tasks.discard(task_coroutine)
+            self.update_status_message_and_style("Communication successful.", bootstyle.SUCCESS)
+
+        if qtpy_resource == qtpy_device.node_id:
+            communicate_task = asyncio.create_task(send_message_and_get_response())
+            self.background_tasks.add(communicate_task)
+            communicate_task.add_done_callback(finalize_task)
+        else:
+            self.update_status_message_and_style("Serial communication is not implemented", bootstyle.WARNING)
 
     def launch_help(self) -> None:
         """Open online help for the app."""
