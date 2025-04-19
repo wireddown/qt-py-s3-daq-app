@@ -204,7 +204,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.update_scan_results_table()
         self.update_combobox_values()
         self.update_send_message_button()
-        self.update_status_message_and_style("Waiting for scan", bootstyle.SUCCESS)
+        self.update_status_message_and_style("Waiting for scan.", bootstyle.SUCCESS)
 
     async def on_loop(self) -> None:
         """Update the UI with new information."""
@@ -270,7 +270,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.selected_node_combobox.selection_clear()
 
         self.update_send_message_button()
-        self.update_status_message_and_style(f"Selected {selected_resource_name}", bootstyle.SUCCESS)
+        self.update_status_message_and_style(f"Selected {selected_resource_name}.", bootstyle.SUCCESS)
 
     def update_status_message_and_style(self, new_message: str, new_style: str) -> None:
         """Set the status message to a new string and style."""
@@ -381,7 +381,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.update_scan_results_table()
         self.update_combobox_values()
         self.update_send_message_button()
-        self.update_status_message_and_style("Waiting for scan", bootstyle.SUCCESS)
+        self.update_status_message_and_style("Waiting for scan.", bootstyle.SUCCESS)
 
     def send_message(self) -> None:
         """Send the message text to the node specified by the user."""
@@ -444,7 +444,7 @@ class ScannerApp(guikit.AsyncWindow):
             self.background_tasks.add(communicate_task)
             communicate_task.add_done_callback(finalize_task)
         else:
-            self.update_status_message_and_style("Serial communication is not implemented", bootstyle.WARNING)
+            self.update_status_message_and_style("Serial communication is not implemented.", bootstyle.WARNING)
 
     def launch_help(self) -> None:
         """Open online help for the app."""
