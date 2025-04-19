@@ -63,11 +63,10 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
         _ = [logger.info(line) for line in self_description]
         raise SystemExit(ExitCode.Success)
 
-    communication_transport = ConnectionTransport.UART_Serial
     if not root:
         qtpy_device, communication_transport = discovery.discover_and_select_qtpy(
             Default.MqttGroup,
-            communication_transport,
+            ConnectionTransport.UART_Serial,
         )
         if not qtpy_device:
             logger.error("No QT Py devices found!")
