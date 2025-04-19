@@ -184,8 +184,18 @@ class ScannerApp(guikit.AsyncWindow):
         # App commands
         action_frame = ttk.Frame(main, name="action_frame", borderwidth=0, relief=tk.SOLID)
         help_button = ttk.Button(action_frame, text="Online help", style=bootstyle.OUTLINE, command=self.launch_help)
-        copy_log_button = ttk.Button(action_frame, text="Copy all", style=(bootstyle.PRIMARY, bootstyle.OUTLINE), command=self.copy_log)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
-        clear_log_button = ttk.Button(action_frame, text="Clear all", style=(bootstyle.WARNING, bootstyle.OUTLINE), command=self.clear_log)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
+        copy_log_button = ttk.Button(
+            action_frame,
+            text="Copy all",
+            style=(bootstyle.PRIMARY, bootstyle.OUTLINE),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
+            command=self.copy_log,
+        )
+        clear_log_button = ttk.Button(
+            action_frame,
+            text="Clear all",
+            style=(bootstyle.WARNING, bootstyle.OUTLINE),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
+            command=self.clear_log,
+        )
         help_button.pack(side=tk.RIGHT, padx=(8, 0))
         copy_log_button.pack(side=tk.LEFT)
         clear_log_button.pack(side=tk.LEFT, padx=(8, 0))
@@ -406,41 +416,47 @@ class ScannerApp(guikit.AsyncWindow):
         qtpy_resource = self.selected_node_combobox.get()
 
         async def send_message_and_get_response() -> tuple[str, str]:
-                controller = network.QTPyController(
-                    broker_host="localhost",
-                    group_id=qtpy_device.mqtt_group_id,
-                    mac_address=hex(uuid.getnode())[2:],
-                    ip_address=socket.gethostbyname(socket.gethostname()),
-                )
-                await controller.connect_and_subscribe()
-                command_name = "custom"
-                custom_parameters = {
-                    "input": message,
-                }
-                sent_emoji = ttk_icons.Emoji.get("black large square")
-                received_emoji = ttk_icons.Emoji.get("leftwards black arrow")
-                status_emoji = ttk_icons.Emoji.get("white large square")
-                self.append_text_to_log(f"{sent_emoji} {message}\n")
-                sent_action = await controller.send_action(qtpy_device.node_id, command_name, custom_parameters)
-                response_complete = False
-                new_status_message = "Communication successful."
-                new_status_style = bootstyle.SUCCESS
-                while not response_complete:
-                    try:
-                        response_parameters, sender_information = await controller.get_matching_result(qtpy_device.node_id, sent_action)
-                        response_complete = response_parameters["complete"]
-                        response = response_parameters["output"]
-                        used_bytes = sender_information.status.used_memory
-                        free_bytes = sender_information.status.free_memory
-                        cpu_degc = sender_information.status.cpu_temperature
-                        self.append_text_to_log(f"{received_emoji} {response}\n")
-                        self.append_text_to_log(f"{status_emoji} with {used_bytes} bytes used, {free_bytes} bytes remaining, at temperature {cpu_degc} degC\n")
-                    except TimeoutError:
-                        new_status_message = f"Node did not respond! Is it online? Scan group {qtpy_device.mqtt_group_id} to verify."
-                        new_status_style = bootstyle.WARNING
-                        break
-                await controller.disconnect()
-                return new_status_message, new_status_style
+            controller = network.QTPyController(
+                broker_host="localhost",
+                group_id=qtpy_device.mqtt_group_id,
+                mac_address=hex(uuid.getnode())[2:],
+                ip_address=socket.gethostbyname(socket.gethostname()),
+            )
+            await controller.connect_and_subscribe()
+            command_name = "custom"
+            custom_parameters = {
+                "input": message,
+            }
+            sent_emoji = ttk_icons.Emoji.get("black large square")
+            received_emoji = ttk_icons.Emoji.get("leftwards black arrow")
+            status_emoji = ttk_icons.Emoji.get("white large square")
+            self.append_text_to_log(f"{sent_emoji} {message}\n")
+            sent_action = await controller.send_action(qtpy_device.node_id, command_name, custom_parameters)
+            response_complete = False
+            new_status_message = "Communication successful."
+            new_status_style = bootstyle.SUCCESS
+            while not response_complete:
+                try:
+                    response_parameters, sender_information = await controller.get_matching_result(
+                        qtpy_device.node_id, sent_action
+                    )
+                    response_complete = response_parameters["complete"]
+                    response = response_parameters["output"]
+                    used_bytes = sender_information.status.used_memory
+                    free_bytes = sender_information.status.free_memory
+                    cpu_degc = sender_information.status.cpu_temperature
+                    self.append_text_to_log(f"{received_emoji} {response}\n")
+                    self.append_text_to_log(
+                        f"{status_emoji} with {used_bytes} bytes used, {free_bytes} bytes remaining, at temperature {cpu_degc} degC\n"
+                    )
+                except TimeoutError:
+                    new_status_message = (
+                        f"Node did not respond! Is it online? Scan group {qtpy_device.mqtt_group_id} to verify."
+                    )
+                    new_status_style = bootstyle.WARNING
+                    break
+            await controller.disconnect()
+            return new_status_message, new_status_style
 
         def finalize_task(task_coroutine: asyncio.Task) -> None:
             self.background_tasks.discard(task_coroutine)
@@ -484,6 +500,7 @@ class ScannerApp(guikit.AsyncWindow):
         """Move the cursor to the specified index."""
         # Assume select all
         self.message_log.mark_set("insert", index)
+
 
 if __name__ == "__main__":
     logger.debug(f"Launching {__package__}")
