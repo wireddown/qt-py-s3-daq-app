@@ -567,13 +567,8 @@ def _format_port_table(qtpy_devices: dict[str, QTPyDevice], group_id: str) -> li
         drive_letter = ""
         if qtpy_device.drive_root:
             drive_letter = f"{qtpy_device.drive_root}\\"
-        if not qtpy_device.node_id:
-            group_id = ""
-        # It is possible to get the group ID from the device drive
-        # This incorrectly uses the Default.MqttGroup for an offline node connected via USB
-        # See https://github.com/wireddown/qt-py-s3-daq-app/issues/60
         lines.append(
-            f"{index + 1:3}:  {qtpy_device.com_port:5}  {drive_letter:5}  {qtpy_device.device_description:35}  {qtpy_device.node_id:20}  {group_id:12}"
+            f"{index + 1:3}:  {qtpy_device.com_port:5}  {drive_letter:5}  {qtpy_device.device_description:35}  {qtpy_device.node_id:20}  {qtpy_device.mqtt_group_id:12}"
         )
     lines.append("")
     return lines
