@@ -181,8 +181,11 @@ class ScannerApp(guikit.AsyncWindow):
         # App commands
         action_frame = ttk.Frame(main, name="action_frame", borderwidth=0, relief=tk.SOLID)
         help_button = ttk.Button(action_frame, text="Online help", style=bootstyle.OUTLINE, command=self.launch_help)
-        exit_button.pack(side=tk.RIGHT, padx=(8, 0))
+        copy_log_button = ttk.Button(action_frame, text="Copy all", style=(bootstyle.PRIMARY, bootstyle.OUTLINE), command=self.copy_log)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
+        clear_log_button = ttk.Button(action_frame, text="Clear all", style=(bootstyle.WARNING, bootstyle.OUTLINE), command=self.clear_log)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         help_button.pack(side=tk.RIGHT, padx=(8, 0))
+        copy_log_button.pack(side=tk.LEFT)
+        clear_log_button.pack(side=tk.LEFT, padx=(8, 0))
         action_frame.grid(column=0, row=5, sticky=(tk.S, tk.E, tk.W), pady=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
         # Finalize layout
@@ -449,6 +452,20 @@ class ScannerApp(guikit.AsyncWindow):
     def launch_help(self) -> None:
         """Open online help for the app."""
         webbrowser.open_new_tab(Links.Homepage)
+
+    def copy_log(self) -> None:
+        """Copy the full log to the clipboard."""
+        all_log = self.message_log.get("1.0", "end")
+        self.root_window.clipboard_clear()
+        self.root_window.clipboard_append(all_log)
+        self.update_status_message_and_style("Copied message log to clipboard.", bootstyle.SUCCESS)
+
+    def clear_log(self) -> None:
+        """Clear the log contents."""
+        self.message_log.configure(state="normal")
+        self.message_log.delete("1.0", "end")
+        self.message_log.configure(state="disabled")
+        self.update_status_message_and_style("Cleared message log.", bootstyle.SUCCESS)
 
 
 if __name__ == "__main__":
