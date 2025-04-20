@@ -367,20 +367,22 @@ class ScannerApp(guikit.AsyncWindow):
 
         self.update_status_message_and_style("Scanning....", bootstyle.INFO)
 
-        async def report_new_scan() -> None:
+        async def new_group_scan() -> dict[str, discovery.QTPyDevice]:
             qtpy_devices_in_group = await discovery.discover_qtpy_devices_async(group_id)
-            self.process_new_scan(group_id, qtpy_devices_in_group)
+            return qtpy_devices_in_group
 
-        def finalize_task(task_coroutine: asyncio.Task) -> None:
-            self.background_tasks.discard(task_coroutine)
+        def finalize_scan(scan_group_task: asyncio.Task) -> None:
+            self.background_tasks.discard(scan_group_task)
+            qtpy_devices_in_group = scan_group_task.result()
+            self.process_new_scan(group_id, qtpy_devices_in_group)
             self.update_status_message_and_style(
                 f"Scan complete: found {len(self.scan_db.devices_by_group[group_id])} nodes in {group_id}.",
                 bootstyle.SUCCESS,
             )
 
-        update_task = asyncio.create_task(report_new_scan())
-        self.background_tasks.add(update_task)
-        update_task.add_done_callback(finalize_task)
+        scan_group_task = asyncio.create_task(new_group_scan())
+        self.background_tasks.add(scan_group_task)
+        scan_group_task.add_done_callback(finalize_scan)
 
     def process_new_scan(self, group_id: str, discovered_devices: dict[str, discovery.QTPyDevice]) -> None:
         """Update the discovered devices with details from a new scan."""
