@@ -174,7 +174,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.send_message_button.pack(side=tk.LEFT, padx=(8, 0))
         message_frame.pack(side=tk.TOP, pady=(8, 0), expand=True, fill=tk.X)
 
-        self.message_log = ttk.ScrolledText(comms_frame, state="disabled", wrap="word")
+        self.message_log = ttk.ScrolledText(comms_frame, state=tk.DISABLED, wrap="word")
         # Add handlers for 'Ctrl-A' / select all
         self.message_log.select_range = self.select_message_log_range  # pyright: ignore reportAttributeAccessIssue -- we are adding this at run time
         self.message_log.icursor = self.set_message_log_cursor  # pyright: ignore reportAttributeAccessIssue -- we are adding this at run time
@@ -216,7 +216,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
 
-        self.group_input.after(100, self.group_input.focus)
+        self.group_input.after(100, self.group_input.focus)  # Give the main window time to appear and focus input on the group name
         self.update_scan_results_table()
         self.update_combobox_values()
         self.update_send_message_button()
@@ -246,7 +246,7 @@ class ScannerApp(guikit.AsyncWindow):
 
         new_selected_index = selected_rows[0]  # selectmode=tk.BROWSE ensures only one row
         selected_row = self.scan_results_table.iidmap[new_selected_index]
-        selected_serial_number = selected_row.values[-1]  # The key column is last
+        selected_serial_number = selected_row.values[-1]  # The key cell is last
         if selected_serial_number == self.selected_node:
             return  # Prevent an infinite event handler loop with on_node_selected()
 
@@ -270,7 +270,10 @@ class ScannerApp(guikit.AsyncWindow):
         selected = self.scan_results_table.view.selection()
         self.scan_results_table.view.selection_remove(selected)
         if node_serial_number != Constants.NoneChoice:
-            index_for_node = {row.values[-1]: index for index, row in self.scan_results_table.iidmap.items()}
+            index_for_node = {
+                row.values[-1]: index  # The key cell is last
+                for index, row in self.scan_results_table.iidmap.items()
+            }
             self.scan_results_table.view.selection_add(index_for_node[node_serial_number])
 
         selected_resource_name = Constants.NoneChoice
@@ -351,9 +354,9 @@ class ScannerApp(guikit.AsyncWindow):
 
     def append_text_to_log(self, line: str) -> None:
         """Add the specified text to the end of the log."""
-        self.message_log.configure(state="normal")
+        self.message_log.configure(state=tk.NORMAL)
         self.message_log.insert("end", line)
-        self.message_log.configure(state="disabled")
+        self.message_log.configure(state=tk.DISABLED)
         self.message_log.see("end")
 
     def start_scan(self) -> None:
@@ -480,9 +483,9 @@ class ScannerApp(guikit.AsyncWindow):
 
     def clear_log(self) -> None:
         """Clear the log contents."""
-        self.message_log.configure(state="normal")
+        self.message_log.configure(state=tk.NORMAL)
         self.message_log.delete("1.0", "end")
-        self.message_log.configure(state="disabled")
+        self.message_log.configure(state=tk.DISABLED)
         self.update_status_message_and_style("Cleared message log.", bootstyle.SUCCESS)
 
     def select_message_log_range(self, start_index: int | str, end_index: int | str) -> None:
