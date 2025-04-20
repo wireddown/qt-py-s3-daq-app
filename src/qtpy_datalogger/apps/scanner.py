@@ -217,8 +217,8 @@ class ScannerApp(guikit.AsyncWindow):
         self.root_window.rowconfigure(0, weight=1)
 
         self.group_input.after(100, self.group_input.focus)  # Give the main window time to appear and focus input on the group name
-        self.update_scan_results_table()
-        self.update_combobox_values()
+        self.refresh_scan_results_table()
+        self.refresh_combobox_values()
         self.update_send_message_button()
         self.update_status_message_and_style("Waiting for scan.", bootstyle.SUCCESS)
 
@@ -295,8 +295,8 @@ class ScannerApp(guikit.AsyncWindow):
         self.status_icon_label.configure(text=status_emoji, bootstyle=new_style)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
         self.status_message.configure(text=new_message, bootstyle=new_style)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
 
-    def update_scan_results_table(self) -> None:
-        """Update the contents of the result stable depending on the app's state."""
+    def refresh_scan_results_table(self) -> None:
+        """Refresh the contents of the result stable depending on the app's state."""
         new_selection = Constants.NoneChoice
         rows = []
         for group_id in sorted(self.scan_db.devices_by_group.keys()):
@@ -327,8 +327,8 @@ class ScannerApp(guikit.AsyncWindow):
             self.message_input.focus()
         self.on_node_selected(new_selection)
 
-    def update_combobox_values(self) -> None:
-        """Enable or disable the combobox and update its choices depending on the app's state."""
+    def refresh_combobox_values(self) -> None:
+        """Enable or disable the combobox and refresh its choices depending on the app's state."""
         none_choice = (Constants.NoneChoice,)
         if self.scan_db.devices_by_group:
             node_resource_names = []
@@ -388,15 +388,15 @@ class ScannerApp(guikit.AsyncWindow):
     def process_new_scan(self, group_id: str, discovered_devices: dict[str, discovery.QTPyDevice]) -> None:
         """Update the discovered devices with details from a new scan."""
         self.scan_db.process_group_scan(group_id, discovered_devices)
-        self.update_scan_results_table()
-        self.update_combobox_values()
+        self.refresh_scan_results_table()
+        self.refresh_combobox_values()
         self.update_send_message_button()
 
     def clear_results(self) -> None:
         """Clear the scan results."""
         self.scan_db.devices_by_group.clear()
-        self.update_scan_results_table()
-        self.update_combobox_values()
+        self.refresh_scan_results_table()
+        self.refresh_combobox_values()
         self.update_send_message_button()
         self.update_status_message_and_style("Waiting for scan.", bootstyle.SUCCESS)
 
