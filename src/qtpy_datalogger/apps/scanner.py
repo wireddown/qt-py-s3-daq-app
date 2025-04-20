@@ -248,7 +248,7 @@ class ScannerApp(guikit.AsyncWindow):
         selected_row = self.scan_results_table.iidmap[new_selected_index]
         selected_serial_number = selected_row.values[-1]  # The key cell is last
         if selected_serial_number == self.selected_node:
-            return  # Prevent an infinite event handler loop with on_node_selected()
+            return  # Prevent an infinite event handler loop with on_node_selected() and refresh_scan_results_table()
 
         self.on_node_selected(selected_serial_number)
 
@@ -299,14 +299,10 @@ class ScannerApp(guikit.AsyncWindow):
         """Update the contents of the result stable depending on the app's state."""
         new_selection = Constants.NoneChoice
         rows = []
-        ordered_by_group = sorted(self.scan_db.devices_by_group.keys())
-        for group_id in ordered_by_group:
+        for group_id in sorted(self.scan_db.devices_by_group.keys()):
             nodes_by_serial_number = self.scan_db.devices_by_group[group_id]
-            ordered_by_serial_number = sorted(nodes_by_serial_number.keys())
-            for serial_number in ordered_by_serial_number:
+            for serial_number in sorted(nodes_by_serial_number.keys()):
                 node_info = nodes_by_serial_number[serial_number]
-                if serial_number == self.selected_node:
-                    new_selection = self.selected_node  # Retain the original selection
                 rows.append(
                     (
                         group_id,
@@ -317,12 +313,17 @@ class ScannerApp(guikit.AsyncWindow):
                         node_info.serial_number,
                     )
                 )
+                # Retain the original selection
+                if serial_number == self.selected_node:
+                    new_selection = self.selected_node
         self.scan_results_table.delete_rows()
+        # Using insert_rows() loses order
         for row in rows:
             self.scan_results_table.insert_row("end", row)
         self.scan_results_table.load_table_data()
+        # When there is only result, auto-select it and move the keyboard focus to the message input
         if len(rows) == 1:
-            new_selection = rows[0][-1]
+            new_selection = rows[0][-1]  # The key cell is last
             self.message_input.focus()
         self.on_node_selected(new_selection)
 
@@ -335,14 +336,15 @@ class ScannerApp(guikit.AsyncWindow):
                 for entry in group_nodes.values():
                     resource_name = entry.node_id if entry.node_id else entry.com_port
                     node_resource_names.append(resource_name)
-            self.selected_node_combobox.configure(state=tk.NORMAL)
+            self.selected_node_combobox.configure(state=tk.NORMAL)  # Set to enabled to update its state
             self.selected_node_combobox["values"] = sorted([*none_choice, *node_resource_names])
+            self.selected_node_combobox.configure(state=ttk.READONLY, bootstyle=bootstyle.PRIMARY)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
         else:
-            self.selected_node_combobox.configure(state=tk.DISABLED)
+            self.selected_node_combobox.configure(state=tk.NORMAL)  # Set to enabled to update its state
             self.selected_node_combobox["values"] = none_choice
             self.selected_node_combobox.current(0)
-        self.selected_node_combobox.configure(state=ttk.READONLY)
-        self.selected_node_combobox.selection_clear()
+            self.selected_node_combobox.configure(state=tk.DISABLED, bootstyle=bootstyle.DEFAULT)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+        self.selected_node_combobox.selection_clear()  # Deselect the text in the combobox
 
     def update_send_message_button(self) -> None:
         """Enable or disable the send message button depending on the app's state."""
@@ -354,7 +356,7 @@ class ScannerApp(guikit.AsyncWindow):
 
     def append_text_to_log(self, line: str) -> None:
         """Add the specified text to the end of the log."""
-        self.message_log.configure(state=tk.NORMAL)
+        self.message_log.configure(state=tk.NORMAL)  # Set to enabled to update its state
         self.message_log.insert("end", line)
         self.message_log.configure(state=tk.DISABLED)
         self.message_log.see("end")
@@ -483,7 +485,7 @@ class ScannerApp(guikit.AsyncWindow):
 
     def clear_log(self) -> None:
         """Clear the log contents."""
-        self.message_log.configure(state=tk.NORMAL)
+        self.message_log.configure(state=tk.NORMAL)  # Set to enabled to update its state
         self.message_log.delete("1.0", "end")
         self.message_log.configure(state=tk.DISABLED)
         self.update_status_message_and_style("Cleared message log.", bootstyle.SUCCESS)
