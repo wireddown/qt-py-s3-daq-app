@@ -402,7 +402,6 @@ class ScannerApp(guikit.AsyncWindow):
     def send_message(self) -> None:
         """Send the message text to the node specified by the user."""
         message = self.message_input.get()
-        self.message_input.delete(0, "end")
         if not message:
             self.update_status_message_and_style("Cannot send: enter a message.", bootstyle.WARNING)
             return
@@ -411,6 +410,7 @@ class ScannerApp(guikit.AsyncWindow):
             return
 
         self.update_status_message_and_style("Sending....", bootstyle.INFO)
+        self.message_input.delete(0, "end")
         qtpy_device = self.scan_db.get_node(self.selected_node)
         if not qtpy_device:
             return
