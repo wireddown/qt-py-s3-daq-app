@@ -141,9 +141,11 @@ class ScannerApp(guikit.AsyncWindow):
             stripecolor=(colors.light, None),  # pyright: ignore reportAttributeAccessIssue -- the type hint for bootstrap omits its own additions
         )
         self.scan_results_table.view.configure(selectmode=tk.BROWSE)
-        self.scan_results_table.hbar.pack_forget()  # Hide the horizontal scroll bar because it's unnecessary
         self.scan_results_table.view.bind("<<TreeviewSelect>>", self.on_row_selected)
-        self.scan_results_table.view.unbind("<Double-Button-1>")  # Disable header-row handlers added by ttkbootstrap
+        # Hide the horizontal scroll bar because it's unnecessary
+        self.scan_results_table.hbar.pack_forget()
+        # Disable header-row handlers added by ttkbootstrap because this table is select-only
+        self.scan_results_table.view.unbind("<Double-Button-1>")
         self.scan_results_table.view.unbind("<Button-1>")
         self.scan_results_table.view.unbind("<Button-3>")
         self.scan_results_table.pack(expand=True, fill=tk.X)
@@ -216,7 +218,8 @@ class ScannerApp(guikit.AsyncWindow):
         self.root_window.rowconfigure(0, weight=1)
 
         self.clear_results()
-        self.group_input.after(100, self.group_input.focus)  # Give the main window time to appear and focus input on the group name
+        # Give the main window time to appear and focus input on the group name
+        self.group_input.after(100, self.group_input.focus)
 
     async def on_loop(self) -> None:
         """Update the UI with new information."""
@@ -401,7 +404,9 @@ class ScannerApp(guikit.AsyncWindow):
     def send_message(self) -> None:
         """Send the message text to the node specified by the user."""
         if self.selected_node in [Constants.NoneChoice, ""]:
-            self.update_status_message_and_style("Cannot send: select a node or scan a group to discover nodes.", bootstyle.WARNING)
+            self.update_status_message_and_style(
+                "Cannot send: select a node or scan a group to discover nodes.", bootstyle.WARNING
+            )
             return
         message = self.message_input.get()
         if not message:
@@ -409,7 +414,9 @@ class ScannerApp(guikit.AsyncWindow):
             return
         qtpy_device = self.scan_db.get_node(self.selected_node)
         if not qtpy_device:
-            self.update_status_message_and_style("Cannot send: device not discovered! Is it online? Scan its group to verify.", bootstyle.DANGER)
+            self.update_status_message_and_style(
+                "Cannot send: device not discovered! Is it online? Scan its group to verify.", bootstyle.DANGER
+            )
             return
         qtpy_resource = self.selected_node_combobox.get()
         if qtpy_resource == qtpy_device.com_port:
