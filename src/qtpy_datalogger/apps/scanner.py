@@ -458,7 +458,7 @@ class ScannerApp(guikit.AsyncWindow):
                     new_status_message = (
                         f"Node did not respond! Is it online? Scan group {qtpy_device.mqtt_group_id} to verify."
                     )
-                    new_status_style = bootstyle.WARNING
+                    new_status_style = bootstyle.DANGER
                     break
             await controller.disconnect()
             return new_status_message, new_status_style
