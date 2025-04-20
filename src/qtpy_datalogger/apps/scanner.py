@@ -216,11 +216,8 @@ class ScannerApp(guikit.AsyncWindow):
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
 
+        self.clear_results()
         self.group_input.after(100, self.group_input.focus)  # Give the main window time to appear and focus input on the group name
-        self.refresh_scan_results_table()
-        self.refresh_combobox_values()
-        self.update_send_message_button()
-        self.update_status_message_and_style("Waiting for scan.", bootstyle.SUCCESS)
 
     async def on_loop(self) -> None:
         """Update the UI with new information."""
