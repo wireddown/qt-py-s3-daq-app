@@ -281,7 +281,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.selected_node_combobox.configure(state=ttk.READONLY)
         self.selected_node_combobox.selection_clear()
 
-        self.update_send_message_button()
+        self.refresh_send_message_button()
         self.update_status_message_and_style(f"Selected {selected_resource_name}.", bootstyle.SUCCESS)
 
     def update_status_message_and_style(self, new_message: str, new_style: str) -> None:
@@ -343,7 +343,7 @@ class ScannerApp(guikit.AsyncWindow):
             self.selected_node_combobox.configure(state=tk.DISABLED, bootstyle=bootstyle.DEFAULT)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
         self.selected_node_combobox.selection_clear()  # Deselect the text in the combobox
 
-    def update_send_message_button(self) -> None:
+    def refresh_send_message_button(self) -> None:
         """Enable or disable the send message button depending on the app's state."""
         choice = self.selected_node_combobox.get()
         if choice == Constants.NoneChoice:
@@ -387,14 +387,14 @@ class ScannerApp(guikit.AsyncWindow):
         self.scan_db.process_group_scan(group_id, discovered_devices)
         self.refresh_scan_results_table()
         self.refresh_combobox_values()
-        self.update_send_message_button()
+        self.refresh_send_message_button()
 
     def clear_results(self) -> None:
         """Clear the scan results."""
         self.scan_db.devices_by_group.clear()
         self.refresh_scan_results_table()
         self.refresh_combobox_values()
-        self.update_send_message_button()
+        self.refresh_send_message_button()
         self.update_status_message_and_style("Waiting for scan.", bootstyle.SUCCESS)
 
     def send_message(self) -> None:
@@ -475,15 +475,15 @@ class ScannerApp(guikit.AsyncWindow):
 
     def copy_log(self) -> None:
         """Copy the full log to the clipboard."""
-        all_log = self.message_log.get("1.0", "end")
+        full_log = self.message_log.get("1.0", "end")  # First index has format "{line}.{column}"
         self.root_window.clipboard_clear()
-        self.root_window.clipboard_append(all_log)
+        self.root_window.clipboard_append(full_log)
         self.update_status_message_and_style("Copied message log to clipboard.", bootstyle.SUCCESS)
 
     def clear_log(self) -> None:
         """Clear the log contents."""
         self.message_log.configure(state=tk.NORMAL)  # Set to enabled to update its state
-        self.message_log.delete("1.0", "end")
+        self.message_log.delete("1.0", "end")  # First index has format "{line}.{column}"
         self.message_log.configure(state=tk.DISABLED)
         self.update_status_message_and_style("Cleared message log.", bootstyle.SUCCESS)
 
@@ -492,7 +492,7 @@ class ScannerApp(guikit.AsyncWindow):
         # Assume select all
         self.message_log.selection_clear()
         if start_index == 0:
-            start_index = "1.0"
+            start_index = "1.0"  # First index has format "{line}.{column}"
         self.message_log.tag_add("sel", start_index, end_index)
 
     def set_message_log_cursor(self, index: int | str) -> None:
