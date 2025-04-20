@@ -97,8 +97,8 @@ class ScannerApp(guikit.AsyncWindow):
         title_font = font.Font(weight="bold", size=24)
         title_label = ttk.Label(
             main,
-            font=title_font,
             text=f"{icon_emoji} {Constants.AppName}",
+            font=title_font,
             padding=16,
             borderwidth=0,
             relief=tk.SOLID,
@@ -111,12 +111,12 @@ class ScannerApp(guikit.AsyncWindow):
         self.group_input = ttk.Entry(scan_frame)
         self.group_input.insert(0, Default.MqttGroup)
         self.group_input.bind("<KeyPress>", self.run_command_on_enter)
-        scan_button = ttk.Button(scan_frame, command=self.start_scan, text="Scan group")
+        scan_button = ttk.Button(scan_frame, text="Scan group", command=self.start_scan)
         clear_button = ttk.Button(
             scan_frame,
-            style=(bootstyle.OUTLINE, bootstyle.WARNING),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
-            command=self.clear_results,
             text="Clear results",
+            command=self.clear_results,
+            style=(bootstyle.OUTLINE, bootstyle.WARNING),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         )
         group_input_label.pack(side=tk.LEFT)
         self.group_input.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(8, 0))
@@ -132,7 +132,7 @@ class ScannerApp(guikit.AsyncWindow):
             {"text": "Device", "stretch": True, "width": 220},
             {"text": "Snsr Version", "stretch": False, "width": 100},
             {"text": "UART Port", "stretch": False, "width": 70},
-            {"text": "Serial Number", "stretch": False, "width": 0},
+            {"text": "Serial Number", "stretch": False, "width": 0},  # Hide the key used to correlate with scan_db
         ]
         self.scan_results_table = ttk_tableview.Tableview(
             results_frame,
@@ -169,10 +169,10 @@ class ScannerApp(guikit.AsyncWindow):
         message_frame = ttk.Frame(comms_frame, name="message_frame")
         self.message_input = ttk.Entry(message_frame)
         self.message_input.bind("<KeyPress>", self.run_command_on_enter)
-        self.send_message_button = ttk.Button(message_frame, command=self.send_message, text="Send message")
+        self.send_message_button = ttk.Button(message_frame, text="Send message", command=self.send_message)
         self.message_input.pack(side=tk.LEFT, expand=True, fill=tk.X)
         self.send_message_button.pack(side=tk.LEFT, padx=(8, 0))
-        message_frame.pack(side=tk.TOP, pady=(8, 0), expand=True, fill=tk.X, anchor=tk.N)
+        message_frame.pack(side=tk.TOP, pady=(8, 0), expand=True, fill=tk.X)
 
         self.message_log = ttk.ScrolledText(comms_frame, state="disabled", wrap="word")
         # Add handlers for 'Ctrl-A' / select all
@@ -183,18 +183,18 @@ class ScannerApp(guikit.AsyncWindow):
 
         # App commands
         action_frame = ttk.Frame(main, name="action_frame", borderwidth=0, relief=tk.SOLID)
-        help_button = ttk.Button(action_frame, text="Online help", style=bootstyle.OUTLINE, command=self.launch_help)
+        help_button = ttk.Button(action_frame, text="Online help", command=self.launch_help, style=bootstyle.OUTLINE)
         copy_log_button = ttk.Button(
             action_frame,
             text="Copy all",
-            style=(bootstyle.PRIMARY, bootstyle.OUTLINE),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
             command=self.copy_log,
+            style=(bootstyle.OUTLINE, bootstyle.PRIMARY),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         )
         clear_log_button = ttk.Button(
             action_frame,
             text="Clear all",
-            style=(bootstyle.WARNING, bootstyle.OUTLINE),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
             command=self.clear_log,
+            style=(bootstyle.OUTLINE, bootstyle.WARNING),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         )
         help_button.pack(side=tk.RIGHT, padx=(8, 0))
         copy_log_button.pack(side=tk.LEFT)
@@ -224,10 +224,7 @@ class ScannerApp(guikit.AsyncWindow):
 
     async def on_loop(self) -> None:
         """Update the UI with new information."""
-        await asyncio.sleep(0.01)
-
-    def on_closing(self) -> None:
-        """Clean up before exiting."""
+        await asyncio.sleep(10e-6)
 
     def run_command_on_enter(self, event_args: tk.Event) -> None:
         """Handle the Enter key press for an entry widget and run its command."""
