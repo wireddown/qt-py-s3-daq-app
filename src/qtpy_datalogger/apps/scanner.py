@@ -463,14 +463,14 @@ class ScannerApp(guikit.AsyncWindow):
             await controller.disconnect()
             return new_status_message, new_status_style
 
-        def finalize_task(task_coroutine: asyncio.Task) -> None:
-            self.background_tasks.discard(task_coroutine)
-            new_status, new_style = task_coroutine.result()
+        def finalize_message(send_message_task: asyncio.Task) -> None:
+            self.background_tasks.discard(send_message_task)
+            new_status, new_style = send_message_task.result()
             self.update_status_message_and_style(new_status, new_style)
 
         communicate_task = asyncio.create_task(send_message_and_get_response())
         self.background_tasks.add(communicate_task)
-        communicate_task.add_done_callback(finalize_task)
+        communicate_task.add_done_callback(finalize_message)
 
     def launch_help(self) -> None:
         """Open online help for the app."""
