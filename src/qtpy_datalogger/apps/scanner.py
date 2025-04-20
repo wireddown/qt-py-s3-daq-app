@@ -157,7 +157,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.selected_node_combobox = ttk.Combobox(
             selection_status_frame,
             width=20,
-            state="readonly",
+            state=ttk.READONLY,
             style=bootstyle.PRIMARY,
         )
         self.selected_node_combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected)
@@ -281,7 +281,7 @@ class ScannerApp(guikit.AsyncWindow):
         if selected_device:
             selected_resource_name = selected_device.node_id if selected_device.node_id else selected_device.com_port
         self.selected_node_combobox.set(selected_resource_name)
-        self.selected_node_combobox.configure(state="readonly")
+        self.selected_node_combobox.configure(state=ttk.READONLY)
         self.selected_node_combobox.selection_clear()
 
         self.update_send_message_button()
@@ -341,7 +341,7 @@ class ScannerApp(guikit.AsyncWindow):
             self.selected_node_combobox.configure(state=tk.DISABLED)
             self.selected_node_combobox["values"] = none_choice
             self.selected_node_combobox.current(0)
-        self.selected_node_combobox.configure(state="readonly")
+        self.selected_node_combobox.configure(state=ttk.READONLY)
         self.selected_node_combobox.selection_clear()
 
     def update_send_message_button(self) -> None:
