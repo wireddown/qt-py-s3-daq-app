@@ -182,7 +182,6 @@ class ScannerApp(guikit.AsyncWindow):
 
         # App commands
         action_frame = ttk.Frame(main, name="action_frame", borderwidth=0, relief=tk.SOLID)
-        help_button = ttk.Button(action_frame, text="Online help", command=self.launch_help, style=bootstyle.OUTLINE)
         copy_log_button = ttk.Button(
             action_frame,
             text="Copy all",
@@ -195,9 +194,10 @@ class ScannerApp(guikit.AsyncWindow):
             command=self.clear_log,
             style=(bootstyle.OUTLINE, bootstyle.WARNING),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         )
-        help_button.pack(side=tk.RIGHT, padx=(8, 0))
+        help_button = ttk.Button(action_frame, text="Online help", command=self.launch_help, style=bootstyle.OUTLINE)
         copy_log_button.pack(side=tk.LEFT)
         clear_log_button.pack(side=tk.LEFT, padx=(8, 0))
+        help_button.pack(side=tk.RIGHT, padx=(8, 0))
         action_frame.grid(column=0, row=5, sticky=(tk.S, tk.E, tk.W), pady=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
         # Finalize layout
