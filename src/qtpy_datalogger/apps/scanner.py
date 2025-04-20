@@ -137,11 +137,11 @@ class ScannerApp(guikit.AsyncWindow):
         self.scan_results_table = ttk_tableview.Tableview(
             results_frame,
             coldata=result_columns,
-            height=9,
+            height=9,  # Unit is lines of text
             stripecolor=(colors.light, None),  # pyright: ignore reportAttributeAccessIssue -- the type hint for bootstrap omits its own additions
         )
         self.scan_results_table.view.configure(selectmode=tk.BROWSE)
-        self.scan_results_table.hbar.pack_forget()
+        self.scan_results_table.hbar.pack_forget()  # Hide the horizontal scroll bar because it's unnecessary
         self.scan_results_table.view.bind("<<TreeviewSelect>>", self.on_row_selected)
         self.scan_results_table.view.unbind("<Double-Button-1>")  # Disable header-row handlers added by ttkbootstrap
         self.scan_results_table.view.unbind("<Button-1>")
@@ -224,10 +224,10 @@ class ScannerApp(guikit.AsyncWindow):
 
     async def on_loop(self) -> None:
         """Update the UI with new information."""
-        await asyncio.sleep(10e-6)
+        await asyncio.sleep(10e-6)  # Yield the CPU to prevent high-but-idle spin-wait consumption
 
     def run_command_on_enter(self, event_args: tk.Event) -> None:
-        """Handle the Enter key press for an entry widget and run its command."""
+        """Handle the Enter key press for an Entry widget and run its associated command."""
         key_character = event_args.char
         if key_character not in ["\r"]:
             return
@@ -244,11 +244,11 @@ class ScannerApp(guikit.AsyncWindow):
         if not selected_rows:
             return
 
-        new_selected_index = selected_rows[0]
+        new_selected_index = selected_rows[0]  # selectmode=tk.BROWSE ensures only one row
         selected_row = self.scan_results_table.iidmap[new_selected_index]
-        selected_serial_number = selected_row.values[-1]
+        selected_serial_number = selected_row.values[-1]  # The key column is last
         if selected_serial_number == self.selected_node:
-            return
+            return  # Prevent an infinite event handler loop with on_node_selected()
 
         self.on_node_selected(selected_serial_number)
 
