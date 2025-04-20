@@ -158,7 +158,6 @@ class ScannerApp(guikit.AsyncWindow):
             selection_status_frame,
             width=20,
             state=ttk.READONLY,
-            style=bootstyle.PRIMARY,
         )
         self.selected_node_combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected)
         self.status_icon_label.pack(side=tk.LEFT)
@@ -335,7 +334,7 @@ class ScannerApp(guikit.AsyncWindow):
                     node_resource_names.append(resource_name)
             self.selected_node_combobox.configure(state=tk.NORMAL)  # Set to enabled to update its state
             self.selected_node_combobox["values"] = sorted([*none_choice, *node_resource_names])
-            self.selected_node_combobox.configure(state=ttk.READONLY, bootstyle=bootstyle.PRIMARY)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+            self.selected_node_combobox.configure(state=ttk.READONLY)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
         else:
             self.selected_node_combobox.configure(state=tk.NORMAL)  # Set to enabled to update its state
             self.selected_node_combobox["values"] = none_choice
