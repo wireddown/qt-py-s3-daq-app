@@ -401,20 +401,24 @@ class ScannerApp(guikit.AsyncWindow):
 
     def send_message(self) -> None:
         """Send the message text to the node specified by the user."""
+        if self.selected_node in [Constants.NoneChoice, ""]:
+            self.update_status_message_and_style("Cannot send: select a node or scan a group to discover nodes.", bootstyle.WARNING)
+            return
         message = self.message_input.get()
         if not message:
             self.update_status_message_and_style("Cannot send: enter a message.", bootstyle.WARNING)
             return
-        if self.selected_node in [Constants.NoneChoice, ""]:
-            self.update_status_message_and_style("Cannot send: select a node.", bootstyle.WARNING)
+        qtpy_device = self.scan_db.get_node(self.selected_node)
+        if not qtpy_device:
+            self.update_status_message_and_style("Cannot send: device not discovered! Is it online? Scan its group to verify.", bootstyle.DANGER)
+            return
+        qtpy_resource = self.selected_node_combobox.get()
+        if qtpy_resource == qtpy_device.com_port:
+            self.update_status_message_and_style("Serial communication is not implemented.", bootstyle.WARNING)
             return
 
         self.update_status_message_and_style("Sending....", bootstyle.INFO)
         self.message_input.delete(0, "end")
-        qtpy_device = self.scan_db.get_node(self.selected_node)
-        if not qtpy_device:
-            return
-        qtpy_resource = self.selected_node_combobox.get()
 
         async def send_message_and_get_response() -> tuple[str, str]:
             controller = network.QTPyController(
@@ -464,12 +468,9 @@ class ScannerApp(guikit.AsyncWindow):
             new_status, new_style = task_coroutine.result()
             self.update_status_message_and_style(new_status, new_style)
 
-        if qtpy_resource == qtpy_device.node_id:
-            communicate_task = asyncio.create_task(send_message_and_get_response())
-            self.background_tasks.add(communicate_task)
-            communicate_task.add_done_callback(finalize_task)
-        else:
-            self.update_status_message_and_style("Serial communication is not implemented.", bootstyle.WARNING)
+        communicate_task = asyncio.create_task(send_message_and_get_response())
+        self.background_tasks.add(communicate_task)
+        communicate_task.add_done_callback(finalize_task)
 
     def launch_help(self) -> None:
         """Open online help for the app."""
