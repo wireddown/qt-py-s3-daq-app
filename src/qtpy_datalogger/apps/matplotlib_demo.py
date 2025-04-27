@@ -31,7 +31,7 @@ class MatplotlibBootstrap:
 
     palette_color_name_for_visual: ClassVar = {
         "background": bootstyle.LIGHT,  # The buttons in the toolbar only re-color themselves on creation, so force a light background color for all themes
-        "foreground": bootstyle.DARK,   # Likewise, force a dark foreground color in text labels for all themes so that the (x, y) indicator remains readable
+        "foreground": bootstyle.DARK,  # Likewise, force a dark foreground color in text labels for all themes so that the (x, y) indicator remains readable
         "selectcolor": bootstyle.PRIMARY,
         "xtra_window_bg": "bg",  # bootstyle themes define "bg" but the library's constants omit them
         "xtra_window_fg": "fg",  # bootstyle themes define "fg" but the library's constants omit them
@@ -58,7 +58,7 @@ class MatplotlibBootstrap:
         padleft: int = 10,
         toolbar_width: int = 500,
         border_thickness: int = 3,
-        ) -> tk.Frame:
+    ) -> tk.Frame:
         """Return a tk.Frame that contains a NavigationToolbar from matplotlib and responds to the ttkbootstrap '<<ThemeChanged>>' event."""
         canvas_aspect = matching_canvas.get_width_height()
         toolbar_width = max(toolbar_width, canvas_aspect[0])  # Any narrower and the updates flicker
@@ -85,7 +85,11 @@ class MatplotlibBootstrap:
         toolbar_constraint.grid(column=1, row=0)
 
         # Place the toolbar in the same cell, covering its constraint
-        toolbar = NavigationToolbar2Tk(matching_canvas, toolbar_frame, pack_toolbar=False)  # Use pack_toolbar=False for explicit placement
+        toolbar = NavigationToolbar2Tk(
+            matching_canvas,
+            toolbar_frame,
+            pack_toolbar=False,  # Use pack_toolbar=False for explicit placement
+        )
         toolbar.grid(column=1, row=0, sticky=tk.NSEW)
 
         return toolbar_border
@@ -253,7 +257,12 @@ class MatplotlibBootstrap:
         """Return a new hex color code that represents a pressed button's color."""
         as_hsl = ttk_colorutils.color_to_hsl(button_neutral_color, model="hex")
         new_luminance = as_hsl[-1] + delta
-        press_color = ttk_colorutils.update_hsl_value(button_neutral_color, lum=new_luminance, inmodel="hex", outmodel="hex")
+        press_color = ttk_colorutils.update_hsl_value(
+            button_neutral_color,
+            lum=new_luminance,
+            inmodel="hex",
+            outmodel="hex",
+        )
         if not isinstance(press_color, str):
             raise TypeError()
         return press_color
@@ -286,9 +295,7 @@ class MatplotlibBootstrap:
             "text",
             "command",
         ]
-        frame_configuration = {
-            child_name: widget.configure() for child_name, widget in frame.children.items()
-        }
+        frame_configuration = {child_name: widget.configure() for child_name, widget in frame.children.items()}
         visual_configuration = {}
         for widget_name, widget_configuration in frame_configuration.items():
             for option_name, option_configuration in widget_configuration.items():
@@ -306,7 +313,7 @@ class MatplotlibBootstrap:
         _ = [logger.info(f"{color:>12} {palette.get(color)}") for color in color_names]
 
 
-def toggle_visual_debug(frame: tk.Widget) -> None:##
+def toggle_visual_debug(frame: tk.Widget) -> None:
     """Show or hide the border around the specified frame for visual debugging."""
     live_borderwidth = frame.cget("borderwidth")
     new_borderwidth = 1 if live_borderwidth == 0 else 0
@@ -348,7 +355,13 @@ class PlottingApp(guikit.AsyncWindow):
         slider_label = ttk.Label(slider_frame, text="Frequency (f)")
         slider_label.grid(column=0, row=0, padx=(0, 4))
 
-        slider_update = ttk.Scale(slider_frame, from_=.001, to=.01, orient=tk.HORIZONTAL, command=self.update_frequency)
+        slider_update = ttk.Scale(
+            slider_frame,
+            from_=0.001,
+            to=0.01,
+            orient=tk.HORIZONTAL,
+            command=self.update_frequency,
+        )
         slider_update.grid(column=1, row=0, padx=(4, 0))
 
         canvas_frame = ttk.Frame(main, name="canvas_frame")
@@ -370,10 +383,10 @@ class PlottingApp(guikit.AsyncWindow):
             dashes=(3, 8),
             zorder=-1,
         )
-        self.t = np.arange(0, 1200, .1)
-        self.line, = ax.plot(
+        self.t = np.arange(0, 1200, 0.1)
+        (self.line,) = ax.plot(
             self.t,
-            1000 * np.sin(2 * np.pi * self.t * .001),
+            1000 * np.sin(2 * np.pi * self.t * 0.001),
             label="y = 1000*sin(2*pi * f * t)",
         )
         ax.legend(
@@ -429,6 +442,7 @@ class PlottingApp(guikit.AsyncWindow):
         y = 1000 * np.sin(2 * np.pi * f * self.t)
         self.line.set_data(self.t, y)
         self.canvas.draw()
+
 
 if __name__ == "__main__":
     logger.debug(f"Launching {__package__}")
