@@ -74,6 +74,9 @@ class AsyncWindow:
 
     async def show(self) -> None:
         """Show the UI and cooperatively run with asyncio."""
+        self.root_window.wait_visibility(self.root_window)
+        self.root_window.update_idletasks()
+        self.on_show()
         while self.should_run_loop:
             await asyncio.sleep(0)
             await self.on_loop()
@@ -82,6 +85,9 @@ class AsyncWindow:
 
     def create_user_interface(self) -> None:
         """Create the layout and widget event handlers."""
+
+    def on_show(self) -> None:
+        """Initialize UI before entering main loop."""
 
     async def on_loop(self) -> None:
         """Update UI elements."""
