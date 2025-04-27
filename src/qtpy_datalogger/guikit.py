@@ -227,5 +227,17 @@ def create_theme_combobox(parent: tk.BaseWidget) -> ttk.Combobox:
     return theme_combobox
 
 
+def toggle_visual_debug(frame: tk.Widget) -> None:
+    """Show or hide the border around the specified frame for visual debugging."""
+    live_borderwidth = frame.cget("borderwidth")
+    new_borderwidth = 1 if live_borderwidth == 0 else 0
+    frame.configure(
+        {
+            "borderwidth": new_borderwidth,
+            "relief": tk.FLAT,
+        }
+    )
+
+
 if __name__ == "__main__":
     asyncio.run(AsyncApp.create_and_run(DemoWithAnimation))
