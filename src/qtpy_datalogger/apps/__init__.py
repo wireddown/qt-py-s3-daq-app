@@ -37,6 +37,7 @@ class Catalog:
             AppInformation("scanner", "qtpy_datalogger.apps.scanner"),
             AppInformation("data-viewer", "qtpy_datalogger.apps.data_viewer"),
             AppInformation("8ch-adc-with-adxl", "#TODO"),
+            AppInformation("matplotlib-demo", "qtpy_datalogger.apps.matplotlib_demo")
         }
     )
 
