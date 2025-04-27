@@ -1,11 +1,14 @@
 """Shared classes and helpers for creating GUIs."""
 
 import asyncio
+import logging
 import tkinter as tk
 
 import ttkbootstrap as ttk
 import ttkbootstrap.icons as ttk_icons
 from ttkbootstrap import constants as bootstyle
+
+logger = logging.getLogger(__name__)
 
 
 class AsyncApp:
@@ -237,6 +240,51 @@ def toggle_visual_debug(frame: tk.Widget) -> None:
             "relief": tk.FLAT,
         }
     )
+
+
+def inspect_visual_style(frame: tk.Widget) -> dict:
+    """Get visual configuration details for the specified frame and its children."""
+    # >>> list(toolbar.children.keys())
+    # <<< ['!button', '!button2', '!button3', '!frame', '!checkbutton-1', '!checkbutton-2', '!button4', '!frame2', '!button5', '!label', '!label2']
+    #                      button       frame     checkbutton    label
+    #  activebackground      x                       x             x
+    #  activeforeground      x                       x             x
+    #  background            x            x          x             x
+    #  disabledforeground    x                       x             x
+    #  foreground            x                       x             x
+    #  highlightbackground   x            x          x             x
+    #  highlightcolor        x            x          x             x
+    #  highlightthickness    x            x          x             x
+    #  selectcolor                                   x
+    theme_properties = [
+        "activebackground",
+        "activeforeground",
+        "background",
+        "disabledforeground",
+        "foreground",
+        "highlightbackground",
+        "highlightcolor",
+        "highlightthickness",
+        "selectcolor",
+        "text",
+        "command",
+    ]
+    frame_configuration = {child_name: widget.configure() for child_name, widget in frame.children.items()}
+    visual_configuration = {}
+    for widget_name, widget_configuration in frame_configuration.items():
+        for option_name, option_configuration in widget_configuration.items():
+            if option_name not in theme_properties:
+                continue
+            widget_visual_configuration = visual_configuration.get(widget_name, {})
+            widget_visual_configuration[option_name] = option_configuration
+            visual_configuration[widget_name] = widget_visual_configuration
+    return visual_configuration
+
+
+def show_palette(palette: dict) -> None:
+    """Show the hex color codes for the specified palette."""
+    color_names = sorted(ttk.Colors.label_iter())
+    _ = [logger.info(f"{color:>12} {palette.get(color)}") for color in color_names]
 
 
 if __name__ == "__main__":
