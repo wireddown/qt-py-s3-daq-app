@@ -119,7 +119,7 @@ class DemoWithAnimation(AsyncWindow):
         self.label = ttk.Label(self.root, text="")
         self.label.grid(
             row=0,
-            columnspan=2,
+            columnspan=3,
             padx=(8, 8),
             pady=(8, 0),
         )
@@ -131,7 +131,7 @@ class DemoWithAnimation(AsyncWindow):
         )
         self.progressbar.grid(
             row=1,
-            columnspan=2,
+            columnspan=3,
             padx=(8, 8),
             pady=(16, 0),
         )
@@ -151,6 +151,12 @@ class DemoWithAnimation(AsyncWindow):
             pady=8,
         )
 
+        theme_combobox = create_theme_combobox(self.root)
+        theme_combobox.grid(
+            row=2,
+            column=1,
+        )
+
         button_non_block = ttk.Button(
             self.root,
             text="Async",
@@ -160,7 +166,7 @@ class DemoWithAnimation(AsyncWindow):
         )
         button_non_block.grid(
             row=2,
-            column=1,
+            column=2,
             sticky=tk.E,
             padx=8,
             pady=8,
