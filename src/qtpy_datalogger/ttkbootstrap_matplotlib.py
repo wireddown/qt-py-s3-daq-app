@@ -19,7 +19,7 @@ from ttkbootstrap import constants as bootstyle
 
 logger = logging.getLogger(__name__)
 
-palette_color_name_for_visual = {
+palette_color_key = {
     "background": bootstyle.LIGHT,  # The buttons in the toolbar only re-color themselves on creation, so force a light background color for all themes
     "foreground": bootstyle.DARK,  # Likewise, force a dark foreground color in text labels for all themes so that the (x, y) indicator remains readable
     "selectcolor": bootstyle.PRIMARY,
@@ -117,10 +117,9 @@ def apply_figure_style(canvas: tk.Canvas, requested_theme: dict) -> None:
         return
 
     theme_palette = requested_theme["colors"]
-    color_name_for_visual = palette_color_name_for_visual
-    fill_color = theme_palette[color_name_for_visual["xtra_window_bg"]]
-    plot_area_color = theme_palette[color_name_for_visual["background"]]
-    text_color = theme_palette[color_name_for_visual["xtra_window_fg"]]
+    fill_color = theme_palette[palette_color_key["xtra_window_bg"]]
+    plot_area_color = theme_palette[palette_color_key["background"]]
+    text_color = theme_palette[palette_color_key["xtra_window_fg"]]
 
     figure: Figure = mpl_figure_canvas.figure
     figure.set_facecolor(fill_color)
@@ -198,10 +197,9 @@ def apply_toolbar_style(tk_widget: tk.Widget, requested_theme: dict) -> None:
 
 def style_frame(frame: tk.Frame, style_palette: dict) -> None:
     """Style a tk.Frame using the specified colors."""
-    color_name_for_visual = palette_color_name_for_visual
-    frame_color = style_palette[color_name_for_visual["background"]]
+    frame_color = style_palette[palette_color_key["background"]]
     if frame.winfo_name() == ReservedName.ToolbarBorder:
-        frame_color = style_palette[color_name_for_visual["xtra_window_fg"]]
+        frame_color = style_palette[palette_color_key["xtra_window_fg"]]
     frame.configure(
         {
             "background": frame_color,
@@ -211,11 +209,10 @@ def style_frame(frame: tk.Frame, style_palette: dict) -> None:
 
 def style_label(label: tk.Label, style_palette: dict) -> None:
     """Style a tk.Label using the specified colors."""
-    color_name_for_visual = palette_color_name_for_visual
     label.configure(
         {
-            "background": style_palette[color_name_for_visual["background"]],
-            "foreground": style_palette[color_name_for_visual["foreground"]],
+            "background": style_palette[palette_color_key["background"]],
+            "foreground": style_palette[palette_color_key["foreground"]],
             "font": font.Font(weight="bold"),
         }
     )
@@ -223,11 +220,10 @@ def style_label(label: tk.Label, style_palette: dict) -> None:
 
 def style_button(button: tk.Button, style_palette: dict) -> None:
     """Style a tk.Button using the specified colors."""
-    color_name_for_visual = palette_color_name_for_visual
-    press_color = change_color_luminance(style_palette[color_name_for_visual["background"]], -20)
+    press_color = change_color_luminance(style_palette[palette_color_key["background"]], -20)
     button.configure(
         {
-            "background": style_palette[color_name_for_visual["background"]],
+            "background": style_palette[palette_color_key["background"]],
             "activebackground": press_color,  # Mouse down
         }
     )
@@ -235,13 +231,12 @@ def style_button(button: tk.Button, style_palette: dict) -> None:
 
 def style_checkbutton(checkbutton: tk.Checkbutton, style_palette: dict) -> None:
     """Style a tk.Checkbutton using the specified colors."""
-    color_name_for_visual = palette_color_name_for_visual
-    press_color = change_color_luminance(style_palette[color_name_for_visual["background"]], -20)
+    press_color = change_color_luminance(style_palette[palette_color_key["background"]], -20)
     checkbutton.configure(
         {
-            "background": style_palette[color_name_for_visual["background"]],
+            "background": style_palette[palette_color_key["background"]],
             "activebackground": press_color,  # Mouse down
-            "selectcolor": style_palette[color_name_for_visual["selectcolor"]],  # Active selection
+            "selectcolor": style_palette[palette_color_key["selectcolor"]],  # Active selection
         }
     )
 
