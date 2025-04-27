@@ -19,6 +19,14 @@ from ttkbootstrap import constants as bootstyle
 
 logger = logging.getLogger(__name__)
 
+
+class ReservedName(StrEnum):
+    """Reserved names used to implement matplotlib styling."""
+
+    EmbeddedFigure = "mpl_figure_canvas"
+    ToolbarBorder = "toolbar_border"
+
+
 palette_color_key = {
     "background": bootstyle.LIGHT,  # The buttons in the toolbar only re-color themselves on creation, so force a light background color for all themes
     "foreground": bootstyle.DARK,  # Likewise, force a dark foreground color in text labels for all themes so that the (x, y) indicator remains readable
@@ -26,12 +34,6 @@ palette_color_key = {
     "xtra_window_bg": "bg",  # bootstyle themes define "bg" but the library's constants omit them
     "xtra_window_fg": "fg",  # bootstyle themes define "fg" but the library's constants omit them
 }
-
-class ReservedName(StrEnum):
-    """Reserved names used to implement matplotlib styling."""
-
-    EmbeddedFigure = "mpl_figure_canvas"
-    ToolbarBorder = "toolbar_border"
 
 
 def create_styled_plot_canvas(
