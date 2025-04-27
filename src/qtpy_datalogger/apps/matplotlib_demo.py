@@ -87,7 +87,7 @@ class PlottingApp(guikit.AsyncWindow):
             draggable=True,
         )
 
-        self.canvas = ttkbootstrap_matplotlib.MatplotlibBootstrap.create_styled_plot_canvas(fig, canvas_frame)
+        self.canvas = ttkbootstrap_matplotlib.create_styled_plot_canvas(fig, canvas_frame)
         self.canvas.get_tk_widget().grid(column=0, row=0, sticky=tk.NSEW)
         self.canvas.mpl_connect("key_press_event", lambda event: print(f"Received {event.key}"))  # type: ignore # noqa T201 -- allow printing to demonstrate event handling
         self.canvas.mpl_connect("key_press_event", key_press_handler)  # pyright: ignore reportArgumentType -- matplotlib type annotations are also a little too strict
@@ -109,7 +109,7 @@ class PlottingApp(guikit.AsyncWindow):
         self.theme_combobox = guikit.create_theme_combobox(side_spacer)
         self.theme_combobox.grid(column=1, row=0, sticky=tk.NE, padx=(0, 32))
 
-        toolbar_frame = ttkbootstrap_matplotlib.MatplotlibBootstrap.create_styled_plot_toolbar(toolbar_row, self.canvas)
+        toolbar_frame = ttkbootstrap_matplotlib.create_styled_plot_toolbar(toolbar_row, self.canvas)
         toolbar_frame.grid(column=1, row=0, sticky=tk.EW)
 
     def on_show(self) -> None:
