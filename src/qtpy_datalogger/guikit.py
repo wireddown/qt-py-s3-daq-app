@@ -183,5 +183,37 @@ class DemoWithAnimation(AsyncWindow):
                 await asyncio.sleep(0)
 
 
+def create_theme_combobox(parent: tk.BaseWidget) -> ttk.Combobox:
+    """Create and return a Combobox that lists the available themes and handles the selection event."""
+    style = ttk.Style.get_instance()
+    if not (style and style.theme):
+        raise ValueError()
+    active_theme = style.theme
+    theme_names = style.theme_names()
+
+    theme_combobox = ttk.Combobox(
+        parent,
+        width=12,
+        values=theme_names,
+    )
+    theme_combobox.set(active_theme.name)
+    theme_combobox.configure(state=ttk.READONLY)
+    theme_combobox.selection_clear()
+
+    def handle_change_theme(event_args: tk.Event) -> None:
+        """Handle the selection event for the theme Combobox."""
+        sending_combobox = event_args.widget
+        theme_name = sending_combobox.get()
+        style = ttk.Style.get_instance()
+        if not style:
+            raise ValueError()
+        sending_combobox.configure(state=ttk.READONLY)
+        sending_combobox.selection_clear()
+        style.theme_use(theme_name)
+
+    theme_combobox.bind("<<ComboboxSelected>>", handle_change_theme)
+    return theme_combobox
+
+
 if __name__ == "__main__":
     asyncio.run(AsyncApp.create_and_run(DemoWithAnimation))
