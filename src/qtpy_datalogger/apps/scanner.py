@@ -90,9 +90,24 @@ class ScannerApp(guikit.AsyncWindow):
         self.root_window.title(Constants.AppName)
         icon = tk.PhotoImage(master=self.root_window, data=ttk_icons.Icon.question)
         self.root_window.iconphoto(True, icon)
+        self.root_window.columnconfigure(0, weight=1)
+        self.root_window.rowconfigure(0, weight=1)
+
+        # Main layout
+        main = ttk.Frame(self.root_window, name="main_frame", padding=16)
+        main.grid(column=0, row=0, sticky=(tk.N, tk.S, tk.E, tk.W))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
+        main.columnconfigure(0, weight=1)
+        main.rowconfigure(0, weight=0)
+        main.rowconfigure(1, weight=0)
+        main.rowconfigure(2, weight=1, minsize=190)
+        main.rowconfigure(3, weight=1, minsize=200)
+        main.rowconfigure(
+            4,
+            weight=10000,  # Extra strong row so that the results stable remains in place when vertically resizing
+        )
+        main.rowconfigure(5, weight=0)
 
         # Title
-        main = ttk.Frame(self.root_window, name="root_frame", padding=16)
         icon_emoji = ttk_icons.Emoji.get("telescope")
         title_font = font.Font(weight="bold", size=24)
         title_label = ttk.Label(
@@ -107,25 +122,26 @@ class ScannerApp(guikit.AsyncWindow):
 
         # Scan group
         scan_frame = ttk.Frame(main, name="scan_frame", borderwidth=0, relief=tk.SOLID)
+        scan_frame.grid(column=0, row=1, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         group_input_label = ttk.Label(scan_frame, text="Group name")
+        group_input_label.pack(side=tk.LEFT)
         self.group_input = ttk.Entry(scan_frame)
         self.group_input.insert(0, Default.MqttGroup)
         self.group_input.bind("<KeyPress>", self.run_command_on_enter)
+        self.group_input.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(8, 0))
         scan_button = ttk.Button(scan_frame, text="Scan group", command=self.start_scan)
+        scan_button.pack(side=tk.LEFT, padx=(8, 0))
         clear_button = ttk.Button(
             scan_frame,
             text="Clear results",
             command=self.clear_results,
             style=(bootstyle.OUTLINE, bootstyle.WARNING),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         )
-        group_input_label.pack(side=tk.LEFT)
-        self.group_input.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(8, 0))
-        scan_button.pack(side=tk.LEFT, padx=(8, 0))
         clear_button.pack(side=tk.LEFT, padx=(8, 0))
-        scan_frame.grid(column=0, row=1, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
         # Results group
         results_frame = ttk.Frame(main, name="result_frame", borderwidth=0, relief=tk.SOLID)
+        results_frame.grid(column=0, row=2, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         result_columns = [
             {"text": "Group", "stretch": False, "width": 60},
             {"text": "Node ID", "stretch": False, "width": 150},
@@ -149,73 +165,57 @@ class ScannerApp(guikit.AsyncWindow):
         self.scan_results_table.view.unbind("<Button-1>")
         self.scan_results_table.view.unbind("<Button-3>")
         self.scan_results_table.pack(expand=True, fill=tk.X)
-        results_frame.grid(column=0, row=2, sticky=(tk.N, tk.E, tk.W), pady=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
         # Node communication
         comms_frame = ttk.Frame(main, name="comms_frame", borderwidth=0, relief=tk.SOLID)
+        comms_frame.grid(column=0, row=3, sticky=(tk.N, tk.E, tk.W))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         selection_status_frame = ttk.Frame(comms_frame, name="selection_frame", borderwidth=0, relief=tk.SOLID)
+        selection_status_frame.pack(side=tk.TOP, expand=True, fill=tk.X)
         self.status_icon_label = ttk.Label(selection_status_frame)
+        self.status_icon_label.pack(side=tk.LEFT)
         self.status_message = ttk.Label(selection_status_frame, borderwidth=0, relief=tk.SOLID)
+        self.status_message.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(8, 0))
         self.selected_node_combobox = ttk.Combobox(
             selection_status_frame,
             width=20,
             state=ttk.READONLY,
         )
         self.selected_node_combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected)
-        self.status_icon_label.pack(side=tk.LEFT)
-        self.status_message.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(8, 0))
         self.selected_node_combobox.pack(side=tk.LEFT, padx=(8, 0))
-        selection_status_frame.pack(side=tk.TOP, expand=True, fill=tk.X)
 
         message_frame = ttk.Frame(comms_frame, name="message_frame")
+        message_frame.pack(side=tk.TOP, pady=(8, 0), expand=True, fill=tk.X)
         self.message_input = ttk.Entry(message_frame)
         self.message_input.bind("<KeyPress>", self.run_command_on_enter)
-        self.send_message_button = ttk.Button(message_frame, text="Send message", command=self.send_message)
         self.message_input.pack(side=tk.LEFT, expand=True, fill=tk.X)
+        self.send_message_button = ttk.Button(message_frame, text="Send message", command=self.send_message)
         self.send_message_button.pack(side=tk.LEFT, padx=(8, 0))
-        message_frame.pack(side=tk.TOP, pady=(8, 0), expand=True, fill=tk.X)
 
         self.message_log = ttk.ScrolledText(comms_frame, state=tk.DISABLED, wrap="word")
+        self.message_log.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
         # Add handlers for 'Ctrl-A' / select all
         self.message_log.select_range = self.select_message_log_range  # pyright: ignore reportAttributeAccessIssue -- we are adding this at run time
         self.message_log.icursor = self.set_message_log_cursor  # pyright: ignore reportAttributeAccessIssue -- we are adding this at run time
-        self.message_log.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
-        comms_frame.grid(column=0, row=3, sticky=(tk.N, tk.E, tk.W))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
         # App commands
         action_frame = ttk.Frame(main, name="action_frame", borderwidth=0, relief=tk.SOLID)
+        action_frame.grid(column=0, row=5, sticky=(tk.S, tk.E, tk.W), pady=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         copy_log_button = ttk.Button(
             action_frame,
             text="Copy all",
             command=self.copy_log,
             style=(bootstyle.OUTLINE, bootstyle.PRIMARY),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         )
+        copy_log_button.pack(side=tk.LEFT)
         clear_log_button = ttk.Button(
             action_frame,
             text="Clear all",
             command=self.clear_log,
             style=(bootstyle.OUTLINE, bootstyle.WARNING),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         )
-        help_button = ttk.Button(action_frame, text="Online help", command=self.launch_help, style=bootstyle.OUTLINE)
-        copy_log_button.pack(side=tk.LEFT)
         clear_log_button.pack(side=tk.LEFT, padx=(8, 0))
+        help_button = ttk.Button(action_frame, text="Online help", command=self.launch_help, style=bootstyle.OUTLINE)
         help_button.pack(side=tk.RIGHT, padx=(8, 0))
-        action_frame.grid(column=0, row=5, sticky=(tk.S, tk.E, tk.W), pady=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
-
-        # Finalize layout
-        main.grid(column=0, row=0, sticky=(tk.N, tk.S, tk.E, tk.W))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
-        main.columnconfigure(0, weight=1)
-        main.rowconfigure(0, weight=0)
-        main.rowconfigure(1, weight=0)
-        main.rowconfigure(2, weight=1, minsize=190)
-        main.rowconfigure(3, weight=1, minsize=200)
-        main.rowconfigure(
-            4,
-            weight=10000,  # Extra strong row so that the results stable remains in place when vertically resizing
-        )
-        main.rowconfigure(5, weight=0)
-        self.root_window.columnconfigure(0, weight=1)
-        self.root_window.rowconfigure(0, weight=1)
 
         self.clear_results()
         # Give the main window time to appear and focus input on the group name
