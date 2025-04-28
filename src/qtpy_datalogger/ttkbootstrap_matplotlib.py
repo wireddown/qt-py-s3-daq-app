@@ -4,7 +4,6 @@ import logging
 import tkinter as tk
 from enum import StrEnum
 from tkinter import font
-from typing import Callable
 
 import ttkbootstrap as ttk
 import ttkbootstrap.colorutils as ttk_colorutils
