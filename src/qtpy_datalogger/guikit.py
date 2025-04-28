@@ -6,6 +6,7 @@ import tkinter as tk
 
 import ttkbootstrap as ttk
 import ttkbootstrap.icons as ttk_icons
+import ttkbootstrap.themes.standard as ttk_themes
 from ttkbootstrap import constants as bootstyle
 
 logger = logging.getLogger(__name__)
@@ -204,12 +205,22 @@ def create_theme_combobox(parent: tk.BaseWidget) -> ttk.Combobox:
     if not (style and style.theme):
         raise ValueError()
     active_theme = style.theme
-    theme_names = style.theme_names()
+    light_themes = []
+    dark_themes = []
+    for theme_name, definition in ttk_themes.STANDARD_THEMES.items():
+        theme_kind = definition["type"]
+        if theme_kind == "light":
+            light_themes.append(theme_name)
+        elif theme_kind == "dark":
+            dark_themes.append(theme_name)
+        else:
+            raise ValueError()
+    sorted_by_kind = [*sorted(light_themes), *sorted(dark_themes)]
 
     theme_combobox = ttk.Combobox(
         parent,
         width=12,
-        values=theme_names,
+        values=sorted_by_kind,
     )
     theme_combobox.set(active_theme.name)
     theme_combobox.configure(state=ttk.READONLY)

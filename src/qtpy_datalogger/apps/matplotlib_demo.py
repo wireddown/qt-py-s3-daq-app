@@ -23,7 +23,7 @@ class PlottingApp(guikit.AsyncWindow):
     def create_user_interface(self) -> None:  # noqa: PLR0915 -- allow long function to create the UI
         """Create the main window and connect event handlers."""
         self.root_window.title("Embed Matplotlib in ttk")
-        self.root_window.minsize(width=860, height=600)
+        self.root_window.minsize(width=870, height=600)
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
 
@@ -38,11 +38,16 @@ class PlottingApp(guikit.AsyncWindow):
         main.rowconfigure(5, weight=0)
 
         title_font = font.Font(weight="bold", size=16)
-        title_label = ttk.Label(main, text="Matplotlib styled by ttkbootstrap", font=title_font)
+        title_label = ttk.Label(main, text="Matplotlib styled with ttkbootstrap", font=title_font)
         title_label.grid(column=0, row=0)
 
         slider_frame = ttk.Frame(main, name="slider_frame")
-        slider_frame.grid(column=0, row=1, sticky=tk.N, pady=(16, 16))
+        slider_frame.grid(column=0, row=1, sticky=tk.N, pady=(16, 2))
+        slider_frame.columnconfigure(0, weight=0)
+        slider_frame.columnconfigure(1, weight=0)
+        slider_frame.columnconfigure(2, weight=0)
+        slider_frame.columnconfigure(3, weight=0)
+        slider_frame.columnconfigure(4, weight=0)
 
         slider_label = ttk.Label(slider_frame, text="Frequency (f)")
         slider_label.grid(column=0, row=0, padx=(0, 4))
@@ -51,10 +56,20 @@ class PlottingApp(guikit.AsyncWindow):
             slider_frame,
             from_=0.001,
             to=0.01,
+            value=0.005,
             orient=tk.HORIZONTAL,
             command=self.update_frequency,
         )
         slider_update.grid(column=1, row=0, padx=(4, 0))
+
+        separator = ttk.Frame(slider_frame, style="primary", width=2, height=24)
+        separator.grid(column=2, row=0, padx=(40, 32))
+
+        combobox_label = ttk.Label(slider_frame, text="Theme")
+        combobox_label.grid(column=3, row=0, sticky=tk.W, padx=(0, 4), pady=(0, 0))
+
+        self.theme_combobox = guikit.create_theme_combobox(slider_frame)
+        self.theme_combobox.grid(column=4, row=0, sticky=tk.W, padx=(4, 0))
 
         canvas_frame = ttk.Frame(main, name="canvas_frame")
         canvas_frame.grid(column=0, row=2, sticky=tk.NSEW)
@@ -78,11 +93,11 @@ class PlottingApp(guikit.AsyncWindow):
         self.t = np.arange(0, 1200, 0.1)
         (self.line,) = ax.plot(
             self.t,
-            1000 * np.sin(2 * np.pi * self.t * 0.001),
+            1000 * np.sin(2 * np.pi * self.t * float(slider_update.get())),
             label="y = 1000*sin(2*pi * f * t)",
         )
         ax.legend(
-            title="Plot",
+            title="Function",
             loc="upper left",
             draggable=True,
         )
@@ -99,15 +114,6 @@ class PlottingApp(guikit.AsyncWindow):
 
         side_spacer = ttk.Frame(toolbar_row, name="side_spacer")
         side_spacer.grid(column=0, row=0, sticky=tk.NSEW)
-        side_spacer.columnconfigure(0, weight=1)
-        side_spacer.columnconfigure(1, weight=0)
-        side_spacer.rowconfigure(0, weight=1)
-
-        combobox_label = ttk.Label(side_spacer, text="Theme")
-        combobox_label.grid(column=0, row=0, sticky=tk.NE, padx=(0, 8), pady=(5, 0))
-
-        self.theme_combobox = guikit.create_theme_combobox(side_spacer)
-        self.theme_combobox.grid(column=1, row=0, sticky=tk.NE, padx=(0, 32))
 
         toolbar_frame = ttkbootstrap_matplotlib.create_styled_plot_toolbar(toolbar_row, self.canvas)
         toolbar_frame.grid(column=1, row=0, sticky=tk.EW)
