@@ -218,8 +218,10 @@ class ScannerApp(guikit.AsyncWindow):
         help_button.pack(side=tk.RIGHT, padx=(8, 0))
 
         self.clear_results()
-        # Give the main window time to appear and focus input on the group name
-        self.group_input.after(100, self.group_input.focus)
+
+    def on_show(self) -> None:
+        """Initialize UI before entering main loop."""
+        self.group_input.focus()
 
     async def on_loop(self) -> None:
         """Update the UI with new information."""
