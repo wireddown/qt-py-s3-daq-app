@@ -243,16 +243,16 @@ def style_checkbutton(checkbutton: tk.Checkbutton, style_palette: dict) -> None:
     )
 
 
-def change_color_luminance(button_neutral_color: str, delta: int) -> str:
-    """Return a new hex color code that represents a pressed button's color."""
-    as_hsl = ttk_colorutils.color_to_hsl(button_neutral_color, model="hex")
+def change_color_luminance(original_color: str, delta: int) -> str:
+    """Return a new hex color code that represents the same color with a changed brightness."""
+    as_hsl = ttk_colorutils.color_to_hsl(original_color, model="hex")
     new_luminance = as_hsl[-1] + delta
-    press_color = ttk_colorutils.update_hsl_value(
-        button_neutral_color,
+    new_color = ttk_colorutils.update_hsl_value(
+        original_color,
         lum=new_luminance,
         inmodel="hex",
         outmodel="hex",
     )
-    if not isinstance(press_color, str):
+    if not isinstance(new_color, str):
         raise TypeError()
-    return press_color
+    return new_color
