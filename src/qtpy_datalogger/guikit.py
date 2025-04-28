@@ -119,6 +119,7 @@ class DemoWithAnimation(AsyncWindow):
 
         self.animation = "🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🩶🖤"
         self.root = ttk.Frame(self.root_window, padding=10)
+        self.root.pack()
 
         self.label = ttk.Label(self.root, text="")
         self.label.grid(
@@ -175,8 +176,6 @@ class DemoWithAnimation(AsyncWindow):
             padx=8,
             pady=8,
         )
-
-        self.root.pack()
 
     async def on_loop(self) -> None:
         """Update the animation."""
