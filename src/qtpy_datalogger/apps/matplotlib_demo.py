@@ -66,7 +66,7 @@ class PlottingApp(guikit.AsyncWindow):
         separator.grid(column=2, row=0, padx=(40, 32))
 
         combobox_label = ttk.Label(slider_frame, text="Theme")
-        combobox_label.grid(column=3, row=0, sticky=tk.W, padx=(0, 4), pady=(0, 0))
+        combobox_label.grid(column=3, row=0, sticky=tk.W, padx=(0, 4))
 
         self.theme_combobox = guikit.create_theme_combobox(slider_frame)
         self.theme_combobox.grid(column=4, row=0, sticky=tk.W, padx=(4, 0))
