@@ -97,7 +97,7 @@ class PlottingApp(guikit.AsyncWindow):
         toolbar_row.columnconfigure(0, weight=1)
         toolbar_row.columnconfigure(1, weight=0)
 
-        side_spacer = ttk.Frame(toolbar_row, name="side_spacer", width=1, height=1)
+        side_spacer = ttk.Frame(toolbar_row, name="side_spacer")
         side_spacer.grid(column=0, row=0, sticky=tk.NSEW)
         side_spacer.columnconfigure(0, weight=1)
         side_spacer.columnconfigure(1, weight=0)
