@@ -5,10 +5,10 @@ import pathlib
 
 import click
 
-from . import discovery, tracelog
+from . import apps, discovery, tracelog
 from . import equip as _equip
 from . import server as _server
-from .datatypes import Links
+from .datatypes import Default, Links
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,10 @@ def cli(
         cli(["--help"])
 
 
-@cli.command(epilog=f"Help and home page: {DEFAULT_HELP_URL}")
+@cli.command(
+    short_help="Connect to a serial port or MQTT sensor_node.",
+    epilog=f"Help and home page: {DEFAULT_HELP_URL}",
+)
 @click.option(
     "--auto-connect",
     "behavior",
@@ -90,20 +93,52 @@ def cli(
     flag_value=discovery.Behavior.DiscoverOnly,
     help="Behavior: List discovered devices and exit.",
 )
+@click.option(
+    "-g",
+    "--group",
+    default=Default.MqttGroup,
+    metavar="GROUP-ID",
+    help=f"MQTT group to use. Default: {Default.MqttGroup}",
+)
 @click.option("-n", "--node", default="", metavar="NODE-ID", help="MQTT node to use for connection.")
 @click.option("-p", "--port", default="", metavar="COM#", help="Serial COM port to use for connection.")
 @click.help_option()
-def connect(behavior: str, node: str, port: str) -> None:
+def connect(behavior: str, group: str, node: str, port: str) -> None:
     """Connect to a serial port, preferring a CircuitPython device, or to an MQTT sensor_node on the network."""
     discovery_behavior = discovery.Behavior(behavior)
-    discovery.handle_connect(discovery_behavior, node, port)
+    discovery.handle_connect(discovery_behavior, group, node, port)
 
 
-@cli.command(epilog=f"Help and home page: {DEFAULT_HELP_URL}")
+@cli.command(epilog=f"The default app is {apps.Catalog.default_app.name}\n\nHelp and home page: {DEFAULT_HELP_URL}")
+@click.option(
+    "--app",
+    "behavior",
+    flag_value=apps.Behavior.App,
+    default=True,
+    help="Behavior: [default] Run the specified or default app.",
+)
+@click.option(
+    "--list",
+    "behavior",
+    flag_value=apps.Behavior.List,
+    help="Behavior: List available apps and exit.",
+)
+@click.option(
+    "--module",
+    "behavior",
+    flag_value=apps.Behavior.Module,
+    help="Behavior: Run the specified MODULE as a custom app.",
+)
+@click.argument(
+    "app_name",
+    type=str,
+    default=apps.Catalog.default_app.name,
+)
 @click.help_option()
-def run() -> None:
-    """Stub entry point for 'run' command."""
-    logger.warning("this is a stub command")
+def run(behavior: str, app_name: str) -> None:
+    """Run the APP_NAME app for QT Py datalogger."""
+    run_behavior = apps.Behavior(behavior)
+    apps.handle_run(run_behavior, app_name)
 
 
 @cli.command(epilog=f"Help and home page: {DEFAULT_HELP_URL}")

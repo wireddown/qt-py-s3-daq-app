@@ -36,6 +36,13 @@ class ExitCode(enum.IntEnum):
     Server_Missing_Failure = 61
     Server_Offline_Failure = 62
     Server_Inaccessible_Failure = 63
+    App_Lookup_Failure = 71
+
+
+class Default(enum.StrEnum):
+    """Default values for the package."""
+
+    MqttGroup = "zone1"
 
 
 class ConnectionTransport(enum.StrEnum):
@@ -57,6 +64,7 @@ class DetailKey(enum.StrEnum):
     drive_partition = "drive_partition"
     drive_root = "drive_root"
     ip_address = "ip_address"
+    mqtt_group_id = "mqtt_group_id"
     node_id = "node_id"
     python_implementation = "python_implementation"
     serial_number = "serial_number"
@@ -84,8 +92,9 @@ class CaptionCorrections:
 class SnsrPath(enum.StrEnum):
     """Reserved path names for qtpy_datalogger sensor_node bundles."""
 
-    root = "snsr"
     notice = "snsr/notice.toml"
+    root = "snsr"
+    settings = "settings.toml"
 
 
 class SnsrNotice(NamedTuple):

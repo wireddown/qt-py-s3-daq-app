@@ -132,6 +132,7 @@ class QTPyController:
         Returned entries, grouped by serial_number:
         - device_description
         - ip_address
+        - mqtt_group_id
         - node_id
         - python_implementation
         - serial_number
@@ -147,6 +148,7 @@ class QTPyController:
             node.descriptor.serial_number: {
                 DetailKey.device_description: CaptionCorrections.get_corrected(node.descriptor.hardware_name),
                 DetailKey.ip_address: node.descriptor.ip_address,
+                DetailKey.mqtt_group_id: self.group_id,
                 DetailKey.node_id: node.descriptor.node_id,
                 DetailKey.python_implementation: node.descriptor.python_implementation,
                 DetailKey.serial_number: node.descriptor.serial_number,
@@ -331,13 +333,14 @@ class QTPyController:
         return f"{action_name}-{self.named_counter.count(action_name)}"
 
 
-def query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
+def query_nodes_from_mqtt(group_id: str) -> dict[str, dict[DetailKey, str]]:
     """
     Scan the MQTT broker on the network for sensor nodes and return a dictionary of information.
 
     Returned entries, grouped by serial_number:
     - device_description
     - ip_address
+    - mqtt_group_id
     - node_id
     - python_implementation
     - serial_number
@@ -346,19 +349,18 @@ def query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
     - snsr_version
     - system_name
     """
-    discovered_nodes = asyncio.run(_query_nodes_from_mqtt())
+    discovered_nodes = asyncio.run(query_nodes_from_mqtt_async(group_id))
     return discovered_nodes
 
 
-def open_session_on_node(node_id: str) -> None:
+def open_session_on_node(group_id: str, node_id: str) -> None:
     """Open a terminal connection to the sensor_node with the specified node_id."""
-    asyncio.run(_open_session_on_node(node_id))
+    asyncio.run(_open_session_on_node(group_id, node_id))
 
 
-async def _query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
+async def query_nodes_from_mqtt_async(group_id: str) -> dict[str, dict[DetailKey, str]]:
     """Use a new QTPyController to scan the network for sensor_nodes."""
     broker_host = "localhost"
-    group_id = "zone1"  # See https://github.com/wireddown/qt-py-s3-daq-app/issues/60
     mac_address = hex(uuid.getnode())[2:]
     ip_address = socket.gethostbyname(socket.gethostname())
     controller = QTPyController(
@@ -375,10 +377,9 @@ async def _query_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
     return node_information
 
 
-async def _open_session_on_node(node_id: str) -> None:
+async def _open_session_on_node(group_id: str, node_id: str) -> None:
     """Use a new QTPyController to open a terminal session on the specified node_id."""
     broker_host = "localhost"
-    group_id = "zone1"  # See https://github.com/wireddown/qt-py-s3-daq-app/issues/60
     mac_address = hex(uuid.getnode())[2:]
     ip_address = socket.gethostbyname(socket.gethostname())
     controller = QTPyController(

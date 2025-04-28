@@ -134,6 +134,9 @@ ignore = [
     "INP001",
     "S101",
 ]
+"src/qtpy_datalogger/apps/empty.py" = [
+    "F401",
+]
 
 [build-system]
 requires = ["poetry-core"]

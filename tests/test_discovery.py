@@ -5,7 +5,7 @@ import pytest
 import serial
 
 from qtpy_datalogger import discovery, network
-from qtpy_datalogger.datatypes import DetailKey, ExitCode
+from qtpy_datalogger.datatypes import Default, DetailKey, ExitCode
 from qtpy_datalogger.sensor_node.snsr.node import classes as node_classes
 
 usb_qtpy_1 = discovery.QTPyDevice(
@@ -15,6 +15,7 @@ usb_qtpy_1 = discovery.QTPyDevice(
     drive_label="CIRCUITPY",
     drive_root="Q:",
     ip_address="",
+    mqtt_group_id=Default.MqttGroup,
     node_id="",
     python_implementation="circuitpython-9.2.1",
     serial_number="00aa00aa00aa",
@@ -28,6 +29,7 @@ mqtt_qtpy_1 = discovery.QTPyDevice(
     drive_label="",
     drive_root="",
     ip_address="192.168.0.0",
+    mqtt_group_id=Default.MqttGroup,
     node_id="node-00aa00aa00aa-0",
     python_implementation="circuitpython-9.2.1",
     serial_number="00aa00aa00aa",
@@ -41,6 +43,7 @@ dual_mode_qtpy_1 = discovery.QTPyDevice(
     drive_label="CIRCUITPY",
     drive_root="Q:",
     ip_address="192.168.0.0",
+    mqtt_group_id=Default.MqttGroup,
     node_id="node-00aa00aa00aa-0",
     python_implementation="circuitpython-9.2.1",
     serial_number="00aa00aa00aa",
@@ -54,6 +57,7 @@ usb_qtpy_2 = discovery.QTPyDevice(
     drive_label="CIRCUITPY",
     drive_root="T:",
     ip_address="",
+    mqtt_group_id=Default.MqttGroup,
     node_id="",
     python_implementation="circuitpython-9.1.3",
     serial_number="11cc11cc11cc",
@@ -67,6 +71,7 @@ mqtt_qtpy_2 = discovery.QTPyDevice(
     drive_label="",
     drive_root="",
     ip_address="172.16.0.0",
+    mqtt_group_id=Default.MqttGroup,
     node_id="node-11cc11cc11cc-0",
     python_implementation="circuitpython-9.1.3",
     serial_number="11cc11cc11cc",
@@ -80,6 +85,7 @@ dual_mode_qtpy_2 = discovery.QTPyDevice(
     drive_label="CIRCUITPY",
     drive_root="T:",
     ip_address="172.16.0.0",
+    mqtt_group_id=Default.MqttGroup,
     node_id="node-11cc11cc11cc-0",
     python_implementation="circuitpython-9.1.3",
     serial_number="11cc11cc11cc",
@@ -87,19 +93,19 @@ dual_mode_qtpy_2 = discovery.QTPyDevice(
 )
 
 
-def no_qtpy_devices() -> dict[str, discovery.QTPyDevice]:
+def no_qtpy_devices(group_id: str) -> dict[str, discovery.QTPyDevice]:
     """Override discovery.discover_qtpy_devices() to return zero results."""
     return {}
 
 
-def one_usb_qtpy_device() -> dict[str, discovery.QTPyDevice]:
+def one_usb_qtpy_device(group_id: str) -> dict[str, discovery.QTPyDevice]:
     """Override discovery.discover_qtpy_devices() to return one result."""
     return {
         usb_qtpy_1.serial_number: usb_qtpy_1,
     }
 
 
-def two_usb_qtpy_devices() -> dict[str, discovery.QTPyDevice]:
+def two_usb_qtpy_devices(group_id: str) -> dict[str, discovery.QTPyDevice]:
     """Override discovery.discover_qtpy_devices() to return two results."""
     return {
         usb_qtpy_1.serial_number: usb_qtpy_1,
@@ -107,14 +113,14 @@ def two_usb_qtpy_devices() -> dict[str, discovery.QTPyDevice]:
     }
 
 
-def one_mqtt_qtpy_device() -> dict[str, discovery.QTPyDevice]:
+def one_mqtt_qtpy_device(group_id: str) -> dict[str, discovery.QTPyDevice]:
     """Override discovery.discover_qtpy_devices() to return one result."""
     return {
         mqtt_qtpy_1.serial_number: mqtt_qtpy_1,
     }
 
 
-def two_dual_mode_qtpy_devices() -> dict[str, discovery.QTPyDevice]:
+def two_dual_mode_qtpy_devices(group_id: str) -> dict[str, discovery.QTPyDevice]:
     """Override discovery.discover_qtpy_devices() to return two results."""
     return {
         dual_mode_qtpy_1.serial_number: dual_mode_qtpy_1,
@@ -197,7 +203,7 @@ def test_handle_connect_with_no_devices(  # noqa: PLR0913 -- allow more than 5 p
     expected_port = port
 
     with pytest.raises(raised_exception) as excinfo:
-        discovery.handle_connect(behavior, node, port)
+        discovery.handle_connect(behavior, Default.MqttGroup, node, port)
 
     assert_universal_test_cases(excinfo, expected_exit_code, expected_port)
 
@@ -226,11 +232,11 @@ def test_handle_connect_with_one_usb_device(  # noqa: PLR0913 -- allow more than
 ) -> None:
     """Does it correctly handle connect() when there is only one QT Py device?"""
     monkeypatch.setattr(discovery, "discover_qtpy_devices", one_usb_qtpy_device)
-    discovered_port = discovery.discover_qtpy_devices().popitem()[1].com_port
+    discovered_port = discovery.discover_qtpy_devices(Default.MqttGroup).popitem()[1].com_port
     expected_port = port if port else discovered_port
 
     with pytest.raises(raised_exception) as excinfo:
-        discovery.handle_connect(behavior, node, port)
+        discovery.handle_connect(behavior, Default.MqttGroup, node, port)
 
     assert_universal_test_cases(excinfo, expected_exit_code, expected_port)
     if excinfo.value is serial.SerialException:
@@ -266,13 +272,13 @@ def test_handle_connect_with_two_usb_devices(  # noqa: PLR0913 -- allow more tha
     """Does it correctly handle connect() when there are two QT Py devices?"""
     monkeypatch.setattr(discovery, "discover_qtpy_devices", two_usb_qtpy_devices)
     monkeypatch.setattr(click, "prompt", select_last_from_prompt)  # Choose second device to exercise the user-choice
-    discovered_devices = discovery.discover_qtpy_devices()
+    discovered_devices = discovery.discover_qtpy_devices(Default.MqttGroup)
     selected_device = sorted(discovered_devices)[-1]
     selected_port = discovered_devices[selected_device].com_port
     expected_port = port if port else selected_port
 
     with pytest.raises(raised_exception) as excinfo:
-        discovery.handle_connect(behavior, node, port)
+        discovery.handle_connect(behavior, Default.MqttGroup, node, port)
 
     assert_universal_test_cases(excinfo, expected_exit_code, expected_port)
     if excinfo.value is serial.SerialException:
@@ -314,12 +320,14 @@ def test_handle_connect_with_one_mqtt_device(  # noqa: PLR0913 -- allow more tha
     """Does it correctly handle connect() when there is only one QT Py device?"""
     monkeypatch.setattr(discovery, "discover_qtpy_devices", one_mqtt_qtpy_device)
     exception_message = "connect() tried to correctly open the (monkeypatched) node"
-    monkeypatch.setattr(network, "open_session_on_node", lambda e: raise_exception(raised_exception, exception_message))
-    discovered_node = discovery.discover_qtpy_devices().popitem()[1].node_id
+    monkeypatch.setattr(
+        network, "open_session_on_node", lambda group, node: raise_exception(raised_exception, exception_message)
+    )
+    discovered_node = discovery.discover_qtpy_devices(Default.MqttGroup).popitem()[1].node_id
     expected_node = node if node else discovered_node
 
     with pytest.raises(raised_exception) as excinfo:
-        discovery.handle_connect(behavior, node, port)
+        discovery.handle_connect(behavior, Default.MqttGroup, node, port)
 
     assert_universal_test_cases(excinfo, expected_exit_code, expected_node)
     if excinfo.value is RuntimeError:
@@ -350,15 +358,17 @@ def test_handle_connect_with_two_dual_mode_devices(  # noqa: PLR0913 -- allow mo
     """Does it correctly handle connect() when there are two QT Py devices with both USB and WiFi?"""
     monkeypatch.setattr(discovery, "discover_qtpy_devices", two_dual_mode_qtpy_devices)
     exception_message = "connect() tried to correctly open the (monkeypatched) node"
-    monkeypatch.setattr(network, "open_session_on_node", lambda e: raise_exception(raised_exception, exception_message))
+    monkeypatch.setattr(
+        network, "open_session_on_node", lambda group, node: raise_exception(raised_exception, exception_message)
+    )
     monkeypatch.setattr(click, "prompt", select_first_from_prompt)  # Choose WiFi connection
-    discovered_devices = discovery.discover_qtpy_devices()
+    discovered_devices = discovery.discover_qtpy_devices(Default.MqttGroup)
     selected_device = sorted(discovered_devices)[-1]
     selected_node = discovered_devices[selected_device].node_id
     expected_node = node if node else selected_node
 
     with pytest.raises(raised_exception) as excinfo:
-        discovery.handle_connect(behavior, node, port)
+        discovery.handle_connect(behavior, Default.MqttGroup, node, port)
 
     assert_universal_test_cases(excinfo, expected_exit_code, expected_node)
     if excinfo.value is RuntimeError:
@@ -412,13 +422,14 @@ def test_windows_discovery(monkeypatch: pytest.MonkeyPatch) -> None:
             },
         }
 
-    def override_nodes_from_mqtt() -> dict[str, dict[DetailKey, str]]:
+    def override_nodes_from_mqtt(group_id: str) -> dict[str, dict[DetailKey, str]]:
         """Return hardcoded details for MQTT nodes."""
         return {
             "00aa00aa00aa": {
                 DetailKey.device_description: "adafruit_qtpy_esp32s3_nopsram",
                 DetailKey.ip_address: "192.168.0.0",
                 DetailKey.node_id: "node-00aa00aa00aa-0",
+                DetailKey.mqtt_group_id: Default.MqttGroup,
                 DetailKey.python_implementation: "circuitpython-9.2.1",
                 DetailKey.serial_number: "00aa00aa00aa",
                 DetailKey.snsr_commit: "ab8dc58",
@@ -430,6 +441,7 @@ def test_windows_discovery(monkeypatch: pytest.MonkeyPatch) -> None:
                 DetailKey.device_description: "adafruit_qtpy_esp32s3_4mbflash_2mbpsram",
                 DetailKey.ip_address: "172.16.0.0",
                 DetailKey.node_id: "node-11cc11cc11cc-0",
+                DetailKey.mqtt_group_id: Default.MqttGroup,
                 DetailKey.python_implementation: "circuitpython-9.1.3",
                 DetailKey.serial_number: "11CC11CC11CC",
                 DetailKey.snsr_commit: "d7efbab",
@@ -443,7 +455,7 @@ def test_windows_discovery(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(discovery, "_query_volumes_from_wmi", override_volumes_from_wmi)
     monkeypatch.setattr(network, "query_nodes_from_mqtt", override_nodes_from_mqtt)
 
-    devices = discovery.discover_qtpy_devices()
+    devices = discovery.discover_qtpy_devices(Default.MqttGroup)
 
     # 1 dual mode
     dual_mode_serial_number = "11cc11cc11cc"
