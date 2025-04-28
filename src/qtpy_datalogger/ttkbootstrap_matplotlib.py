@@ -175,27 +175,27 @@ def apply_figure_style(canvas: tk.Canvas, requested_theme: dict) -> None:
 
 
 def apply_toolbar_style(tk_widget: tk.Widget, requested_theme: dict) -> None:
-    """Apply the specified theme to the specified matplotlib toolbar."""
+    """Apply the specified theme to the specified tk.Frame."""
     theme_palette = requested_theme["colors"]
-    widget_stylers: dict[str, Callable] = {
-        "frame": style_frame,
-        "label": style_label,
-        "button": style_button,
-        "checkbutton": style_checkbutton,
-    }
+    style_tree(tk_widget, theme_palette)
 
-    def style_tree(widget: tk.Widget) -> None:
-        """Style the specified tk.Widget and its children."""
-        widget_kind = widget.widgetName
-        styler = widget_stylers[widget_kind]
-        styler(widget, theme_palette)
 
-        if widget.children:
-            for child in widget.children.values():
-                style_tree(child)
+def style_tree(widget: tk.Widget, theme_palette: dict[str, str]) -> None:
+    """Style the specified tk.Widget and its children."""
+    if isinstance(widget, tk.Frame):
+        style_frame(widget, theme_palette)
+    elif isinstance(widget, tk.Label):
+        style_label(widget, theme_palette)
+    elif isinstance(widget, tk.Button):
+        style_button(widget, theme_palette)
+    elif isinstance(widget, tk.Checkbutton):
+        style_checkbutton(widget, theme_palette)
+    else:
+        raise TypeError()
 
-    style_tree(tk_widget)
-
+    if widget.children:
+        for child in widget.children.values():
+            style_tree(child, theme_palette)
 
 def style_frame(frame: tk.Frame, style_palette: dict) -> None:
     """Style a tk.Frame using the specified colors."""
