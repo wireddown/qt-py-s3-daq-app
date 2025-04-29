@@ -23,6 +23,7 @@ class DataViewer(guikit.AsyncWindow):
         ##self.root_window.minsize(width=870, height=600)
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
+        self.build_window_menu()
 
         main = ttk.Frame(self.root_window, name="main_frame", padding=16)
         main.grid(column=0, row=0, sticky=tk.NSEW)
@@ -56,6 +57,108 @@ class DataViewer(guikit.AsyncWindow):
     def update_window_title(self, new_title: str) -> None:
         """Update the application's window title."""
         self.root_window.title(new_title)
+
+    def build_window_menu(self) -> None:
+        """Create the entries for the window menu bar."""
+        self.root_window.option_add("*tearOff", False)
+        self.menubar = tk.Menu(
+            self.root_window,
+            # No styling support here -- Windows Settings for Light vs Dark mode control this
+        )
+        self.root_window.config(menu=self.menubar)
+
+        file_menu = tk.Menu(self.menubar, postcommand=self.on_file_menu)
+        file_menu.add_command(
+            command=self.open_file,
+            label="Open",
+            accelerator="Ctrl-O",
+            # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
+        )
+        file_menu.add_command(
+            label="Reload",
+            accelerator="F5",
+        )
+        file_menu.add_command(
+            command=self.close_file,
+            label="Close",
+            accelerator="Ctrl-W",
+            # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
+        )
+        file_menu.add_separator(
+            # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
+        )
+        file_menu.add_command(
+            command=self.exit,
+            label="Exit",
+            accelerator="Alt-F4"
+        )
+        self.menubar.add_cascade(
+            label="File",
+            menu=file_menu,
+            underline=0,
+        )
+
+        edit_menu = tk.Menu(self.menubar)
+        edit_menu.add_command(
+            command=self.copy_canvas,
+            label="Copy",
+            accelerator="Ctrl-C",
+        )
+        self.menubar.add_cascade(
+            label="Edit",
+            menu=edit_menu,
+            underline=0,
+        )
+
+        view_menu = tk.Menu(self.menubar)
+        view_menu.add_command(
+            label="Use light theme",
+        )
+        view_menu.add_command(
+            label="Replay",
+        )
+
+        plots_menu = tk.Menu(view_menu)
+        plots_menu.add_command(
+            label="(none)",
+        )
+        view_menu.add_cascade(
+            label="Plots",
+            menu=plots_menu,
+            underline=0,
+        )
+        self.menubar.add_cascade(
+            label="View",
+            menu=view_menu,
+            underline=0,
+        )
+
+        help_menu = tk.Menu(self.menubar)
+        help_menu.add_command(
+            command=self.show_about,
+            label="About",
+            accelerator="F1",
+        )
+        self.menubar.add_cascade(
+            label="Help",
+            menu=help_menu,
+            underline=0,
+        )
+
+    def on_file_menu(self) -> None:
+        """Handle the File menu opening."""
+
+    def open_file(self) -> None:
+        """Handle the File::Open menu command."""
+
+    def close_file(self) -> None:
+        """Handle the File::Close menu command."""
+
+    def copy_canvas(self) -> None:
+        """Handle the Edit::Copy menu command."""
+
+    def show_about(self) -> None:
+        """Handle the Help::About menu command."""
 
 
 if __name__ == "__main__":
