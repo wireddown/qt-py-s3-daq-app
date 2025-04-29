@@ -63,10 +63,11 @@ class DataViewer(guikit.AsyncWindow):
         self.root_window.option_add("*tearOff", False)
         self.menubar = tk.Menu(
             self.root_window,
-            # No styling support here -- Windows Settings for Light vs Dark mode control this
+            # No styling support here -- Windows Settings for Light vs Dark mode control the menubar
         )
         self.root_window.config(menu=self.menubar)
 
+        # File menu
         file_menu = tk.Menu(self.menubar, postcommand=self.on_file_menu)
         file_menu.add_command(
             command=self.open_file,
@@ -75,6 +76,7 @@ class DataViewer(guikit.AsyncWindow):
             # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
         )
         file_menu.add_command(
+            command=self.reload_file,
             label="Reload",
             accelerator="F5",
         )
@@ -98,6 +100,7 @@ class DataViewer(guikit.AsyncWindow):
             underline=0,
         )
 
+        # Edit menu
         edit_menu = tk.Menu(self.menubar)
         edit_menu.add_command(
             command=self.copy_canvas,
@@ -110,14 +113,17 @@ class DataViewer(guikit.AsyncWindow):
             underline=0,
         )
 
+        # View menu
         view_menu = tk.Menu(self.menubar)
         view_menu.add_command(
-            label="Use light theme",
+            command=self.change_theme,
+            label="Theme",
         )
         view_menu.add_command(
+            command=self.replay_data,
             label="Replay",
         )
-
+        # View :: Plots submenu
         plots_menu = tk.Menu(view_menu)
         plots_menu.add_command(
             label="(none)",
@@ -133,6 +139,7 @@ class DataViewer(guikit.AsyncWindow):
             underline=0,
         )
 
+        # Help menu
         help_menu = tk.Menu(self.menubar)
         help_menu.add_command(
             command=self.show_about,
@@ -151,11 +158,20 @@ class DataViewer(guikit.AsyncWindow):
     def open_file(self) -> None:
         """Handle the File::Open menu command."""
 
+    def reload_file(self) -> None:
+        """Handle the File::Reload menu command."""
+
     def close_file(self) -> None:
         """Handle the File::Close menu command."""
 
     def copy_canvas(self) -> None:
         """Handle the Edit::Copy menu command."""
+
+    def replay_data(self) -> None:
+        """Handle the View::Replay menu command."""
+
+    def change_theme(self) -> None:
+        """Handle the View::Theme selection command."""
 
     def show_about(self) -> None:
         """Handle the Help::About menu command."""
