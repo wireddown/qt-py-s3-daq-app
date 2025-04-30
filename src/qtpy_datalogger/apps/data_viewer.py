@@ -1,6 +1,7 @@
 """Plot data from CSV files."""
 
 import asyncio
+import functools
 import logging
 import pathlib
 import tkinter as tk
@@ -134,6 +135,7 @@ class DataViewer(guikit.AsyncWindow):
         )
         plots_menu.add_command(
             label="(none)",
+            state="disabled",
         )
         # Themes submenu
         style = ttk.Style.get_instance()
@@ -170,12 +172,12 @@ class DataViewer(guikit.AsyncWindow):
         )
         for theme_name in sorted(light_themes):
             light_menu.add_command(
-                command=self.change_theme,
+                command=functools.partial(self.change_theme, theme_name),
                 label=theme_name,
             )
         for theme_name in sorted(dark_themes):
             dark_menu.add_command(
-                command=self.change_theme,
+                command=functools.partial(self.change_theme, theme_name),
                 label=theme_name,
             )
 
@@ -210,8 +212,12 @@ class DataViewer(guikit.AsyncWindow):
     def replay_data(self) -> None:
         """Handle the View::Replay menu command."""
 
-    def change_theme(self) -> None:
+    def change_theme(self, theme_name: str) -> None:
         """Handle the View::Theme selection command."""
+        style = ttk.Style().instance
+        if not style:
+            raise ValueError()
+        style.theme_use(theme_name)
 
     def show_about(self) -> None:
         """Handle the Help::About menu command."""
