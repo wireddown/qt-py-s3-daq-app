@@ -7,6 +7,7 @@ import tkinter as tk
 
 import ttkbootstrap as ttk
 import ttkbootstrap.icons as ttk_icons
+import ttkbootstrap.themes.standard as ttk_themes
 from ttkbootstrap import constants as bootstyle
 
 from qtpy_datalogger import guikit
@@ -69,6 +70,11 @@ class DataViewer(guikit.AsyncWindow):
 
         # File menu
         file_menu = tk.Menu(self.menubar, postcommand=self.on_file_menu)
+        self.menubar.add_cascade(
+            label="File",
+            menu=file_menu,
+            underline=0,
+        )
         file_menu.add_command(
             command=self.open_file,
             label="Open",
@@ -79,6 +85,10 @@ class DataViewer(guikit.AsyncWindow):
             command=self.reload_file,
             label="Reload",
             accelerator="F5",
+        )
+        file_menu.add_command(
+            command=self.replay_data,
+            label="Replay",
         )
         file_menu.add_command(
             command=self.close_file,
@@ -94,62 +104,92 @@ class DataViewer(guikit.AsyncWindow):
             label="Exit",
             accelerator="Alt-F4"
         )
-        self.menubar.add_cascade(
-            label="File",
-            menu=file_menu,
-            underline=0,
-        )
 
         # Edit menu
         edit_menu = tk.Menu(self.menubar)
-        edit_menu.add_command(
-            command=self.copy_canvas,
-            label="Copy",
-            accelerator="Ctrl-C",
-        )
         self.menubar.add_cascade(
             label="Edit",
             menu=edit_menu,
             underline=0,
         )
+        edit_menu.add_command(
+            command=self.copy_canvas,
+            label="Copy",
+            accelerator="Ctrl-C",
+        )
 
         # View menu
         view_menu = tk.Menu(self.menubar)
-        view_menu.add_command(
-            command=self.change_theme,
-            label="Theme",
-        )
-        view_menu.add_command(
-            command=self.replay_data,
-            label="Replay",
-        )
-        # View :: Plots submenu
-        plots_menu = tk.Menu(view_menu)
-        plots_menu.add_command(
-            label="(none)",
-        )
-        view_menu.add_cascade(
-            label="Plots",
-            menu=plots_menu,
-            underline=0,
-        )
         self.menubar.add_cascade(
             label="View",
             menu=view_menu,
             underline=0,
         )
+        # Plots submenu
+        plots_menu = tk.Menu(view_menu)
+        view_menu.add_cascade(
+            label="Plots",
+            menu=plots_menu,
+            underline=0,
+        )
+        plots_menu.add_command(
+            label="(none)",
+        )
+        # Themes submenu
+        style = ttk.Style.get_instance()
+        if not (style and style.theme):
+            raise ValueError()
+        active_theme = style.theme
+        light_themes = []
+        dark_themes = []
+        for theme_name, definition in ttk_themes.STANDARD_THEMES.items():
+            theme_kind = definition["type"]
+            if theme_kind == "light":
+                light_themes.append(theme_name)
+            elif theme_kind == "dark":
+                dark_themes.append(theme_name)
+            else:
+                raise ValueError()
+        themes_menu = tk.Menu(view_menu)
+        view_menu.add_cascade(
+            label="Theme",
+            menu=themes_menu,
+            underline=0,
+        )
+        light_menu = tk.Menu(themes_menu)
+        themes_menu.add_cascade(
+            label="Light",
+            menu=light_menu,
+            underline=0,
+        )
+        dark_menu = tk.Menu(themes_menu)
+        themes_menu.add_cascade(
+            label="Dark",
+            menu=dark_menu,
+            underline=0,
+        )
+        for theme_name in sorted(light_themes):
+            light_menu.add_command(
+                command=self.change_theme,
+                label=theme_name,
+            )
+        for theme_name in sorted(dark_themes):
+            dark_menu.add_command(
+                command=self.change_theme,
+                label=theme_name,
+            )
 
         # Help menu
         help_menu = tk.Menu(self.menubar)
-        help_menu.add_command(
-            command=self.show_about,
-            label="About",
-            accelerator="F1",
-        )
         self.menubar.add_cascade(
             label="Help",
             menu=help_menu,
             underline=0,
+        )
+        help_menu.add_command(
+            command=self.show_about,
+            label="About",
+            accelerator="F1",
         )
 
     def on_file_menu(self) -> None:
