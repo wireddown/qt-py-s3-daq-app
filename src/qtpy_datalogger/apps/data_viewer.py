@@ -56,7 +56,8 @@ class DataViewer(guikit.AsyncWindow):
 
         reload_button = ttk.Button(action_panel, command=self.reload_file, text="Reload")
         reload_button.grid(column=0, row=1)
-        replay_button = ttk.Checkbutton(action_panel, command=self.replay_data, text="Replay")
+        replay_button = ttk.Button(action_panel, text="Replay", style=bootstyle.SUCCESS)
+        replay_button.configure(command=functools.partial(self.replay_data, replay_button))
         replay_button.grid(column=1, row=1)
 
         file_message = ttk.Label(action_panel, text="Waiting for load")
@@ -70,6 +71,7 @@ class DataViewer(guikit.AsyncWindow):
 
     async def on_loop(self) -> None:
         """Update the UI with new information."""
+        await asyncio.sleep(1e-6)
 
     def on_closing(self) -> None:
         """Clean up before exiting."""
@@ -105,8 +107,8 @@ class DataViewer(guikit.AsyncWindow):
             label="Reload",
             accelerator="F5",
         )
-        file_menu.add_command(
-            command=self.replay_data,
+        file_menu.add_checkbutton(
+            command=functools.partial(self.replay_data, file_menu),
             label="Replay",
         )
         file_menu.add_command(
@@ -229,8 +231,14 @@ class DataViewer(guikit.AsyncWindow):
     def export_canvas(self) -> None:
         """Handle the Export CSV button command."""
 
-    def replay_data(self) -> None:
+    def replay_data(self, sender: tk.Widget) -> None:
         """Handle the View::Replay menu command."""
+        if isinstance(sender, ttk.Button):
+            style = sender.cget("style")
+            new_style = bootstyle.SUCCESS if "success" not in style else bootstyle.DEFAULT
+            sender.configure(bootstyle=new_style)
+        else:
+            x = sender
 
     def change_theme(self, theme_name: str) -> None:
         """Handle the View::Theme selection command."""
