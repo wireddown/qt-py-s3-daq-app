@@ -43,6 +43,24 @@ class DataViewer(guikit.AsyncWindow):
 
         action_panel = ttk.Frame(toolbar_row, name="action_panel", height=50, width=200, style=bootstyle.SUCCESS)
         action_panel.grid(column=0, row=0, sticky=tk.EW, padx=(0, 8))
+        action_panel.columnconfigure(0, weight=0)
+        action_panel.columnconfigure(1, weight=0)
+        action_panel.rowconfigure(0, weight=0)
+        action_panel.rowconfigure(1, weight=0)
+        action_panel.rowconfigure(2, weight=0)
+
+        copy_view_button = ttk.Button(action_panel, command=self.copy_canvas, text="Copy")
+        copy_view_button.grid(column=0, row=0)
+        export_csv_button = ttk.Button(action_panel, command=self.export_canvas, text="Export CSV")
+        export_csv_button.grid(column=1, row=0)
+
+        reload_button = ttk.Button(action_panel, command=self.reload_file, text="Reload")
+        reload_button.grid(column=0, row=1)
+        replay_button = ttk.Checkbutton(action_panel, command=self.replay_data, text="Replay")
+        replay_button.grid(column=1, row=1)
+
+        file_message = ttk.Label(action_panel, text="Waiting for load")
+        file_message.grid(row=2, columnspan=2)
 
         toolbar = ttk.Frame(toolbar_row, name="toolbar", height=50, width=300, style=bootstyle.SECONDARY)
         toolbar.grid(column=1, row=0, sticky=tk.EW)
@@ -141,7 +159,6 @@ class DataViewer(guikit.AsyncWindow):
         style = ttk.Style.get_instance()
         if not (style and style.theme):
             raise ValueError()
-        active_theme = style.theme
         light_themes = []
         dark_themes = []
         for theme_name, definition in ttk_themes.STANDARD_THEMES.items():
@@ -208,6 +225,9 @@ class DataViewer(guikit.AsyncWindow):
 
     def copy_canvas(self) -> None:
         """Handle the Edit::Copy menu command."""
+
+    def export_canvas(self) -> None:
+        """Handle the Export CSV button command."""
 
     def replay_data(self) -> None:
         """Handle the View::Replay menu command."""
