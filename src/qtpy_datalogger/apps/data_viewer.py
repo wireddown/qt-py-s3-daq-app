@@ -47,7 +47,7 @@ class DataViewer(guikit.AsyncWindow):
 
         startup_label = ttk.Label(self.canvas_placeholder, font=font.Font(weight="bold", size=16), text="QT Py Data Viewer", background=guikit.hex_string_for_style(bootstyle.INFO))
         startup_label.grid(column=0, row=0, pady=16)
-        open_file_button = self.create_icon_button(self.canvas_placeholder, text="Open CSV", icon_name="file-csv")
+        open_file_button = self.create_icon_button(self.canvas_placeholder, text="Open CSV", icon_name="file-csv", spaces=2)
         open_file_button.grid(column=0, row=1, sticky=tk.S, pady=(0, 16))
         open_file_button.configure(command=functools.partial(self.open_file, open_file_button))
         demo_button = self.create_icon_button(self.canvas_placeholder, text="Demo", icon_name="chart-line", spaces=4)
@@ -68,29 +68,29 @@ class DataViewer(guikit.AsyncWindow):
         action_panel.rowconfigure(0, weight=0)
         action_panel.rowconfigure(1, weight=0)
 
-        copy_view_button = ttk.Button(action_panel, command=self.copy_canvas, text="Copy")
-        copy_view_button.grid(column=3, row=0)
-        export_csv_button = ttk.Button(action_panel, command=self.export_canvas, text="Export CSV")
-        export_csv_button.grid(column=4, row=0)
+        copy_view_button = self.create_icon_button(action_panel, text="Copy view", icon_name="image", char_width=16)
+        copy_view_button.grid(column=3, row=0, padx=8)
+        export_csv_button = self.create_icon_button(action_panel, text="Export", icon_name="table", char_width=12)
+        export_csv_button.grid(column=4, row=0, padx=8)
 
-        reload_button = ttk.Button(action_panel, command=self.reload_file, text="Reload")
-        reload_button.grid(column=0, row=0)
-        replay_button = ttk.Button(action_panel, text="Replay")
+        reload_button = self.create_icon_button(action_panel, text="Reload", icon_name="rotate-left", char_width=12)
+        reload_button.grid(column=0, row=0, padx=(0, 8))
+        replay_button = self.create_icon_button(action_panel, text="Replay", icon_name="clock-rotate-left", char_width=12)
         replay_button.configure(command=functools.partial(self.replay_data, replay_button))
-        replay_button.grid(column=1, row=0)
+        replay_button.grid(column=1, row=0, padx=8)
 
-        file_message = ttk.Label(action_panel, text="Waiting for load")
+        file_message = ttk.Label(action_panel, text="Waiting for load", background=guikit.hex_string_for_style(bootstyle.SUCCESS))
         file_message.grid(row=1, columnspan=5)
 
         toolbar = ttk.Frame(toolbar_row, name="toolbar", height=50, width=300, style=bootstyle.SECONDARY)
-        toolbar.grid(column=1, row=0, sticky=tk.EW)
+        toolbar.grid(column=1, row=0, sticky=tk.N)
 
     def create_icon_button(self, parent: tk.Widget, text: str, icon_name: str, char_width: int = 15, spaces: int = 2) -> ttk.Button:
         """Create a ttk.Button using the specified icon_name an text."""
         text_spacing = 3 * " "
         button_image = icon_to_image(icon_name, fill=guikit.hex_string_for_style("selectfg"), scale_to_height=24)
         self.svg_images[icon_name] = button_image
-        button = ttk.Button(parent, text=text + spaces*text_spacing, image=button_image, compound=tk.RIGHT, width=15, padding=(4, 6, 4, 4))
+        button = ttk.Button(parent, text=text + spaces*text_spacing, image=button_image, compound=tk.RIGHT, width=char_width, padding=(4, 6, 4, 4))
         return button
 
     def on_show(self) -> None:
