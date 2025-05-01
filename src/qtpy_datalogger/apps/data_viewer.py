@@ -84,7 +84,7 @@ class DataViewer(guikit.AsyncWindow):
         replay_button.grid(column=1, row=0, padx=8)
 
         file_message = ttk.Label(action_panel, text="Waiting for load", background=guikit.hex_string_for_style(bootstyle.SUCCESS))
-        file_message.grid(row=1, columnspan=5)
+        file_message.grid(row=1, columnspan=5, pady=(8, 0))
 
         toolbar = ttk.Frame(toolbar_row, name="toolbar", height=50, width=300, style=bootstyle.SECONDARY)
         toolbar.grid(column=1, row=0, sticky=tk.N)
