@@ -183,6 +183,10 @@ class DataViewer(guikit.AsyncWindow):
             label="Copy",
             accelerator="Ctrl-C",
         )
+        edit_menu.add_command(
+            command=functools.partial(self.export_canvas, edit_menu),
+            label="Export",
+        )
 
         # View menu
         view_menu = tk.Menu(self.menubar)
