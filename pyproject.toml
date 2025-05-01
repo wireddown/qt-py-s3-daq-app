@@ -27,7 +27,7 @@ matplotlib = "^3.10.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
-ruff = "^0.11.2"
+ruff = "^0.11.7"
 pyright = "^1.1.398"
 
 [tool.poetry.group.circup.dependencies]
