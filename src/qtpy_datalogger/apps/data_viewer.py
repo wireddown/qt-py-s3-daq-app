@@ -5,13 +5,14 @@ import functools
 import logging
 import pathlib
 import tkinter as tk
+from tkinter import font
 
 import ttkbootstrap as ttk
-import ttkbootstrap.icons as ttk_icons
 import ttkbootstrap.themes.standard as ttk_themes
 from ttkbootstrap import constants as bootstyle
 
 from qtpy_datalogger import guikit
+from qtpy_datalogger.vendor.tkfontawesome import icon_to_image
 
 logger = logging.getLogger(pathlib.Path(__file__).stem)
 
@@ -21,6 +22,10 @@ class DataViewer(guikit.AsyncWindow):
 
     def create_user_interface(self) -> None:
         """Create the main window and connect event handlers."""
+        ttk.Style().theme_use("cosmo")
+
+        self.svg_images: dict[str, tk.Image] = {}
+
         self.update_window_title("QT Py Data Viewer")
         ##self.root_window.minsize(width=870, height=600)
         self.root_window.columnconfigure(0, weight=1)
@@ -35,6 +40,18 @@ class DataViewer(guikit.AsyncWindow):
 
         self.canvas_placeholder = ttk.Frame(main, name="canvas_placeholder", height=200, width=300, style=bootstyle.INFO)
         self.canvas_placeholder.grid(column=0, row=0, sticky=tk.NSEW)
+        self.canvas_placeholder.columnconfigure(0, weight=1)
+        self.canvas_placeholder.rowconfigure(0, weight=1)
+        self.canvas_placeholder.rowconfigure(1, weight=0)
+        self.canvas_placeholder.rowconfigure(2, weight=1)
+
+        startup_label = ttk.Label(self.canvas_placeholder, font=font.Font(weight="bold", size=16), text="QT Py Data Viewer", background=guikit.hex_string_for_style(bootstyle.INFO))
+        startup_label.grid(column=0, row=0, pady=16)
+        open_file_button = self.create_icon_button(self.canvas_placeholder, text="Open CSV", icon_name="file-csv")
+        open_file_button.grid(column=0, row=1, sticky=tk.S, pady=(0, 16))
+        open_file_button.configure(command=functools.partial(self.open_file, open_file_button))
+        demo_button = self.create_icon_button(self.canvas_placeholder, text="Demo", icon_name="chart-line", spaces=4)
+        demo_button.grid(column=0, row=2, sticky=tk.N, pady=(0, 16))
 
         toolbar_row = ttk.Frame(main, name="toolbar_row", style=bootstyle.WARNING)
         toolbar_row.grid(column=0, row=1, sticky=tk.NSEW, pady=(8, 0))
@@ -56,7 +73,7 @@ class DataViewer(guikit.AsyncWindow):
 
         reload_button = ttk.Button(action_panel, command=self.reload_file, text="Reload")
         reload_button.grid(column=0, row=1)
-        replay_button = ttk.Button(action_panel, text="Replay", style=bootstyle.SUCCESS)
+        replay_button = ttk.Button(action_panel, text="Replay")
         replay_button.configure(command=functools.partial(self.replay_data, replay_button))
         replay_button.grid(column=1, row=1)
 
@@ -65,6 +82,14 @@ class DataViewer(guikit.AsyncWindow):
 
         toolbar = ttk.Frame(toolbar_row, name="toolbar", height=50, width=300, style=bootstyle.SECONDARY)
         toolbar.grid(column=1, row=0, sticky=tk.EW)
+
+    def create_icon_button(self, parent: tk.Widget, text: str, icon_name: str, char_width: int = 15, spaces: int = 2) -> ttk.Button:
+        """Create a ttk.Button using the specified icon_name an text."""
+        text_spacing = 3 * " "
+        button_image = icon_to_image(icon_name, fill=guikit.hex_string_for_style("selectfg"), scale_to_height=24)
+        self.svg_images[icon_name] = button_image
+        button = ttk.Button(parent, text=text + spaces*text_spacing, image=button_image, compound=tk.RIGHT, width=15, padding=(4, 6, 4, 4))
+        return button
 
     def on_show(self) -> None:
         """Initialize UI before entering main loop."""
@@ -97,7 +122,7 @@ class DataViewer(guikit.AsyncWindow):
             underline=0,
         )
         file_menu.add_command(
-            command=self.open_file,
+            command=functools.partial(self.open_file, file_menu),
             label="Open",
             accelerator="Ctrl-O",
             # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
@@ -213,10 +238,13 @@ class DataViewer(guikit.AsyncWindow):
             accelerator="F1",
         )
 
+    def open_demo(self) -> None:
+        """Handle the Demo button command."""
+
     def on_file_menu(self) -> None:
         """Handle the File menu opening."""
 
-    def open_file(self) -> None:
+    def open_file(self, sender: tk.Widget) -> None:
         """Handle the File::Open menu command."""
 
     def reload_file(self) -> None:

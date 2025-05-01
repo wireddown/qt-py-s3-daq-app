@@ -240,6 +240,17 @@ def create_theme_combobox(parent: tk.BaseWidget) -> ttk.Combobox:
     return theme_combobox
 
 
+def hex_string_for_style(style_name: str, theme_name: str = "") -> str:
+    """Return the '#RRGGBB' string for the specified style name for the active or specified theme."""
+    if not theme_name:
+        style = ttk.Style.get_instance()
+        if not (style and style.theme):
+            raise ValueError()
+        theme_name = style.theme.name
+    palette = ttk_themes.STANDARD_THEMES[theme_name]["colors"]
+    return palette[style_name]
+
+
 def toggle_visual_debug(frame: tk.Widget) -> None:
     """Show or hide the border around the specified frame for visual debugging."""
     live_borderwidth = frame.cget("borderwidth")

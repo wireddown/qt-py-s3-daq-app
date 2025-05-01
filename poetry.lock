@@ -504,6 +504,17 @@ docs = ["ipython", "matplotlib", "numpydoc", "sphinx"]
 tests = ["pytest", "pytest-cov", "pytest-xdist"]
 
 [[package]]
+name = "distro"
+version = "1.9.0"
+description = "Distro - an OS platform information API"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "distro-1.9.0-py3-none-any.whl", hash = "sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2"},
+    {file = "distro-1.9.0.tar.gz", hash = "sha256:2fa77c6fd8940f116ee1d6b94a2f90b13b5ea8d019b98bc8bafdcabcdd9bdbed"},
+]
+
+[[package]]
 name = "findimports"
 version = "2.5.2"
 description = "Python module import analysis tool"
@@ -1165,6 +1176,29 @@ files = [
 ]
 
 [[package]]
+name = "scikit-build"
+version = "0.18.1"
+description = "Improved build system generator for Python C/C++/Fortran/Cython extensions"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "scikit_build-0.18.1-py3-none-any.whl", hash = "sha256:a6860e300f6807e76f21854163bdb9db16afc74eadf34bd6a9947d3fdfcd725a"},
+    {file = "scikit_build-0.18.1.tar.gz", hash = "sha256:a4152ac5a084d499c28a7797be0628d8366c336e2fb0e1a063eb32e55efcb8e7"},
+]
+
+[package.dependencies]
+distro = "*"
+packaging = "*"
+setuptools = ">=42.0.0"
+wheel = ">=0.32.0"
+
+[package.extras]
+cov = ["coverage[toml] (>=4.2)", "pytest-cov (>=2.7.1)"]
+docs = ["pygments", "sphinx (>=4)", "sphinx-issues", "sphinx-rtd-theme (>=1.0)", "sphinxcontrib-moderncmakedomain (>=3.19)"]
+doctest = ["ubelt (>=0.8.2)", "xdoctest (>=0.10.0)"]
+test = ["build (>=0.7)", "cython (>=0.25.1)", "importlib-metadata", "pip", "pytest (>=6.0.0)", "pytest-mock (>=1.10.4)", "requests", "virtualenv"]
+
+[[package]]
 name = "semver"
 version = "3.0.4"
 description = "Python helper for Semantic Versioning (https://semver.org)"
@@ -1174,6 +1208,26 @@ files = [
     {file = "semver-3.0.4-py3-none-any.whl", hash = "sha256:9c824d87ba7f7ab4a1890799cec8596f15c1241cb473404ea1cb0c55e4b04746"},
     {file = "semver-3.0.4.tar.gz", hash = "sha256:afc7d8c584a5ed0a11033af086e8af226a9c0b206f313e0301f8dd7b6b589602"},
 ]
+
+[[package]]
+name = "setuptools"
+version = "80.1.0"
+description = "Easily download, build, install, upgrade, and uninstall Python packages"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "setuptools-80.1.0-py3-none-any.whl", hash = "sha256:ea0e7655c05b74819f82e76e11a85b31779fee7c4969e82f72bab0664e8317e4"},
+    {file = "setuptools-80.1.0.tar.gz", hash = "sha256:2e308396e1d83de287ada2c2fd6e64286008fe6aca5008e0b6a8cb0e2c86eedd"},
+]
+
+[package.extras]
+check = ["pytest-checkdocs (>=2.4)", "pytest-ruff (>=0.2.1)", "ruff (>=0.8.0)"]
+core = ["importlib_metadata (>=6)", "jaraco.functools (>=4)", "jaraco.text (>=3.7)", "more_itertools", "more_itertools (>=8.8)", "packaging (>=24.2)", "platformdirs (>=4.2.2)", "tomli (>=2.0.1)", "wheel (>=0.43.0)"]
+cover = ["pytest-cov"]
+doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "pygments-github-lexers (==0.0.5)", "pyproject-hooks (!=1.1)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-favicon", "sphinx-inline-tabs", "sphinx-lint", "sphinx-notfound-page (>=1,<2)", "sphinx-reredirects", "sphinxcontrib-towncrier", "towncrier (<24.7)"]
+enabler = ["pytest-enabler (>=2.2)"]
+test = ["build[virtualenv] (>=1.0.3)", "filelock (>=3.4.0)", "ini2toml[lite] (>=0.14)", "jaraco.develop (>=7.21)", "jaraco.envs (>=2.2)", "jaraco.path (>=3.7.2)", "jaraco.test (>=5.5)", "packaging (>=24.2)", "pip (>=19.1)", "pyproject-hooks (!=1.1)", "pytest (>=6,!=8.1.*)", "pytest-home (>=0.5)", "pytest-perf", "pytest-subprocess", "pytest-timeout", "pytest-xdist (>=3)", "tomli-w (>=1.0.0)", "virtualenv (>=13.0.0)", "wheel (>=0.44.0)"]
+type = ["importlib_metadata (>=7.0.2)", "jaraco.develop (>=7.21)", "mypy (==1.14.*)", "pytest-mypy"]
 
 [[package]]
 name = "six"
@@ -1210,6 +1264,24 @@ files = [
     {file = "sysv_ipc-1.1.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:61190b934b0277f7a189092dcabceee8d9736fd73de90fd9b50ea69f0bac4723"},
     {file = "sysv_ipc-1.1.0.tar.gz", hash = "sha256:0f063cbd36ec232032e425769ebc871f195a7d183b9af32f9901589ea7129ac3"},
 ]
+
+[[package]]
+name = "tksvg"
+version = "0.7.4"
+description = "SVG support for PhotoImage in Tk 8.6"
+optional = false
+python-versions = "*"
+files = [
+    {file = "tksvg-0.7.4-cp36-cp36m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:be180c76c4a417f5ddaa2a08e39df5177e32a1d2698f9cdc241d5e42b6bf69d7"},
+    {file = "tksvg-0.7.4-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0771586ba3bf56443185ae29fa2d49619c9d208f0dee4f2fefb4a6bad7edc7f0"},
+    {file = "tksvg-0.7.4-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ad6991c1a9fdca48f1a195519facb8c8a2c3cb1c3443b9910b39600e8bf63d0d"},
+    {file = "tksvg-0.7.4-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:2baa23b1f07cb88199a05c8bee825522520fd780ed3365bd54803407ffd03780"},
+    {file = "tksvg-0.7.4-py3-none-win_amd64.whl", hash = "sha256:1e96830e3e92d12390aee3460dab2aab169bd3b1cb59ba478329c1e6bc3edd2a"},
+    {file = "tksvg-0.7.4.tar.gz", hash = "sha256:e451c4301814306547afca80680e6db0cc6720b7d6cc3dca56beb17c2b29c0f5"},
+]
+
+[package.dependencies]
+scikit-build = "*"
 
 [[package]]
 name = "toml"
@@ -1284,6 +1356,20 @@ socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
 zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
+name = "wheel"
+version = "0.45.1"
+description = "A built-package format for Python"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "wheel-0.45.1-py3-none-any.whl", hash = "sha256:708e7481cc80179af0e556bbf0cc00b8444c7321e2700b8d8580231d13017248"},
+    {file = "wheel-0.45.1.tar.gz", hash = "sha256:661e1abd9198507b1409a20c02106d9670b2576e916d58f520316666abca6729"},
+]
+
+[package.extras]
+test = ["pytest (>=6.0.0)", "setuptools (>=65)"]
+
+[[package]]
 name = "wmi"
 version = "1.5.1"
 description = "Windows Management Instrumentation"
@@ -1307,4 +1393,4 @@ tests = ["pytest"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "28de04a41a8164dd158681f8ca8181a7e666f132e9f46a1bd6335757cad139e2"
+content-hash = "92d5c5be9093e220c9898fdf0d6bc7938989a0e68a43ca039a731c5c0eed17bf"
