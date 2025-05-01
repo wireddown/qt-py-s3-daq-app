@@ -52,6 +52,7 @@ class DataViewer(guikit.AsyncWindow):
         open_file_button.configure(command=functools.partial(self.open_file, open_file_button))
         demo_button = self.create_icon_button(self.canvas_placeholder, text="Demo", icon_name="chart-line", spaces=4)
         demo_button.grid(column=0, row=2, sticky=tk.N, pady=(0, 16))
+        demo_button.configure(command=functools.partial(self.open_demo, demo_button))
 
         toolbar_row = ttk.Frame(main, name="toolbar_row", style=bootstyle.WARNING)
         toolbar_row.grid(column=0, row=1, sticky=tk.NSEW, pady=(8, 0))
@@ -70,10 +71,13 @@ class DataViewer(guikit.AsyncWindow):
 
         copy_view_button = self.create_icon_button(action_panel, text="Copy view", icon_name="image", char_width=16)
         copy_view_button.grid(column=3, row=0, padx=8)
+        copy_view_button.configure(command=functools.partial(self.copy_canvas, copy_view_button))
         export_csv_button = self.create_icon_button(action_panel, text="Export", icon_name="table", char_width=12)
         export_csv_button.grid(column=4, row=0, padx=8)
+        export_csv_button.configure(command=functools.partial(self.export_canvas, export_csv_button))
 
         reload_button = self.create_icon_button(action_panel, text="Reload", icon_name="rotate-left", char_width=12)
+        reload_button.configure(command=functools.partial(self.reload_file, reload_button))
         reload_button.grid(column=0, row=0, padx=(0, 8))
         replay_button = self.create_icon_button(action_panel, text="Replay", icon_name="clock-rotate-left", char_width=12)
         replay_button.configure(command=functools.partial(self.replay_data, replay_button))
@@ -85,12 +89,26 @@ class DataViewer(guikit.AsyncWindow):
         toolbar = ttk.Frame(toolbar_row, name="toolbar", height=50, width=300, style=bootstyle.SECONDARY)
         toolbar.grid(column=1, row=0, sticky=tk.N)
 
-    def create_icon_button(self, parent: tk.Widget, text: str, icon_name: str, char_width: int = 15, spaces: int = 2) -> ttk.Button:
+    def create_icon_button(
+            self,
+            parent: tk.Widget,
+            text: str,
+            icon_name: str,
+            char_width: int = 15,
+            spaces: int = 2
+        ) -> ttk.Button:
         """Create a ttk.Button using the specified icon_name an text."""
         text_spacing = 3 * " "
         button_image = icon_to_image(icon_name, fill=guikit.hex_string_for_style("selectfg"), scale_to_height=24)
         self.svg_images[icon_name] = button_image
-        button = ttk.Button(parent, text=text + spaces*text_spacing, image=button_image, compound=tk.RIGHT, width=char_width, padding=(4, 6, 4, 4))
+        button = ttk.Button(
+            parent,
+            text=text + spaces * text_spacing,
+            image=button_image,
+            compound=tk.RIGHT,
+            width=char_width,
+            padding=(4, 6, 4, 4)
+        )
         return button
 
     def on_show(self) -> None:
@@ -130,7 +148,7 @@ class DataViewer(guikit.AsyncWindow):
             # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
         )
         file_menu.add_command(
-            command=self.reload_file,
+            command=functools.partial(self.reload_file, file_menu),
             label="Reload",
             accelerator="F5",
         )
@@ -139,7 +157,7 @@ class DataViewer(guikit.AsyncWindow):
             label="Replay",
         )
         file_menu.add_command(
-            command=self.close_file,
+            command=functools.partial(self.close_file, file_menu),
             label="Close",
             accelerator="Ctrl-W",
             # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
@@ -161,7 +179,7 @@ class DataViewer(guikit.AsyncWindow):
             underline=0,
         )
         edit_menu.add_command(
-            command=self.copy_canvas,
+            command=functools.partial(self.copy_canvas, edit_menu),
             label="Copy",
             accelerator="Ctrl-C",
         )
@@ -240,25 +258,25 @@ class DataViewer(guikit.AsyncWindow):
             accelerator="F1",
         )
 
-    def open_demo(self) -> None:
+    def open_file(self, sender: tk.Widget) -> None:
+        """Handle the File::Open menu command."""
+
+    def open_demo(self, sender: tk.Widget) -> None:
         """Handle the Demo button command."""
 
     def on_file_menu(self) -> None:
         """Handle the File menu opening."""
 
-    def open_file(self, sender: tk.Widget) -> None:
-        """Handle the File::Open menu command."""
-
-    def reload_file(self) -> None:
+    def reload_file(self, sender: tk.Widget) -> None:
         """Handle the File::Reload menu command."""
 
-    def close_file(self) -> None:
+    def close_file(self, sender: tk.Widget) -> None:
         """Handle the File::Close menu command."""
 
-    def copy_canvas(self) -> None:
+    def copy_canvas(self, sender: tk.Widget) -> None:
         """Handle the Edit::Copy menu command."""
 
-    def export_canvas(self) -> None:
+    def export_canvas(self, sender: tk.Widget) -> None:
         """Handle the Export CSV button command."""
 
     def replay_data(self, sender: tk.Widget) -> None:
