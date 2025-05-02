@@ -5,6 +5,7 @@ import functools
 import logging
 import pathlib
 import tkinter as tk
+from enum import StrEnum
 from tkinter import font
 
 import ttkbootstrap as ttk
@@ -20,20 +21,27 @@ logger = logging.getLogger(pathlib.Path(__file__).stem)
 class AppState:
     """A class that models and controls the app's settings and runtime state."""
 
-    def __init__(self, theme_variable: tk.StringVar) -> None:
+    class Event(StrEnum):
+        """Events emitted when properties change."""
+
+        DataFileChanged = "<<DataFileChanged>>"
+        ReplayActiveChanged = "<<ReplayActiveChanged>>"
+
+    def __init__(self, tk_root: tk.Tk) -> None:
         """Initialize a new AppState instance."""
-        self._theme_name = theme_variable
+        self._tk_notifier = tk_root
+        self._theme_name: str = ""
         self._replay_active: bool = False
 
     @property
     def active_theme(self) -> str:
         """Return the name of the active ttkbootstrap theme."""
-        return self._theme_name.get()
+        return self._theme_name
 
     @active_theme.setter
     def active_theme(self, new_value: str) -> None:
         """Set a new value for the active_theme."""
-        self._theme_name.set(new_value)
+        self._theme_name = new_value
         ttk.Style().theme_use(new_value)
 
     @property
@@ -45,6 +53,7 @@ class AppState:
     def replay_active(self, new_value: bool) -> None:
         """Set a new value for replay_active."""
         self._replay_active = new_value
+        self._tk_notifier.event_generate(AppState.Event.ReplayActiveChanged, data=str(new_value))
 
 
 class DataViewer(guikit.AsyncWindow):
@@ -53,7 +62,8 @@ class DataViewer(guikit.AsyncWindow):
     def create_user_interface(self) -> None:  # noqa: PLR0915 -- allow long function to create the UI
         """Create the main window and connect event handlers."""
         self.theme_variable = tk.StringVar()
-        self.state = AppState(self.theme_variable)
+        self.replay_variable = tk.BooleanVar()
+        self.state = AppState(self.root_window)
         self.state.active_theme = "vapor"
 
         self.svg_images: dict[str, tk.Image] = {}
@@ -111,15 +121,24 @@ class DataViewer(guikit.AsyncWindow):
         reload_button = self.create_icon_button(action_panel, text="Reload", icon_name="rotate-left", char_width=12)
         reload_button.configure(command=functools.partial(self.reload_file, reload_button))
         reload_button.grid(column=0, row=0, padx=(0, 8))
-        replay_button = self.create_icon_button(action_panel, text="Replay", icon_name="clock-rotate-left", char_width=12)
-        replay_button.configure(command=functools.partial(self.replay_data, replay_button))
-        replay_button.grid(column=1, row=0, padx=8)
+        self.replay_button = self.create_icon_button(action_panel, text="Replay", icon_name="clock-rotate-left", char_width=12)
+        self.replay_button.configure(command=functools.partial(self.replay_data, self.replay_button))
+        self.replay_button.grid(column=1, row=0, padx=8)
 
         file_message = ttk.Label(action_panel, text="Waiting for load", background=guikit.hex_string_for_style(bootstyle.SUCCESS))
         file_message.grid(row=1, columnspan=5, pady=(8, 0))
 
         toolbar = ttk.Frame(toolbar_row, name="toolbar", height=50, width=300, style=bootstyle.SECONDARY)
         toolbar.grid(column=1, row=0, sticky=tk.N)
+
+        self.root_window.bind(
+            AppState.Event.ReplayActiveChanged,
+            lambda e: self.on_replay_active_changed(e),
+        )
+        self.root_window.bind(
+            "<<ThemeChanged>>",
+            lambda e: self.on_theme_changed(e),
+        )
 
     def create_icon_button(
             self,
@@ -187,6 +206,7 @@ class DataViewer(guikit.AsyncWindow):
         file_menu.add_checkbutton(
             command=functools.partial(self.replay_data, file_menu),
             label="Replay",
+            variable=self.replay_variable,
         )
         file_menu.add_command(
             command=functools.partial(self.close_file, file_menu),
@@ -318,17 +338,25 @@ class DataViewer(guikit.AsyncWindow):
         """Handle the Export CSV button command."""
 
     def replay_data(self, sender: tk.Widget) -> None:
-        """Handle the View::Replay menu command."""
-        if isinstance(sender, ttk.Button):
-            style = sender.cget("style")
-            new_style = bootstyle.SUCCESS if "success" not in style else bootstyle.DEFAULT
-            sender.configure(bootstyle=new_style)
-        else:
-            x = sender
+        """Handle the View::Replay menu or button command."""
+        current_replay = self.state.replay_active
+        self.state.replay_active = not current_replay
+
+    def on_replay_active_changed(self, sender: tk.Misc) -> None:
+        """Update UI state when replay_active changes state."""
+        replay_active = self.state.replay_active
+        new_style = bootstyle.SUCCESS if replay_active else bootstyle.DEFAULT
+        self.replay_button.configure(bootstyle=new_style)
+        self.replay_variable.set(replay_active)
 
     def change_theme(self, theme_name: str) -> None:
         """Handle the View::Theme selection command."""
         self.state.active_theme = theme_name
+
+    def on_theme_changed(self, sender: tk.Misc) -> None:
+        """Update UI state when active_theme changes state."""
+        theme_name = self.state.active_theme
+        self.theme_variable.set(theme_name)
 
     def show_about(self) -> None:
         """Handle the Help::About menu command."""
