@@ -17,12 +17,43 @@ from qtpy_datalogger.vendor.tkfontawesome import icon_to_image
 logger = logging.getLogger(pathlib.Path(__file__).stem)
 
 
+class AppState:
+    """A class that models and controls the app's settings and runtime state."""
+
+    def __init__(self) -> None:
+        """Initialize a new AppState instance."""
+        self._theme_name: str = ""
+        self._replay_active: bool = False
+
+    @property
+    def active_theme(self) -> str:
+        """Return the name of the active ttkbootstrap theme."""
+        return self._theme_name
+
+    @active_theme.setter
+    def active_theme(self, new_value: str) -> None:
+        """Set a new value for the active_theme."""
+        self._theme_name = new_value
+        ttk.Style().theme_use(new_value)
+
+    @property
+    def replay_active(self) -> bool:
+        """Return True when the app is replaying a data file."""
+        return self._replay_active
+
+    @replay_active.setter
+    def replay_active(self, new_value: bool) -> None:
+        """Set a new value for replay_active."""
+        self._replay_active = new_value
+
+
 class DataViewer(guikit.AsyncWindow):
     """A GUI that loads a CSV data file and plots the columns."""
 
-    def create_user_interface(self) -> None:
+    def create_user_interface(self) -> None:  # noqa: PLR0915 -- allow long function to create the UI
         """Create the main window and connect event handlers."""
-        ttk.Style().theme_use("cosmo")
+        self.state = AppState()
+        self.state.active_theme = "vapor"
 
         self.svg_images: dict[str, tk.Image] = {}
 
@@ -97,7 +128,7 @@ class DataViewer(guikit.AsyncWindow):
             char_width: int = 15,
             spaces: int = 2
         ) -> ttk.Button:
-        """Create a ttk.Button using the specified icon_name an text."""
+        """Create a ttk.Button using the specified text and FontAwesome icon_name."""
         text_spacing = 3 * " "
         button_image = icon_to_image(icon_name, fill=guikit.hex_string_for_style("selectfg"), scale_to_height=24)
         self.svg_images[icon_name] = button_image
@@ -294,10 +325,7 @@ class DataViewer(guikit.AsyncWindow):
 
     def change_theme(self, theme_name: str) -> None:
         """Handle the View::Theme selection command."""
-        style = ttk.Style().instance
-        if not style:
-            raise ValueError()
-        style.theme_use(theme_name)
+        self.state.active_theme = theme_name
 
     def show_about(self) -> None:
         """Handle the Help::About menu command."""
