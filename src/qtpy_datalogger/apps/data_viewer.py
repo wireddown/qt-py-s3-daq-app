@@ -52,8 +52,8 @@ class DataViewer(guikit.AsyncWindow):
 
     def create_user_interface(self) -> None:  # noqa: PLR0915 -- allow long function to create the UI
         """Create the main window and connect event handlers."""
-        theme_variable = tk.StringVar()
-        self.state = AppState(theme_variable)
+        self.theme_variable = tk.StringVar()
+        self.state = AppState(self.theme_variable)
         self.state.active_theme = "vapor"
 
         self.svg_images: dict[str, tk.Image] = {}
@@ -271,14 +271,16 @@ class DataViewer(guikit.AsyncWindow):
             underline=0,
         )
         for theme_name in sorted(light_themes):
-            light_menu.add_command(
+            light_menu.add_radiobutton(
                 command=functools.partial(self.change_theme, theme_name),
                 label=theme_name,
+                variable=self.theme_variable,
             )
         for theme_name in sorted(dark_themes):
-            dark_menu.add_command(
+            dark_menu.add_radiobutton(
                 command=functools.partial(self.change_theme, theme_name),
                 label=theme_name,
+                variable=self.theme_variable,
             )
 
         # Help menu
