@@ -20,20 +20,20 @@ logger = logging.getLogger(pathlib.Path(__file__).stem)
 class AppState:
     """A class that models and controls the app's settings and runtime state."""
 
-    def __init__(self) -> None:
+    def __init__(self, theme_variable: tk.StringVar) -> None:
         """Initialize a new AppState instance."""
-        self._theme_name: str = ""
+        self._theme_name = theme_variable
         self._replay_active: bool = False
 
     @property
     def active_theme(self) -> str:
         """Return the name of the active ttkbootstrap theme."""
-        return self._theme_name
+        return self._theme_name.get()
 
     @active_theme.setter
     def active_theme(self, new_value: str) -> None:
         """Set a new value for the active_theme."""
-        self._theme_name = new_value
+        self._theme_name.set(new_value)
         ttk.Style().theme_use(new_value)
 
     @property
@@ -52,7 +52,8 @@ class DataViewer(guikit.AsyncWindow):
 
     def create_user_interface(self) -> None:  # noqa: PLR0915 -- allow long function to create the UI
         """Create the main window and connect event handlers."""
-        self.state = AppState()
+        theme_variable = tk.StringVar()
+        self.state = AppState(theme_variable)
         self.state.active_theme = "vapor"
 
         self.svg_images: dict[str, tk.Image] = {}
