@@ -342,7 +342,7 @@ class DataViewer(guikit.AsyncWindow):
         current_replay = self.state.replay_active
         self.state.replay_active = not current_replay
 
-    def on_replay_active_changed(self, sender: tk.Misc) -> None:
+    def on_replay_active_changed(self, event_args: tk.Event) -> None:
         """Update UI state when replay_active changes state."""
         replay_active = self.state.replay_active
         new_style = bootstyle.SUCCESS if replay_active else bootstyle.DEFAULT
@@ -353,7 +353,7 @@ class DataViewer(guikit.AsyncWindow):
         """Handle the View::Theme selection command."""
         self.state.active_theme = theme_name
 
-    def on_theme_changed(self, sender: tk.Misc) -> None:
+    def on_theme_changed(self, event_args: tk.Event) -> None:
         """Update UI state when active_theme changes state."""
         theme_name = self.state.active_theme
         self.theme_variable.set(theme_name)
