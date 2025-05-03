@@ -110,7 +110,6 @@ class DataViewer(guikit.AsyncWindow):
         self.theme_variable = tk.StringVar()
         self.replay_variable = tk.BooleanVar()
         self.state = AppState(self.root_window)
-        self.state.active_theme = "flatly"
 
         self.svg_images: dict[str, tk.Image] = {}
 
@@ -213,6 +212,7 @@ class DataViewer(guikit.AsyncWindow):
             lambda e: self.on_theme_changed(e),
         )
 
+        self.state.active_theme = "flatly"
         self.on_data_file_changed(event_args=tk.Event())
 
     def create_icon_button(
@@ -364,13 +364,13 @@ class DataViewer(guikit.AsyncWindow):
         for theme_name in sorted(light_themes):
             self.light_menu.add_radiobutton(
                 command=functools.partial(self.change_theme, theme_name),
-                label=theme_name,
+                label=theme_name.capitalize(),
                 variable=self.theme_variable,
             )
         for theme_name in sorted(dark_themes):
             self.dark_menu.add_radiobutton(
                 command=functools.partial(self.change_theme, theme_name),
-                label=theme_name,
+                label=theme_name.capitalize(),
                 variable=self.theme_variable,
             )
 
