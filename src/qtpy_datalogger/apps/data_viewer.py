@@ -81,6 +81,8 @@ class AppState:
 class DataViewer(guikit.AsyncWindow):
     """A GUI that loads a CSV data file and plots the columns."""
 
+    app_name = "QT Py Data Viewer"
+
     def create_user_interface(self) -> None:  # noqa: PLR0915 -- allow long function to create the UI
         """Create the main window and connect event handlers."""
         self.theme_variable = tk.StringVar()
@@ -90,7 +92,7 @@ class DataViewer(guikit.AsyncWindow):
 
         self.svg_images: dict[str, tk.Image] = {}
 
-        self.update_window_title("QT Py Data Viewer")
+        self.update_window_title(DataViewer.app_name)
         ##self.root_window.minsize(width=870, height=600)
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
@@ -377,7 +379,12 @@ class DataViewer(guikit.AsyncWindow):
 
     def on_data_file_changed(self, event_args: tk.Event) -> None:
         """Handle the File::Open menu or button command."""
-        new_enabled_state = tk.DISABLED if self.state.data_file == AppState.no_file else tk.NORMAL
+        if self.state.data_file == AppState.no_file:
+            new_enabled_state = tk.DISABLED
+            new_window_title = DataViewer.app_name
+        else:
+            new_enabled_state =  tk.NORMAL
+            new_window_title = f"{self.state.data_file.name} - {DataViewer.app_name}"
         button_list = [
             self.reload_button,
             self.replay_button,
@@ -386,6 +393,7 @@ class DataViewer(guikit.AsyncWindow):
         ]
         for button in button_list:
             button.configure(state=new_enabled_state)
+        self.update_window_title(new_window_title)
 
     def replay_data(self, sender: tk.Widget) -> None:
         """Handle the View::Replay menu or button command."""
