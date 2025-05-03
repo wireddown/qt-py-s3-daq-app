@@ -88,14 +88,15 @@ class DataViewer(guikit.AsyncWindow):
         """Names used for entries in the app's menus."""
 
         File = "File"
-        Open = "Open"
+        Open = "Open..."
         Reload= "Reload"
         Replay = "Replay"
+        Overlay = "Overlay..."
         Close = "Close"
         Exit = "Exit"
         Edit = "Edit"
         Copy = "Copy"
-        Export = "Export"
+        Export = "Export..."
         View = "View"
         Plots = "Plots"
         Theme = "Theme"
@@ -267,29 +268,29 @@ class DataViewer(guikit.AsyncWindow):
         # File menu
         self.file_menu = tk.Menu(self.menubar, name="file_menu")
         self.menubar.add_cascade(
-            label="File",
+            label=DataViewer.MenuName.File,
             menu=self.file_menu,
             underline=0,
         )
         self.file_menu.add_command(
             command=functools.partial(self.open_file, self.file_menu),
-            label="Open",
+            label=DataViewer.MenuName.Open,
             accelerator="Ctrl-O",
             # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
         )
         self.file_menu.add_command(
             command=functools.partial(self.reload_file, self.file_menu),
-            label="Reload",
+            label=DataViewer.MenuName.Reload,
             accelerator="F5",
         )
         self.file_menu.add_checkbutton(
             command=functools.partial(self.replay_data, self.file_menu),
-            label="Replay",
+            label=DataViewer.MenuName.Replay,
             variable=self.replay_variable,
         )
         self.file_menu.add_command(
             command=functools.partial(self.close_file, self.file_menu),
-            label="Close",
+            label=DataViewer.MenuName.Close,
             accelerator="Ctrl-W",
             # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
         )
@@ -297,39 +298,46 @@ class DataViewer(guikit.AsyncWindow):
             # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
         )
         self.file_menu.add_command(
+            command=functools.partial(self.overlay_file, self.file_menu),
+            label=DataViewer.MenuName.Overlay,
+        )
+        self.file_menu.add_separator(
+            # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
+        )
+        self.file_menu.add_command(
             command=self.exit,
-            label="Exit",
-            accelerator="Alt-F4"
+            label=DataViewer.MenuName.Exit,
+            accelerator="Alt-F4",
         )
 
         # Edit menu
         self.edit_menu = tk.Menu(self.menubar, name="edit_menu")
         self.menubar.add_cascade(
-            label="Edit",
+            label=DataViewer.MenuName.Edit,
             menu=self.edit_menu,
             underline=0,
         )
         self.edit_menu.add_command(
             command=functools.partial(self.copy_canvas, self.edit_menu),
-            label="Copy",
+            label=DataViewer.MenuName.Copy,
             accelerator="Ctrl-C",
         )
         self.edit_menu.add_command(
             command=functools.partial(self.export_canvas, self.edit_menu),
-            label="Export",
+            label=DataViewer.MenuName.Export,
         )
 
         # View menu
         self.view_menu = tk.Menu(self.menubar, name="view_menu")
         self.menubar.add_cascade(
-            label="View",
+            label=DataViewer.MenuName.View,
             menu=self.view_menu,
             underline=0,
         )
         # Plots submenu
         self.plots_menu = tk.Menu(self.view_menu, name="plots_menu")
         self.view_menu.add_cascade(
-            label="Plots",
+            label=DataViewer.MenuName.Plots,
             menu=self.plots_menu,
             underline=0,
         )
@@ -349,19 +357,19 @@ class DataViewer(guikit.AsyncWindow):
                 raise ValueError()
         self.themes_menu = tk.Menu(self.view_menu, name="themes_menu")
         self.view_menu.add_cascade(
-            label="Theme",
+            label=DataViewer.MenuName.Theme,
             menu=self.themes_menu,
             underline=0,
         )
         self.light_menu = tk.Menu(self.themes_menu, name="light_themes_menu")
         self.themes_menu.add_cascade(
-            label="Light",
+            label=DataViewer.MenuName.Light,
             menu=self.light_menu,
             underline=0,
         )
         self.dark_menu = tk.Menu(self.themes_menu, name="dark_themes_menu")
         self.themes_menu.add_cascade(
-            label="Dark",
+            label=DataViewer.MenuName.Dark,
             menu=self.dark_menu,
             underline=0,
         )
@@ -381,13 +389,13 @@ class DataViewer(guikit.AsyncWindow):
         # Help menu
         self.help_menu = tk.Menu(self.menubar, name="help_menu")
         self.menubar.add_cascade(
-            label="Help",
+            label=DataViewer.MenuName.Help,
             menu=self.help_menu,
             underline=0,
         )
         self.help_menu.add_command(
             command=self.show_about,
-            label="About",
+            label=DataViewer.MenuName.About,
             accelerator="F1",
         )
 
@@ -411,6 +419,9 @@ class DataViewer(guikit.AsyncWindow):
     def close_file(self, sender: tk.Widget) -> None:
         """Handle the File::Close menu command."""
         self.state.data_file = AppState.no_file
+
+    def overlay_file(self, sender: tk.Widget) -> None:
+        """Handle the File::Overlay menu command."""
 
     def copy_canvas(self, sender: tk.Widget) -> None:
         """Handle the Edit::Copy menu command."""
