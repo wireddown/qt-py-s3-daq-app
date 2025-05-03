@@ -1,6 +1,7 @@
 """Plot data from CSV files."""
 
 import asyncio
+import contextlib
 import functools
 import logging
 import math
@@ -480,6 +481,34 @@ class DataViewer(guikit.AsyncWindow):
         theme_name = self.state.active_theme
         self.theme_variable.set(theme_name.capitalize())
         self.startup_label.configure(background=guikit.hex_string_for_style(bootstyle.LIGHT))
+        all_menus = [
+            self.file_menu,
+            self.edit_menu,
+            self.view_menu,
+            self.plots_menu,
+            self.themes_menu,
+            self.light_menu,
+            self.dark_menu,
+            self.help_menu,
+        ]
+        # Force light theme for menus
+        for menu in all_menus:
+            for index in range(0, menu.index("end") + 1):
+                with contextlib.suppress(tk.TclError):
+                    menu.entryconfigure(
+                        index,
+                        background="grey94",
+                    )
+                with contextlib.suppress(tk.TclError):
+                    menu.entryconfigure(
+                        index,
+                        foreground="grey5",
+                    )
+                with contextlib.suppress(tk.TclError):
+                    menu.entryconfigure(
+                        index,
+                        selectcolor="grey5",
+                    )
 
     def show_about(self) -> None:
         """Handle the Help::About menu command."""
