@@ -110,7 +110,6 @@ class DataViewer(guikit.AsyncWindow):
         self.theme_variable = tk.StringVar()
         self.replay_variable = tk.BooleanVar()
         self.state = AppState(self.root_window)
-        self.state.active_theme = "vapor"
 
         self.svg_images: dict[str, tk.Image] = {}
 
@@ -150,7 +149,6 @@ class DataViewer(guikit.AsyncWindow):
             which="major",
             axis="y",
             dashes=(3, 8),
-            zorder=-1,
         )
 
         startup_label = ttk.Label(self.canvas_placeholder, font=font.Font(weight="bold", size=16), text="QT Py Data Viewer", background=guikit.hex_string_for_style(bootstyle.INFO))
@@ -162,12 +160,12 @@ class DataViewer(guikit.AsyncWindow):
         demo_button.grid(column=0, row=2, sticky=tk.N, pady=(0, 16))
         demo_button.configure(command=functools.partial(self.open_demo, demo_button))
 
-        toolbar_row = ttk.Frame(main, name="toolbar_row", style=bootstyle.WARNING)
-        toolbar_row.grid(column=0, row=1, sticky=tk.NSEW, pady=(8, 0))
+        toolbar_row = ttk.Frame(main, name="toolbar_row")
+        toolbar_row.grid(column=0, row=1, sticky=tk.NSEW, padx=40, pady=(8, 0))
         toolbar_row.columnconfigure(0, weight=1)
         toolbar_row.columnconfigure(1, weight=0)
 
-        action_panel = ttk.Frame(toolbar_row, name="action_panel", height=50, width=200, style=bootstyle.SUCCESS)
+        action_panel = ttk.Frame(toolbar_row, name="action_panel")
         action_panel.grid(column=0, row=0, sticky=tk.EW, padx=(0, 8))
         action_panel.columnconfigure(0, weight=0)
         action_panel.columnconfigure(1, weight=0)
@@ -181,7 +179,7 @@ class DataViewer(guikit.AsyncWindow):
         self.copy_view_button.grid(column=3, row=0, padx=8)
         self.copy_view_button.configure(command=functools.partial(self.copy_canvas, self.copy_view_button))
         self.export_csv_button = self.create_icon_button(action_panel, text="Export", icon_name="table", char_width=12)
-        self.export_csv_button.grid(column=4, row=0, padx=8)
+        self.export_csv_button.grid(column=4, row=0, padx=(8, 0))
         self.export_csv_button.configure(command=functools.partial(self.export_canvas, self.export_csv_button))
 
         self.reload_button = self.create_icon_button(action_panel, text="Reload", icon_name="rotate-left", char_width=12)
@@ -191,11 +189,11 @@ class DataViewer(guikit.AsyncWindow):
         self.replay_button.configure(command=functools.partial(self.replay_data, self.replay_button))
         self.replay_button.grid(column=1, row=0, padx=8)
 
-        self.file_message = ttk.Label(action_panel, text="Waiting for load", background=guikit.hex_string_for_style(bootstyle.SUCCESS))
+        self.file_message = ttk.Label(action_panel, text="Waiting for load")
         self.file_message.grid(row=1, columnspan=5, pady=(8, 0))
 
-        toolbar = ttk.Frame(toolbar_row, name="toolbar", height=50, width=300, style=bootstyle.SECONDARY)
-        toolbar.grid(column=1, row=0, sticky=tk.N)
+        toolbar_frame = ttkbootstrap_matplotlib.create_styled_plot_toolbar(toolbar_row, self.canvas_figure)
+        toolbar_frame.grid(column=1, row=0, sticky=(tk.EW, tk.N), padx=(8, 0))
 
         self.root_window.bind(
             AppState.Event.DataFileChanged,
@@ -211,7 +209,7 @@ class DataViewer(guikit.AsyncWindow):
             lambda e: self.on_theme_changed(e),
         )
 
-        self.on_data_file_changed(event_args=None)
+        self.on_data_file_changed(event_args=tk.Event())
 
     def create_icon_button(
             self,
@@ -237,6 +235,7 @@ class DataViewer(guikit.AsyncWindow):
 
     def on_show(self) -> None:
         """Initialize UI before entering main loop."""
+        self.state.active_theme = "cosmo"
 
     async def on_loop(self) -> None:
         """Update the UI with new information."""
@@ -478,8 +477,18 @@ class DataViewer(guikit.AsyncWindow):
         """Reconfigure the plot for the new data."""
         time_coordinates = range(0, 1200, 1)
         y1_coordinates = [1000 * math.sin(2 * math.pi * t * 1) for t in time_coordinates]
+
+        x_major_params = self.plot_axes.xaxis.get_tick_params(which="major")
+        x_minor_params = self.plot_axes.xaxis.get_tick_params(which="minor")
+        y_major_params = self.plot_axes.yaxis.get_tick_params(which="major")
+        y_minor_params = self.plot_axes.yaxis.get_tick_params(which="minor")
         self.plot_axes.clear()
-        (self.line,) = self.plot_axes.plot(
+        self.plot_axes.xaxis.set_tick_params(which="major", **x_major_params)
+        self.plot_axes.xaxis.set_tick_params(which="minor", **x_minor_params)
+        self.plot_axes.yaxis.set_tick_params(which="major", **y_major_params)
+        self.plot_axes.yaxis.set_tick_params(which="minor", **y_minor_params)
+
+        self.plot_axes.plot(
             time_coordinates,
             y1_coordinates,
             label="Demo",
