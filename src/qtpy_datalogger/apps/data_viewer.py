@@ -62,7 +62,7 @@ class AppState:
         if new_value in [self._data_file, AppState.canceled_file]:
             return
         self._data_file = new_value
-        self._tk_notifier.event_generate(AppState.Event.DataFileChanged, data=str(new_value))
+        self._tk_notifier.event_generate(AppState.Event.DataFileChanged)
 
     @property
     def replay_active(self) -> bool:
@@ -75,11 +75,31 @@ class AppState:
         if new_value == self._replay_active:
             return
         self._replay_active = new_value
-        self._tk_notifier.event_generate(AppState.Event.ReplayActiveChanged, data=str(new_value))
+        self._tk_notifier.event_generate(AppState.Event.ReplayActiveChanged)
 
 
 class DataViewer(guikit.AsyncWindow):
     """A GUI that loads a CSV data file and plots the columns."""
+
+    class MenuName(StrEnum):
+        """Names used for entries in the app's menus."""
+
+        File = "File"
+        Open = "Open"
+        Reload= "Reload"
+        Replay = "Replay"
+        Close = "Close"
+        Exit = "Exit"
+        Edit = "Edit"
+        Copy = "Copy"
+        Export = "Export"
+        View = "View"
+        Plots = "Plots"
+        Theme = "Theme"
+        Light = "Light"
+        Dark = "Dark"
+        Help = "Help"
+        About = "About"
 
     app_name = "QT Py Data Viewer"
 
@@ -217,77 +237,73 @@ class DataViewer(guikit.AsyncWindow):
         self.root_window.config(menu=self.menubar)
 
         # File menu
-        file_menu = tk.Menu(self.menubar, postcommand=self.on_file_menu)
+        self.file_menu = tk.Menu(self.menubar, name="file_menu")
         self.menubar.add_cascade(
             label="File",
-            menu=file_menu,
+            menu=self.file_menu,
             underline=0,
         )
-        file_menu.add_command(
-            command=functools.partial(self.open_file, file_menu),
+        self.file_menu.add_command(
+            command=functools.partial(self.open_file, self.file_menu),
             label="Open",
             accelerator="Ctrl-O",
             # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
         )
-        file_menu.add_command(
-            command=functools.partial(self.reload_file, file_menu),
+        self.file_menu.add_command(
+            command=functools.partial(self.reload_file, self.file_menu),
             label="Reload",
             accelerator="F5",
         )
-        file_menu.add_checkbutton(
-            command=functools.partial(self.replay_data, file_menu),
+        self.file_menu.add_checkbutton(
+            command=functools.partial(self.replay_data, self.file_menu),
             label="Replay",
             variable=self.replay_variable,
         )
-        file_menu.add_command(
-            command=functools.partial(self.close_file, file_menu),
+        self.file_menu.add_command(
+            command=functools.partial(self.close_file, self.file_menu),
             label="Close",
             accelerator="Ctrl-W",
             # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
         )
-        file_menu.add_separator(
+        self.file_menu.add_separator(
             # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
         )
-        file_menu.add_command(
+        self.file_menu.add_command(
             command=self.exit,
             label="Exit",
             accelerator="Alt-F4"
         )
 
         # Edit menu
-        edit_menu = tk.Menu(self.menubar)
+        self.edit_menu = tk.Menu(self.menubar, name="edit_menu")
         self.menubar.add_cascade(
             label="Edit",
-            menu=edit_menu,
+            menu=self.edit_menu,
             underline=0,
         )
-        edit_menu.add_command(
-            command=functools.partial(self.copy_canvas, edit_menu),
+        self.edit_menu.add_command(
+            command=functools.partial(self.copy_canvas, self.edit_menu),
             label="Copy",
             accelerator="Ctrl-C",
         )
-        edit_menu.add_command(
-            command=functools.partial(self.export_canvas, edit_menu),
+        self.edit_menu.add_command(
+            command=functools.partial(self.export_canvas, self.edit_menu),
             label="Export",
         )
 
         # View menu
-        view_menu = tk.Menu(self.menubar)
+        self.view_menu = tk.Menu(self.menubar, name="view_menu")
         self.menubar.add_cascade(
             label="View",
-            menu=view_menu,
+            menu=self.view_menu,
             underline=0,
         )
         # Plots submenu
-        plots_menu = tk.Menu(view_menu)
-        view_menu.add_cascade(
+        self.plots_menu = tk.Menu(self.view_menu, name="plots_menu")
+        self.view_menu.add_cascade(
             label="Plots",
-            menu=plots_menu,
+            menu=self.plots_menu,
             underline=0,
-        )
-        plots_menu.add_command(
-            label="(none)",
-            state="disabled",
         )
         # Themes submenu
         style = ttk.Style.get_instance()
@@ -303,45 +319,45 @@ class DataViewer(guikit.AsyncWindow):
                 dark_themes.append(theme_name)
             else:
                 raise ValueError()
-        themes_menu = tk.Menu(view_menu)
-        view_menu.add_cascade(
+        self.themes_menu = tk.Menu(self.view_menu, name="themes_menu")
+        self.view_menu.add_cascade(
             label="Theme",
-            menu=themes_menu,
+            menu=self.themes_menu,
             underline=0,
         )
-        light_menu = tk.Menu(themes_menu)
-        themes_menu.add_cascade(
+        self.light_menu = tk.Menu(self.themes_menu, name="light_themes_menu")
+        self.themes_menu.add_cascade(
             label="Light",
-            menu=light_menu,
+            menu=self.light_menu,
             underline=0,
         )
-        dark_menu = tk.Menu(themes_menu)
-        themes_menu.add_cascade(
+        self.dark_menu = tk.Menu(self.themes_menu, name="dark_themes_menu")
+        self.themes_menu.add_cascade(
             label="Dark",
-            menu=dark_menu,
+            menu=self.dark_menu,
             underline=0,
         )
         for theme_name in sorted(light_themes):
-            light_menu.add_radiobutton(
+            self.light_menu.add_radiobutton(
                 command=functools.partial(self.change_theme, theme_name),
                 label=theme_name,
                 variable=self.theme_variable,
             )
         for theme_name in sorted(dark_themes):
-            dark_menu.add_radiobutton(
+            self.dark_menu.add_radiobutton(
                 command=functools.partial(self.change_theme, theme_name),
                 label=theme_name,
                 variable=self.theme_variable,
             )
 
         # Help menu
-        help_menu = tk.Menu(self.menubar)
+        self.help_menu = tk.Menu(self.menubar, name="help_menu")
         self.menubar.add_cascade(
             label="Help",
-            menu=help_menu,
+            menu=self.help_menu,
             underline=0,
         )
-        help_menu.add_command(
+        self.help_menu.add_command(
             command=self.show_about,
             label="About",
             accelerator="F1",
@@ -361,9 +377,6 @@ class DataViewer(guikit.AsyncWindow):
     def open_demo(self, sender: tk.Widget) -> None:
         """Handle the Demo button command."""
 
-    def on_file_menu(self) -> None:
-        """Handle the File menu opening."""
-
     def reload_file(self, sender: tk.Widget) -> None:
         """Handle the File::Reload menu command."""
 
@@ -382,9 +395,11 @@ class DataViewer(guikit.AsyncWindow):
         if self.state.data_file == AppState.no_file:
             new_enabled_state = tk.DISABLED
             new_window_title = DataViewer.app_name
+            plots_entries = ["(none)"]
         else:
             new_enabled_state =  tk.NORMAL
             new_window_title = f"{self.state.data_file.name} - {DataViewer.app_name}"
+            plots_entries = ["(unknown)"]
         button_list = [
             self.reload_button,
             self.replay_button,
@@ -393,6 +408,16 @@ class DataViewer(guikit.AsyncWindow):
         ]
         for button in button_list:
             button.configure(state=new_enabled_state)
+        menu_entries = {
+            self.file_menu: [DataViewer.MenuName.Reload, DataViewer.MenuName.Replay, DataViewer.MenuName.Close],
+            self.edit_menu: [DataViewer.MenuName.Copy, DataViewer.MenuName.Export],
+        }
+        for owner, entries in menu_entries.items():
+            for entry in entries:
+                owner.entryconfigure(entry, state=new_enabled_state)
+        self.plots_menu.delete(0, "end")
+        for entry in plots_entries:
+            self.plots_menu.add_command(label=entry, state=new_enabled_state)
         self.update_window_title(new_window_title)
 
     def replay_data(self, sender: tk.Widget) -> None:
