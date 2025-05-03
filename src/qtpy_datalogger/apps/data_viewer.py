@@ -130,19 +130,19 @@ class DataViewer(guikit.AsyncWindow):
         main.rowconfigure(0, weight=1)
         main.rowconfigure(1, weight=0)
 
-        self.canvas_placeholder = ttk.Frame(main, name="canvas_placeholder", height=200, width=300, style=bootstyle.INFO)
-        self.canvas_placeholder.grid(column=0, row=0, sticky=tk.NSEW)
-        self.canvas_placeholder.columnconfigure(0, weight=1)
-        self.canvas_placeholder.rowconfigure(0, weight=1)
-        self.canvas_placeholder.rowconfigure(1, weight=0)
-        self.canvas_placeholder.rowconfigure(2, weight=1)
-
         self.canvas_frame = ttk.Frame(main, name="canvas_frame")
         self.canvas_frame.grid(column=0, row=0, sticky=tk.NSEW)
         self.canvas_frame.columnconfigure(0, weight=1)
         self.canvas_frame.rowconfigure(0, weight=1)
         self.plot_figure = mpl_figure.Figure(figsize=figure_aspect, dpi=figure_dpi)
         self.canvas_figure = ttkbootstrap_matplotlib.create_styled_plot_canvas(self.plot_figure, self.canvas_frame)
+
+        self.canvas_cover = ttk.Frame(main, name="canvas_cover", style=bootstyle.INFO)
+        self.canvas_cover.grid(column=0, row=0, sticky=tk.NSEW)
+        self.canvas_cover.columnconfigure(0, weight=1)
+        self.canvas_cover.rowconfigure(0, weight=1)
+        self.canvas_cover.rowconfigure(1, weight=0)
+        self.canvas_cover.rowconfigure(2, weight=1)
 
         self.plot_axes = self.plot_figure.add_subplot()
         self.plot_axes.set_xlabel("time")
@@ -154,12 +154,12 @@ class DataViewer(guikit.AsyncWindow):
             dashes=(3, 8),
         )
 
-        startup_label = ttk.Label(self.canvas_placeholder, font=font.Font(weight="bold", size=16), text="QT Py Data Viewer", background=guikit.hex_string_for_style(bootstyle.INFO))
+        startup_label = ttk.Label(self.canvas_cover, font=font.Font(weight="bold", size=16), text="QT Py Data Viewer", background=guikit.hex_string_for_style(bootstyle.INFO))
         startup_label.grid(column=0, row=0, pady=16)
-        open_file_button = self.create_icon_button(self.canvas_placeholder, text="Open CSV", icon_name="file-csv", spaces=2)
+        open_file_button = self.create_icon_button(self.canvas_cover, text="Open CSV", icon_name="file-csv", spaces=2)
         open_file_button.grid(column=0, row=1, sticky=tk.S, pady=(0, 16))
         open_file_button.configure(command=functools.partial(self.open_file, open_file_button))
-        demo_button = self.create_icon_button(self.canvas_placeholder, text="Demo", icon_name="chart-line", spaces=4)
+        demo_button = self.create_icon_button(self.canvas_cover, text="Demo", icon_name="chart-line", spaces=4)
         demo_button.grid(column=0, row=2, sticky=tk.N, pady=(0, 16))
         demo_button.configure(command=functools.partial(self.open_demo, demo_button))
 
@@ -212,6 +212,7 @@ class DataViewer(guikit.AsyncWindow):
             lambda e: self.on_theme_changed(e),
         )
 
+        self.state.active_theme = "vapor"
         self.on_data_file_changed(event_args=tk.Event())
 
     def create_icon_button(
@@ -238,7 +239,6 @@ class DataViewer(guikit.AsyncWindow):
 
     def on_show(self) -> None:
         """Initialize UI before entering main loop."""
-        self.state.active_theme = "cosmo"
 
     async def on_loop(self) -> None:
         """Update the UI with new information."""
@@ -420,15 +420,12 @@ class DataViewer(guikit.AsyncWindow):
             new_enabled_state = tk.DISABLED
             new_window_title = DataViewer.app_name
             plots_entries = ["(none)"]
-            presented_frame = self.canvas_placeholder
-            hidden_frame = self.canvas_frame
+            self.canvas_cover.grid(column=0, row=0, sticky=tk.NSEW)
         else:
             new_enabled_state =  tk.NORMAL
             new_window_title = f"{self.state.data_file.name} - {DataViewer.app_name}"
-            presented_frame = self.canvas_frame
-            hidden_frame = self.canvas_placeholder
             self.update_plot_axes()
-            self.canvas_figure.draw()
+            self.canvas_cover.grid_forget()
             plots_entries = ["(unknown)"]
         button_list = [
             self.reload_button,
@@ -445,8 +442,6 @@ class DataViewer(guikit.AsyncWindow):
         for owner, entries in menu_entries.items():
             for entry in entries:
                 owner.entryconfigure(entry, state=new_enabled_state)
-        hidden_frame.grid_remove()
-        presented_frame.grid()
         self.plots_menu.delete(0, "end")
         for entry in plots_entries:
             self.plots_menu.add_command(label=entry, state=new_enabled_state)
