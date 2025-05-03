@@ -110,7 +110,7 @@ class DataViewer(guikit.AsyncWindow):
         self.theme_variable = tk.StringVar()
         self.replay_variable = tk.BooleanVar()
         self.state = AppState(self.root_window)
-        self.state.active_theme = "cosmo"
+        self.state.active_theme = "flatly"
 
         self.svg_images: dict[str, tk.Image] = {}
 
@@ -138,7 +138,7 @@ class DataViewer(guikit.AsyncWindow):
         self.plot_figure = mpl_figure.Figure(figsize=figure_aspect, dpi=figure_dpi)
         self.canvas_figure = ttkbootstrap_matplotlib.create_styled_plot_canvas(self.plot_figure, self.canvas_frame)
 
-        self.canvas_cover = ttk.Frame(main, name="canvas_cover", style=bootstyle.INFO)
+        self.canvas_cover = ttk.Frame(main, name="canvas_cover")
         self.canvas_cover.grid(column=0, row=0, sticky=tk.NSEW)
         self.canvas_cover.columnconfigure(0, weight=1)
         self.canvas_cover.rowconfigure(0, weight=1)
@@ -155,7 +155,7 @@ class DataViewer(guikit.AsyncWindow):
             dashes=(3, 8),
         )
 
-        startup_label = ttk.Label(self.canvas_cover, font=font.Font(weight="bold", size=16), text="QT Py Data Viewer", background=guikit.hex_string_for_style(bootstyle.INFO))
+        startup_label = ttk.Label(self.canvas_cover, font=font.Font(weight="bold", size=16), text="QT Py Data Viewer")
         startup_label.grid(column=0, row=0, pady=16)
         open_file_button = self.create_icon_button(self.canvas_cover, text="Open CSV", icon_name="file-csv", spaces=2)
         open_file_button.grid(column=0, row=1, sticky=tk.S, pady=(0, 16))
