@@ -59,7 +59,7 @@ class AppState:
     @data_file.setter
     def data_file(self, new_value: pathlib.Path) -> None:
         """Set a new value for the data_file."""
-        if new_value in [self._data_file, AppState.canceled_file, AppState.no_file]:
+        if new_value in [self._data_file, AppState.canceled_file]:
             return
         self._data_file = new_value
         self._tk_notifier.event_generate(AppState.Event.DataFileChanged, data=str(new_value))
@@ -367,6 +367,7 @@ class DataViewer(guikit.AsyncWindow):
 
     def close_file(self, sender: tk.Widget) -> None:
         """Handle the File::Close menu command."""
+        self.state.data_file = AppState.no_file
 
     def copy_canvas(self, sender: tk.Widget) -> None:
         """Handle the Edit::Copy menu command."""
