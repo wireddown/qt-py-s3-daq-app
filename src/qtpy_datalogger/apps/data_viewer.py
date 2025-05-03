@@ -114,7 +114,12 @@ class DataViewer(guikit.AsyncWindow):
         self.svg_images: dict[str, tk.Image] = {}
 
         self.update_window_title(DataViewer.app_name)
-        self.root_window.minsize(width=(1136 + 32), height=(639 + 32 + 8 + 65))
+        figure_dpi = 112
+        figure_ratio = 16 / 9
+        graph_min_width = 504
+        graph_aspect_size = graph_min_width / figure_dpi
+        figure_aspect = (graph_aspect_size, graph_aspect_size / figure_ratio)
+        self.root_window.minsize(width=(1136 + 32), height=(639 + 32 + 8 + 65))  # Account for padding
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
         self.build_window_menu()
@@ -136,8 +141,6 @@ class DataViewer(guikit.AsyncWindow):
         self.canvas_frame.grid(column=0, row=0, sticky=tk.NSEW)
         self.canvas_frame.columnconfigure(0, weight=1)
         self.canvas_frame.rowconfigure(0, weight=1)
-        figure_aspect = (4, 2.25)
-        figure_dpi = 126
         self.plot_figure = mpl_figure.Figure(figsize=figure_aspect, dpi=figure_dpi)
         self.canvas_figure = ttkbootstrap_matplotlib.create_styled_plot_canvas(self.plot_figure, self.canvas_frame)
 
