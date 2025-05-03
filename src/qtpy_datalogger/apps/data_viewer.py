@@ -21,6 +21,8 @@ logger = logging.getLogger(pathlib.Path(__file__).stem)
 class AppState:
     """A class that models and controls the app's settings and runtime state."""
 
+    no_file: pathlib.Path = pathlib.Path(__file__)
+
     class Event(StrEnum):
         """Events emitted when properties change."""
 
@@ -31,6 +33,7 @@ class AppState:
         """Initialize a new AppState instance."""
         self._tk_notifier = tk_root
         self._theme_name: str = ""
+        self._data_file = AppState.no_file
         self._replay_active: bool = False
 
     @property
@@ -41,8 +44,23 @@ class AppState:
     @active_theme.setter
     def active_theme(self, new_value: str) -> None:
         """Set a new value for the active_theme."""
+        if new_value == self._theme_name:
+            return
         self._theme_name = new_value
         ttk.Style().theme_use(new_value)
+
+    @property
+    def data_file(self) -> pathlib.Path:
+        """Return the path to the data file."""
+        return self._data_file
+
+    @data_file.setter
+    def data_file(self, new_value: pathlib.Path) -> None:
+        """Set a new value for the data_file."""
+        if new_value == self._data_file:
+            return
+        self._data_file = new_value
+        self._tk_notifier.event_generate(AppState.Event.DataFileChanged, data=str(new_value))
 
     @property
     def replay_active(self) -> bool:
@@ -52,6 +70,8 @@ class AppState:
     @replay_active.setter
     def replay_active(self, new_value: bool) -> None:
         """Set a new value for replay_active."""
+        if new_value == self._replay_active:
+            return
         self._replay_active = new_value
         self._tk_notifier.event_generate(AppState.Event.ReplayActiveChanged, data=str(new_value))
 
@@ -111,25 +131,30 @@ class DataViewer(guikit.AsyncWindow):
         action_panel.rowconfigure(0, weight=0)
         action_panel.rowconfigure(1, weight=0)
 
-        copy_view_button = self.create_icon_button(action_panel, text="Copy view", icon_name="image", char_width=16)
-        copy_view_button.grid(column=3, row=0, padx=8)
-        copy_view_button.configure(command=functools.partial(self.copy_canvas, copy_view_button))
-        export_csv_button = self.create_icon_button(action_panel, text="Export", icon_name="table", char_width=12)
-        export_csv_button.grid(column=4, row=0, padx=8)
-        export_csv_button.configure(command=functools.partial(self.export_canvas, export_csv_button))
+        self.copy_view_button = self.create_icon_button(action_panel, text="Copy view", icon_name="image", char_width=16)
+        self.copy_view_button.grid(column=3, row=0, padx=8)
+        self.copy_view_button.configure(command=functools.partial(self.copy_canvas, self.copy_view_button))
+        self.export_csv_button = self.create_icon_button(action_panel, text="Export", icon_name="table", char_width=12)
+        self.export_csv_button.grid(column=4, row=0, padx=8)
+        self.export_csv_button.configure(command=functools.partial(self.export_canvas, self.export_csv_button))
 
-        reload_button = self.create_icon_button(action_panel, text="Reload", icon_name="rotate-left", char_width=12)
-        reload_button.configure(command=functools.partial(self.reload_file, reload_button))
-        reload_button.grid(column=0, row=0, padx=(0, 8))
+        self.reload_button = self.create_icon_button(action_panel, text="Reload", icon_name="rotate-left", char_width=12)
+        self.reload_button.configure(command=functools.partial(self.reload_file, self.reload_button))
+        self.reload_button.grid(column=0, row=0, padx=(0, 8))
         self.replay_button = self.create_icon_button(action_panel, text="Replay", icon_name="clock-rotate-left", char_width=12)
         self.replay_button.configure(command=functools.partial(self.replay_data, self.replay_button))
         self.replay_button.grid(column=1, row=0, padx=8)
 
-        file_message = ttk.Label(action_panel, text="Waiting for load", background=guikit.hex_string_for_style(bootstyle.SUCCESS))
-        file_message.grid(row=1, columnspan=5, pady=(8, 0))
+        self.file_message = ttk.Label(action_panel, text="Waiting for load", background=guikit.hex_string_for_style(bootstyle.SUCCESS))
+        self.file_message.grid(row=1, columnspan=5, pady=(8, 0))
 
         toolbar = ttk.Frame(toolbar_row, name="toolbar", height=50, width=300, style=bootstyle.SECONDARY)
         toolbar.grid(column=1, row=0, sticky=tk.N)
+
+        self.root_window.bind(
+            AppState.Event.DataFileChanged,
+            lambda e: self.on_data_file_changed(e),
+        )
 
         self.root_window.bind(
             AppState.Event.ReplayActiveChanged,
@@ -336,6 +361,18 @@ class DataViewer(guikit.AsyncWindow):
 
     def export_canvas(self, sender: tk.Widget) -> None:
         """Handle the Export CSV button command."""
+
+    def on_data_file_changed(self, event_args: tk.Event) -> None:
+        """Handle the File::Open menu or button command."""
+        new_enabled_state = tk.DISABLED if self.state.data_file == AppState.no_file else tk.NORMAL
+        button_list = [
+            self.reload_button,
+            self.replay_button,
+            self.copy_view_button,
+            self.export_csv_button,
+        ]
+        for button in button_list:
+            button.configure(state=new_enabled_state)
 
     def replay_data(self, sender: tk.Widget) -> None:
         """Handle the View::Replay menu or button command."""
