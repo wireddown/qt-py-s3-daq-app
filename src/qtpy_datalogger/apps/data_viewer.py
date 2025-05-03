@@ -509,6 +509,11 @@ class DataViewer(guikit.AsyncWindow):
                         index,
                         selectcolor="grey5",
                     )
+                with contextlib.suppress(tk.TclError):
+                    menu.entryconfigure(
+                        index,
+                        activebackground="grey42",
+                    )
 
     def show_about(self) -> None:
         """Handle the Help::About menu command."""
