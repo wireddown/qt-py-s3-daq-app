@@ -6,7 +6,7 @@ import logging
 import pathlib
 import tkinter as tk
 from enum import StrEnum
-from tkinter import font
+from tkinter import filedialog, font
 
 import ttkbootstrap as ttk
 import ttkbootstrap.themes.standard as ttk_themes
@@ -22,6 +22,8 @@ class AppState:
     """A class that models and controls the app's settings and runtime state."""
 
     no_file: pathlib.Path = pathlib.Path(__file__)
+    canceled_file: pathlib.Path = pathlib.Path()
+    demo_file = None
 
     class Event(StrEnum):
         """Events emitted when properties change."""
@@ -57,7 +59,7 @@ class AppState:
     @data_file.setter
     def data_file(self, new_value: pathlib.Path) -> None:
         """Set a new value for the data_file."""
-        if new_value == self._data_file:
+        if new_value in [self._data_file, AppState.canceled_file, AppState.no_file]:
             return
         self._data_file = new_value
         self._tk_notifier.event_generate(AppState.Event.DataFileChanged, data=str(new_value))
@@ -164,6 +166,8 @@ class DataViewer(guikit.AsyncWindow):
             "<<ThemeChanged>>",
             lambda e: self.on_theme_changed(e),
         )
+
+        self.on_data_file_changed(event_args=None)
 
     def create_icon_button(
             self,
@@ -343,6 +347,14 @@ class DataViewer(guikit.AsyncWindow):
 
     def open_file(self, sender: tk.Widget) -> None:
         """Handle the File::Open menu command."""
+        file_path = filedialog.askopenfilename(
+            parent=self.root_window,
+            title="Select a CSV data file",
+            filetypes=[
+                ("CSV files", "*.csv"),
+            ],
+        )
+        self.state.data_file = pathlib.Path(file_path)
 
     def open_demo(self, sender: tk.Widget) -> None:
         """Handle the Demo button command."""
