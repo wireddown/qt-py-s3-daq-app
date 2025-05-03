@@ -191,12 +191,12 @@ class DataViewer(guikit.AsyncWindow):
         self.canvas_cover.rowconfigure(1, weight=0)
         self.canvas_cover.rowconfigure(2, weight=1)
 
-        self.startup_label = ttk.Label(self.canvas_cover, font=font.Font(weight="bold", size=16), text="QT Py Data Viewer")
+        self.startup_label = ttk.Label(self.canvas_cover, font=font.Font(weight="bold", size=24), text="QT Py Data Viewer")
         self.startup_label.grid(column=0, row=0, pady=16)
-        open_file_button = self.create_icon_button(self.canvas_cover, text="Open CSV", icon_name="file-csv", spaces=2)
+        open_file_button = self.create_icon_button(self.canvas_cover, text="Open CSV", icon_name="file-csv", spaces=2, bootstyle=bootstyle.INFO)
         open_file_button.grid(column=0, row=1, sticky=tk.S, pady=(0, 16))
         open_file_button.configure(command=functools.partial(self.open_file, open_file_button))
-        demo_button = self.create_icon_button(self.canvas_cover, text="Demo", icon_name="chart-line", spaces=4)
+        demo_button = self.create_icon_button(self.canvas_cover, text="Demo", icon_name="chart-line", spaces=4, bootstyle=bootstyle.INFO)
         demo_button.grid(column=0, row=2, sticky=tk.N, pady=(0, 16))
         demo_button.configure(command=functools.partial(self.open_demo, demo_button))
 
@@ -222,7 +222,8 @@ class DataViewer(guikit.AsyncWindow):
             text: str,
             icon_name: str,
             char_width: int = 15,
-            spaces: int = 2
+            spaces: int = 2,
+            bootstyle: str = bootstyle.DEFAULT,
         ) -> ttk.Button:
         """Create a ttk.Button using the specified text and FontAwesome icon_name."""
         text_spacing = 3 * " "
@@ -234,7 +235,8 @@ class DataViewer(guikit.AsyncWindow):
             image=button_image,
             compound=tk.RIGHT,
             width=char_width,
-            padding=(4, 6, 4, 4)
+            padding=(4, 6, 4, 4),
+            bootstyle=bootstyle,
         )
         return button
 
@@ -476,7 +478,7 @@ class DataViewer(guikit.AsyncWindow):
     def on_theme_changed(self, event_args: tk.Event) -> None:
         """Update UI state when active_theme changes state."""
         theme_name = self.state.active_theme
-        self.theme_variable.set(theme_name)
+        self.theme_variable.set(theme_name.capitalize())
         self.startup_label.configure(background=guikit.hex_string_for_style(bootstyle.LIGHT))
 
     def show_about(self) -> None:
