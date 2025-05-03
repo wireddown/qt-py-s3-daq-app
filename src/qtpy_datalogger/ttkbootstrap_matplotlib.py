@@ -66,6 +66,7 @@ def create_styled_plot_toolbar(
     toolbar_border.columnconfigure(0, weight=0, minsize=final_width)
     toolbar_border.rowconfigure(0, weight=0, minsize=final_height)
     toolbar_border.grid_propagate(False)  # Lock the height and width by ignoring child size requests
+    toolbar_border.bind("<Expose>", handle_theme_changed)
     toolbar_border.bind("<<ThemeChanged>>", handle_theme_changed)
 
     toolbar_frame = tk.Frame(toolbar_border, name="toolbar_frame")
