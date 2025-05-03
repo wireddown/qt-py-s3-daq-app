@@ -123,7 +123,7 @@ class PlottingApp(guikit.AsyncWindow):
         style = ttk.Style.get_instance()
         if not style:
             raise ValueError()
-        self.theme_combobox.set(theme_name)
+        self.theme_combobox.set(theme_name.capitalize())
         style.theme_use(theme_name)
 
     async def on_loop(self) -> None:
