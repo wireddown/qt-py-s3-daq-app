@@ -420,6 +420,15 @@ class DataViewer(guikit.AsyncWindow):
             new_enabled_state = tk.DISABLED
             new_window_title = DataViewer.app_name
             plots_entries = ["(none)"]
+            x_major_params = self.plot_axes.xaxis.get_tick_params(which="major")
+            x_minor_params = self.plot_axes.xaxis.get_tick_params(which="minor")
+            y_major_params = self.plot_axes.yaxis.get_tick_params(which="major")
+            y_minor_params = self.plot_axes.yaxis.get_tick_params(which="minor")
+            self.plot_axes.clear()
+            self.plot_axes.xaxis.set_tick_params(which="major", **x_major_params)
+            self.plot_axes.xaxis.set_tick_params(which="minor", **x_minor_params)
+            self.plot_axes.yaxis.set_tick_params(which="major", **y_major_params)
+            self.plot_axes.yaxis.set_tick_params(which="minor", **y_minor_params)
             self.canvas_cover.grid(column=0, row=0, sticky=tk.NSEW)
         else:
             new_enabled_state =  tk.NORMAL
@@ -475,17 +484,6 @@ class DataViewer(guikit.AsyncWindow):
         """Reconfigure the plot for the new data."""
         time_coordinates = range(0, 1200, 1)
         y1_coordinates = [1000 * math.sin(2 * math.pi * t * 1) for t in time_coordinates]
-
-        x_major_params = self.plot_axes.xaxis.get_tick_params(which="major")
-        x_minor_params = self.plot_axes.xaxis.get_tick_params(which="minor")
-        y_major_params = self.plot_axes.yaxis.get_tick_params(which="major")
-        y_minor_params = self.plot_axes.yaxis.get_tick_params(which="minor")
-        self.plot_axes.clear()
-        self.plot_axes.xaxis.set_tick_params(which="major", **x_major_params)
-        self.plot_axes.xaxis.set_tick_params(which="minor", **x_minor_params)
-        self.plot_axes.yaxis.set_tick_params(which="major", **y_major_params)
-        self.plot_axes.yaxis.set_tick_params(which="minor", **y_minor_params)
-
         self.plot_axes.plot(
             time_coordinates,
             y1_coordinates,
