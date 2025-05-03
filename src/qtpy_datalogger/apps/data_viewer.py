@@ -20,6 +20,8 @@ from qtpy_datalogger.vendor.tkfontawesome import icon_to_image
 
 logger = logging.getLogger(pathlib.Path(__file__).stem)
 
+app_icon_color = "#07a000"
+
 
 class AppState:
     """A class that models and controls the app's settings and runtime state."""
@@ -115,6 +117,8 @@ class DataViewer(guikit.AsyncWindow):
 
         self.svg_images: dict[str, tk.Image] = {}
 
+        app_icon = icon_to_image("chart-line", fill=app_icon_color, scale_to_height=256)
+        self.root_window.iconphoto(True, app_icon)
         self.update_window_title(DataViewer.app_name)
         figure_dpi = 112
         figure_ratio = 16 / 9
