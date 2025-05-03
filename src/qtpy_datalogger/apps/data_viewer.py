@@ -3,16 +3,18 @@
 import asyncio
 import functools
 import logging
+import math
 import pathlib
 import tkinter as tk
 from enum import StrEnum
 from tkinter import filedialog, font
 
+import matplotlib.figure as mpl_figure
 import ttkbootstrap as ttk
 import ttkbootstrap.themes.standard as ttk_themes
 from ttkbootstrap import constants as bootstyle
 
-from qtpy_datalogger import guikit
+from qtpy_datalogger import guikit, ttkbootstrap_matplotlib
 from qtpy_datalogger.vendor.tkfontawesome import icon_to_image
 
 logger = logging.getLogger(pathlib.Path(__file__).stem)
@@ -130,6 +132,27 @@ class DataViewer(guikit.AsyncWindow):
         self.canvas_placeholder.rowconfigure(0, weight=1)
         self.canvas_placeholder.rowconfigure(1, weight=0)
         self.canvas_placeholder.rowconfigure(2, weight=1)
+
+        self.canvas_frame = ttk.Frame(main, name="canvas_frame")
+        self.canvas_frame.grid(column=0, row=0, sticky=tk.NSEW)
+        self.canvas_frame.columnconfigure(0, weight=1)
+        self.canvas_frame.rowconfigure(0, weight=1)
+        figure_aspect = (4, 3)
+        figure_dpi = 100
+        self.plot_figure = mpl_figure.Figure(figsize=figure_aspect, dpi=figure_dpi)
+        self.canvas_figure = ttkbootstrap_matplotlib.create_styled_plot_canvas(self.plot_figure, self.canvas_frame)
+        self.canvas_figure.get_tk_widget().grid(column=0, row=0, sticky=tk.NSEW)
+
+        self.plot_axes = self.plot_figure.add_subplot()
+        self.plot_axes.set_xlabel("time")
+        self.plot_axes.set_ylabel("y")
+        self.plot_axes.grid(
+            visible=True,
+            which="major",
+            axis="y",
+            dashes=(3, 8),
+            zorder=-1,
+        )
 
         startup_label = ttk.Label(self.canvas_placeholder, font=font.Font(weight="bold", size=16), text="QT Py Data Viewer", background=guikit.hex_string_for_style(bootstyle.INFO))
         startup_label.grid(column=0, row=0, pady=16)
@@ -396,9 +419,15 @@ class DataViewer(guikit.AsyncWindow):
             new_enabled_state = tk.DISABLED
             new_window_title = DataViewer.app_name
             plots_entries = ["(none)"]
+            presented_frame = self.canvas_placeholder
+            hidden_frame = self.canvas_frame
         else:
             new_enabled_state =  tk.NORMAL
             new_window_title = f"{self.state.data_file.name} - {DataViewer.app_name}"
+            presented_frame = self.canvas_frame
+            hidden_frame = self.canvas_placeholder
+            self.update_plot_axes()
+            self.canvas_figure.draw()
             plots_entries = ["(unknown)"]
         button_list = [
             self.reload_button,
@@ -415,6 +444,8 @@ class DataViewer(guikit.AsyncWindow):
         for owner, entries in menu_entries.items():
             for entry in entries:
                 owner.entryconfigure(entry, state=new_enabled_state)
+        hidden_frame.grid_remove()
+        presented_frame.grid()
         self.plots_menu.delete(0, "end")
         for entry in plots_entries:
             self.plots_menu.add_command(label=entry, state=new_enabled_state)
@@ -443,6 +474,22 @@ class DataViewer(guikit.AsyncWindow):
 
     def show_about(self) -> None:
         """Handle the Help::About menu command."""
+
+    def update_plot_axes(self) -> None:
+        """Reconfigure the plot for the new data."""
+        time_coordinates = range(0, 1200, 1)
+        y1_coordinates = [1000 * math.sin(2 * math.pi * t * 1) for t in time_coordinates]
+        self.plot_axes.clear()
+        (self.line,) = self.plot_axes.plot(
+            time_coordinates,
+            y1_coordinates,
+            label="Demo",
+        )
+        self.plot_axes.legend(
+            title="Function",
+            loc="upper left",
+            draggable=True,
+        )
 
 
 if __name__ == "__main__":
