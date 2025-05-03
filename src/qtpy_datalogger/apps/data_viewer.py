@@ -110,6 +110,7 @@ class DataViewer(guikit.AsyncWindow):
         self.theme_variable = tk.StringVar()
         self.replay_variable = tk.BooleanVar()
         self.state = AppState(self.root_window)
+        self.state.active_theme = "cosmo"
 
         self.svg_images: dict[str, tk.Image] = {}
 
@@ -212,7 +213,6 @@ class DataViewer(guikit.AsyncWindow):
             lambda e: self.on_theme_changed(e),
         )
 
-        self.state.active_theme = "vapor"
         self.on_data_file_changed(event_args=tk.Event())
 
     def create_icon_button(
