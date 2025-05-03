@@ -141,7 +141,6 @@ class DataViewer(guikit.AsyncWindow):
         figure_dpi = 100
         self.plot_figure = mpl_figure.Figure(figsize=figure_aspect, dpi=figure_dpi)
         self.canvas_figure = ttkbootstrap_matplotlib.create_styled_plot_canvas(self.plot_figure, self.canvas_frame)
-        self.canvas_figure.get_tk_widget().grid(column=0, row=0, sticky=tk.NSEW)
 
         self.plot_axes = self.plot_figure.add_subplot()
         self.plot_axes.set_xlabel("time")

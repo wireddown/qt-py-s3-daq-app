@@ -42,6 +42,7 @@ def create_styled_plot_canvas(
     """Return a FigureCanvasTkAgg from matplotlib that responds to the ttkbootstrap '<<ThemeChanged>>' event."""
     canvas = FigureCanvasTkAgg(figure, canvas_frame)
     setattr(canvas.get_tk_widget(), ReservedName.EmbeddedFigure, canvas)
+    canvas.get_tk_widget().grid(column=0, row=0, sticky=tk.NSEW)
     canvas.get_tk_widget().bind("<<ThemeChanged>>", handle_theme_changed)
     return canvas
 
