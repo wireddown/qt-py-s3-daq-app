@@ -137,13 +137,6 @@ class DataViewer(guikit.AsyncWindow):
         self.plot_figure = mpl_figure.Figure(figsize=figure_aspect, dpi=figure_dpi)
         self.canvas_figure = ttkbootstrap_matplotlib.create_styled_plot_canvas(self.plot_figure, self.canvas_frame)
 
-        self.canvas_cover = ttk.Frame(main, name="canvas_cover")
-        self.canvas_cover.grid(column=0, row=0, sticky=tk.NSEW)
-        self.canvas_cover.columnconfigure(0, weight=1)
-        self.canvas_cover.rowconfigure(0, weight=1)
-        self.canvas_cover.rowconfigure(1, weight=0)
-        self.canvas_cover.rowconfigure(2, weight=1)
-
         self.plot_axes = self.plot_figure.add_subplot()
         self.plot_axes.set_xlabel("time")
         self.plot_axes.set_ylabel("y")
@@ -153,15 +146,6 @@ class DataViewer(guikit.AsyncWindow):
             axis="y",
             dashes=(3, 8),
         )
-
-        startup_label = ttk.Label(self.canvas_cover, font=font.Font(weight="bold", size=16), text="QT Py Data Viewer")
-        startup_label.grid(column=0, row=0, pady=16)
-        open_file_button = self.create_icon_button(self.canvas_cover, text="Open CSV", icon_name="file-csv", spaces=2)
-        open_file_button.grid(column=0, row=1, sticky=tk.S, pady=(0, 16))
-        open_file_button.configure(command=functools.partial(self.open_file, open_file_button))
-        demo_button = self.create_icon_button(self.canvas_cover, text="Demo", icon_name="chart-line", spaces=4)
-        demo_button.grid(column=0, row=2, sticky=tk.N, pady=(0, 16))
-        demo_button.configure(command=functools.partial(self.open_demo, demo_button))
 
         toolbar_row = ttk.Frame(main, name="toolbar_row")
         toolbar_row.grid(column=0, row=1, sticky=tk.NSEW, padx=40, pady=(8, 0))
@@ -198,6 +182,24 @@ class DataViewer(guikit.AsyncWindow):
         toolbar_frame = ttkbootstrap_matplotlib.create_styled_plot_toolbar(toolbar_row, self.canvas_figure)
         toolbar_frame.grid(column=1, row=0, sticky=(tk.EW, tk.N), padx=(8, 0))
 
+        self.state.active_theme = "flatly"
+
+        self.canvas_cover = ttk.Frame(main, name="canvas_cover", style=bootstyle.LIGHT)
+        self.canvas_cover.grid(column=0, row=0, sticky=tk.NSEW)
+        self.canvas_cover.columnconfigure(0, weight=1)
+        self.canvas_cover.rowconfigure(0, weight=1)
+        self.canvas_cover.rowconfigure(1, weight=0)
+        self.canvas_cover.rowconfigure(2, weight=1)
+
+        self.startup_label = ttk.Label(self.canvas_cover, font=font.Font(weight="bold", size=16), text="QT Py Data Viewer")
+        self.startup_label.grid(column=0, row=0, pady=16)
+        open_file_button = self.create_icon_button(self.canvas_cover, text="Open CSV", icon_name="file-csv", spaces=2)
+        open_file_button.grid(column=0, row=1, sticky=tk.S, pady=(0, 16))
+        open_file_button.configure(command=functools.partial(self.open_file, open_file_button))
+        demo_button = self.create_icon_button(self.canvas_cover, text="Demo", icon_name="chart-line", spaces=4)
+        demo_button.grid(column=0, row=2, sticky=tk.N, pady=(0, 16))
+        demo_button.configure(command=functools.partial(self.open_demo, demo_button))
+
         self.root_window.bind(
             AppState.Event.DataFileChanged,
             lambda e: self.on_data_file_changed(e),
@@ -212,7 +214,6 @@ class DataViewer(guikit.AsyncWindow):
             lambda e: self.on_theme_changed(e),
         )
 
-        self.state.active_theme = "flatly"
         self.on_data_file_changed(event_args=tk.Event())
 
     def create_icon_button(
@@ -476,6 +477,7 @@ class DataViewer(guikit.AsyncWindow):
         """Update UI state when active_theme changes state."""
         theme_name = self.state.active_theme
         self.theme_variable.set(theme_name)
+        self.startup_label.configure(background=guikit.hex_string_for_style(bootstyle.LIGHT))
 
     def show_about(self) -> None:
         """Handle the Help::About menu command."""
