@@ -19,6 +19,7 @@ import toml
 class Links(enum.StrEnum):
     """URLs for references and help."""
 
+    Source = "https://github.com/wireddown/qt-py-s3-daq-app"
     Homepage = "https://github.com/wireddown/qt-py-s3-daq-app/wiki"
     New_Bug = "https://github.com/wireddown/qt-py-s3-daq-app/issues/new?template=bug-report.md"
     Board_Support_Matrix = "https://docs.circuitpython.org/en/stable/shared-bindings/support_matrix.html"
