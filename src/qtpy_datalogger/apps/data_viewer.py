@@ -556,7 +556,7 @@ class DataViewer(guikit.AsyncWindow):
         for button in button_list:
             button.configure(state=new_enabled_state)
         menu_entries = {
-            self.file_menu: [DataViewer.MenuName.Reload, DataViewer.MenuName.Replay, DataViewer.MenuName.Close],
+            self.file_menu: [DataViewer.MenuName.Reload, DataViewer.MenuName.Replay, DataViewer.MenuName.Overlay, DataViewer.MenuName.Close],
             self.edit_menu: [DataViewer.MenuName.Copy, DataViewer.MenuName.Export],
         }
         for owner, entries in menu_entries.items():
