@@ -1,12 +1,16 @@
 """Plot data from CSV files."""
 
 import asyncio
+import atexit
 import contextlib
+import csv
 import functools
 import json
 import logging
 import math
 import pathlib
+import shutil
+import tempfile
 import tkinter as tk
 import webbrowser
 from enum import StrEnum
@@ -32,7 +36,6 @@ class AppState:
 
     no_file: pathlib.Path = pathlib.Path(__file__)
     canceled_file: pathlib.Path = pathlib.Path()
-    demo_file = None
 
     class Event(StrEnum):
         """Events emitted when properties change."""
@@ -46,6 +49,8 @@ class AppState:
         self._theme_name: str = ""
         self._data_file = AppState.no_file
         self._replay_active: bool = False
+        self._demo_folder: pathlib.Path = pathlib.Path(tempfile.mkdtemp())
+        atexit.register(functools.partial(shutil.rmtree, self._demo_folder))
 
     @property
     def active_theme(self) -> str:
@@ -85,6 +90,11 @@ class AppState:
             return
         self._replay_active = new_value
         self._tk_notifier.event_generate(AppState.Event.ReplayActiveChanged)
+
+    @property
+    def demo_folder(self) -> pathlib.Path:
+        """Return the folder used for demo files."""
+        return self._demo_folder
 
 
 class AboutDialog(ttk_dialogs.Dialog):
@@ -508,6 +518,23 @@ class DataViewer(guikit.AsyncWindow):
 
     def open_demo(self, sender: tk.Widget) -> None:
         """Handle the Demo button command."""
+        channel_count = 8
+        column_titles = ["time (s)"]
+        column_titles.extend([f"v{N+1}" for N in range(channel_count)])
+        data_samples = [column_titles]
+        for sample_number in range(100):
+            scan = []
+            timestamp = sample_number * 1
+            scan.append(timestamp)
+            for channel in range(1, len(column_titles)):
+                channel_sample = channel * math.log10(timestamp + 1)
+                scan.append(channel_sample)
+            data_samples.append(scan)
+        with self.state.demo_folder.joinpath("Data Viewer Demo.csv").open(encoding="UTF-8", mode="w", newline="") as demo_file:
+            csv_writer = csv.writer(demo_file)
+            csv_writer.writerows(data_samples)
+            demo_file.flush()
+            self.state.data_file = pathlib.Path(demo_file.name)
 
     def reload_file(self, sender: tk.Widget) -> None:
         """Handle the File::Reload menu command."""
