@@ -9,6 +9,7 @@ import json
 import logging
 import math
 import pathlib
+import random
 import shutil
 import tempfile
 import tkinter as tk
@@ -512,15 +513,19 @@ class DataViewer(guikit.AsyncWindow):
     def open_demo(self, sender: tk.Widget) -> None:
         """Handle the Demo button command."""
         channel_count = 8
+        trend_function = random.choice([math.log10, math.cbrt])
         column_titles = ["time (s)"]
         column_titles.extend([f"v{N+1}" for N in range(channel_count)])
+        channels = list(range(1, len(column_titles)))
+        random.shuffle(channels)
         data_samples = [column_titles]
         for sample_number in range(100):
             scan = []
-            timestamp = sample_number * 1
+            timestamp = sample_number * 10
             scan.append(float(timestamp))
-            for channel in range(1, len(column_titles)):
-                channel_sample = channel * math.log10(timestamp + 1)
+            for channel in channels:
+                noise = random.random()
+                channel_sample = channel * trend_function(timestamp + 50) - 0.2 * noise
                 scan.append(channel_sample)
             data_samples.append(scan)
         with self.state.demo_folder.joinpath("Data Viewer Demo.csv").open(encoding="UTF-8", mode="w", newline="") as demo_file:
@@ -659,6 +664,10 @@ class DataViewer(guikit.AsyncWindow):
             which="major",
             axis="y",
             dashes=(3, 8),
+        )
+        self.plot_axes.legend(
+            loc="upper left",
+            draggable=True,
         )
 
 
