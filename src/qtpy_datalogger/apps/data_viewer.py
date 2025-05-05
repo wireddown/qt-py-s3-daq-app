@@ -17,6 +17,7 @@ from enum import StrEnum
 from tkinter import filedialog, font
 
 import matplotlib.figure as mpl_figure
+import pandas as pd
 import ttkbootstrap as ttk
 import ttkbootstrap.dialogs as ttk_dialogs
 import ttkbootstrap.icons as ttk_icons
@@ -246,14 +247,6 @@ class DataViewer(guikit.AsyncWindow):
         self.canvas_figure = ttkbootstrap_matplotlib.create_styled_plot_canvas(self.plot_figure, self.canvas_frame)
 
         self.plot_axes = self.plot_figure.add_subplot()
-        self.plot_axes.set_xlabel("time")
-        self.plot_axes.set_ylabel("y")
-        self.plot_axes.grid(
-            visible=True,
-            which="major",
-            axis="y",
-            dashes=(3, 8),
-        )
 
         toolbar_row = ttk.Frame(main, name="toolbar_row")
         toolbar_row.grid(column=0, row=1, sticky=tk.NSEW, padx=40, pady=(8, 0))
@@ -525,7 +518,7 @@ class DataViewer(guikit.AsyncWindow):
         for sample_number in range(100):
             scan = []
             timestamp = sample_number * 1
-            scan.append(timestamp)
+            scan.append(float(timestamp))
             for channel in range(1, len(column_titles)):
                 channel_sample = channel * math.log10(timestamp + 1)
                 scan.append(channel_sample)
@@ -558,15 +551,7 @@ class DataViewer(guikit.AsyncWindow):
             new_enabled_state = tk.DISABLED
             new_window_title = DataViewer.app_name
             plots_entries = ["(none)"]
-            x_major_params = self.plot_axes.xaxis.get_tick_params(which="major")
-            x_minor_params = self.plot_axes.xaxis.get_tick_params(which="minor")
-            y_major_params = self.plot_axes.yaxis.get_tick_params(which="major")
-            y_minor_params = self.plot_axes.yaxis.get_tick_params(which="minor")
             self.plot_axes.clear()
-            self.plot_axes.xaxis.set_tick_params(which="major", **x_major_params)
-            self.plot_axes.xaxis.set_tick_params(which="minor", **x_minor_params)
-            self.plot_axes.yaxis.set_tick_params(which="major", **y_major_params)
-            self.plot_axes.yaxis.set_tick_params(which="minor", **y_minor_params)
             self.canvas_cover.grid(column=0, row=0, sticky=tk.NSEW)
         else:
             new_enabled_state =  tk.NORMAL
@@ -656,17 +641,24 @@ class DataViewer(guikit.AsyncWindow):
 
     def update_plot_axes(self) -> None:
         """Reconfigure the plot for the new data."""
-        time_coordinates = range(0, 1200, 1)
-        y1_coordinates = [1000 * math.sin(2 * math.pi * t * 1) for t in time_coordinates]
-        self.plot_axes.plot(
-            time_coordinates,
-            y1_coordinates,
-            label="Demo",
-        )
-        self.plot_axes.legend(
-            title="Function",
-            loc="upper left",
-            draggable=True,
+        data_file_df = pd.read_csv(self.state.data_file)
+        time_index = data_file_df[data_file_df.columns[0]]
+        series = data_file_df[data_file_df.columns[1:]]
+        for name, data_series in series.items():
+            time_coordinates = time_index.to_list()
+            measurements = data_series.tolist()
+            self.plot_axes.plot(
+                time_coordinates,
+                measurements,
+                label=name,
+            )
+        self.plot_axes.set_xlabel("time")
+        self.plot_axes.set_ylabel("y")
+        self.plot_axes.grid(
+            visible=True,
+            which="major",
+            axis="y",
+            dashes=(3, 8),
         )
 
 
