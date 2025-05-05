@@ -220,6 +220,7 @@ class DataViewer(guikit.AsyncWindow):
         self.state = AppState(self.root_window)
 
         self.svg_images: dict[str, tk.Image] = {}
+        self.plots_variables: list[tk.BooleanVar] = []
 
         app_icon = icon_to_image("chart-line", fill=app_icon_color, scale_to_height=256)
         self.root_window.iconphoto(True, app_icon)
@@ -561,9 +562,8 @@ class DataViewer(guikit.AsyncWindow):
         else:
             new_enabled_state =  tk.NORMAL
             new_window_title = f"{self.state.data_file.name} - {DataViewer.app_name}"
-            self.update_plot_axes()
+            plots_entries = self.update_plot_axes()
             self.canvas_cover.grid_forget()
-            plots_entries = ["(unknown)"]
         button_list = [
             self.reload_button,
             self.replay_button,
@@ -580,9 +580,23 @@ class DataViewer(guikit.AsyncWindow):
             for entry in entries:
                 owner.entryconfigure(entry, state=new_enabled_state)
         self.plots_menu.delete(0, "end")
-        for entry in plots_entries:
-            self.plots_menu.add_command(label=entry, state=new_enabled_state)
+        self.plots_variables.clear()
+        for index, entry in enumerate(plots_entries):
+            toggle_variable = tk.BooleanVar(self.plots_menu)
+            self.plots_menu.add_checkbutton(label=entry, state=new_enabled_state, command=functools.partial(self.toggle_plot, index), variable=toggle_variable)
+            self.style_menu_entry(self.plots_menu, index)
+            self.plots_variables.append(toggle_variable)
+            if self.state.data_file != AppState.no_file:
+                toggle_variable.set(True)
         self.update_window_title(new_window_title)
+
+    def toggle_plot(self, index: int) -> None:
+        """Toggle the visibility of the plot for series_name."""
+        menu_variable = self.plots_variables[index]
+        new_visibility = menu_variable.get()
+        plots_and_more = self.plot_axes.get_children()
+        plots_and_more[index].set_visible(new_visibility)
+        self.canvas_figure.draw()
 
     def replay_data(self, sender: tk.Widget) -> None:
         """Handle the View::Replay menu or button command."""
@@ -618,37 +632,42 @@ class DataViewer(guikit.AsyncWindow):
         # Force light theme for menus
         for menu in all_menus:
             for index in range(0, menu.index("end") + 1):
-                with contextlib.suppress(tk.TclError):
-                    menu.entryconfigure(
-                        index,
-                        background="grey94",
-                    )
-                with contextlib.suppress(tk.TclError):
-                    menu.entryconfigure(
-                        index,
-                        foreground="grey5",
-                    )
-                with contextlib.suppress(tk.TclError):
-                    menu.entryconfigure(
-                        index,
-                        selectcolor="grey5",
-                    )
-                with contextlib.suppress(tk.TclError):
-                    menu.entryconfigure(
-                        index,
-                        activebackground="grey42",
-                    )
+                self.style_menu_entry(menu, index)
+
+    def style_menu_entry(self, menu: tk.Menu, index: int) -> None:
+        """Style the specified menu entry."""
+        with contextlib.suppress(tk.TclError):
+            menu.entryconfigure(
+                index,
+                background="grey94",
+            )
+        with contextlib.suppress(tk.TclError):
+            menu.entryconfigure(
+                index,
+                foreground="grey5",
+            )
+        with contextlib.suppress(tk.TclError):
+            menu.entryconfigure(
+                index,
+                selectcolor="grey5",
+            )
+        with contextlib.suppress(tk.TclError):
+            menu.entryconfigure(
+                index,
+                activebackground="grey42",
+            )
 
     def show_about(self) -> None:
         """Handle the Help::About menu command."""
         about_dialog = AboutDialog(parent=self.root_window, title=f"About {DataViewer.app_name}")
         about_dialog.show()
 
-    def update_plot_axes(self) -> None:
-        """Reconfigure the plot for the new data."""
+    def update_plot_axes(self) -> list[str]:
+        """Reconfigure the plot for the new data and return the names of the measurement series."""
         data_file_df = pd.read_csv(self.state.data_file)
         time_index = data_file_df[data_file_df.columns[0]]
-        series = data_file_df[data_file_df.columns[1:]]
+        measurement_series = data_file_df.columns[1:]
+        series = data_file_df[measurement_series]
         for name, data_series in series.items():
             time_coordinates = time_index.to_list()
             measurements = data_series.tolist()
@@ -669,6 +688,7 @@ class DataViewer(guikit.AsyncWindow):
             loc="upper left",
             draggable=True,
         )
+        return measurement_series.to_list()
 
 
 if __name__ == "__main__":
