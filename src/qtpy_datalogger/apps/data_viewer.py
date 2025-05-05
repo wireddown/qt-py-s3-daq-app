@@ -657,8 +657,8 @@ class DataViewer(guikit.AsyncWindow):
                 measurements,
                 label=name,
             )
-        self.plot_axes.set_xlabel("time")
-        self.plot_axes.set_ylabel("y")
+        self.plot_axes.set_xlabel("Time")
+        self.plot_axes.set_ylabel("Measurement")
         self.plot_axes.grid(
             visible=True,
             which="major",
