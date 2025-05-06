@@ -539,6 +539,8 @@ class DataViewer(guikit.AsyncWindow):
 
     def reload_file(self, sender: tk.Widget) -> None:
         """Handle the File::Reload menu command."""
+        self.plot_axes.clear()
+        self.on_data_file_changed(tk.Event())
 
     def close_file(self, sender: tk.Widget) -> None:
         """Handle the File::Close menu command."""
@@ -712,6 +714,7 @@ class DataViewer(guikit.AsyncWindow):
             loc="upper left",
             draggable=True,
         )
+        self.canvas_figure.draw()
         return measurement_series.to_list()
 
 
