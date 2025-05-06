@@ -137,7 +137,7 @@ class AboutDialog(ttk_dialogs.Dialog):
         icon_height = 48
         icon_color = guikit.hex_string_for_style("fg")
         self.microchip_icon = icon_to_image("microchip", fill=icon_color, scale_to_height=icon_height)
-        microchip_label = ttk.Label(message_frame, image=self.microchip_icon, padding=4)
+        microchip_label = ttk.Label(message_frame, image=self.microchip_icon, padding=3)
         microchip_label.grid(column=1, row=1, rowspan=2)
         self.qtpy_icon = icon_to_image("worm", fill=icon_color, scale_to_height=icon_height)
         qtpy_label = ttk.Label(message_frame, image=self.qtpy_icon, padding=4)
@@ -150,7 +150,7 @@ class AboutDialog(ttk_dialogs.Dialog):
         name_label.grid(column=5, row=1, sticky=tk.W)
         version_information = datatypes.SnsrNotice.get_package_notice_info(allow_dev_version=True)
         version_label = ttk.Label(message_frame, text=f"{version_information.version} {ttk_icons.Emoji.get('black medium small square')} {version_information.timestamp:%Y-%m-%d} {ttk_icons.Emoji.get('black medium small square')} {version_information.commit}")
-        version_label.grid(column=5, row=2, sticky=tk.W, padx=(2, 0))
+        version_label.grid(column=5, row=2, sticky=tk.W, padx=(4, 0))
         separator = ttk.Separator(message_frame)
         separator.grid(column=1, row=3, columnspan=5, sticky=tk.EW, pady=4)
         self.help_icon = icon_to_image("parachute-box", fill=guikit.hex_string_for_style("selectfg"), scale_to_width=16)  # suitcase-medical
@@ -634,7 +634,8 @@ class DataViewer(guikit.AsyncWindow):
     def replay_data(self, sender: tk.Widget) -> None:
         """Handle the View::Replay menu or button command."""
         current_replay = self.state.replay_active
-        self.state.replay_active = not current_replay
+        new_replay = not current_replay
+        self.state.replay_active = new_replay
 
     def on_replay_active_changed(self, event_args: tk.Event) -> None:
         """Update UI state when replay_active changes state."""
@@ -642,6 +643,17 @@ class DataViewer(guikit.AsyncWindow):
         new_style = bootstyle.SUCCESS if replay_active else bootstyle.DEFAULT
         self.replay_button.configure(bootstyle=new_style)
         self.replay_variable.set(replay_active)
+
+        if replay_active:
+            self.start_replay()
+            return
+        self.stop_replay()
+
+    def start_replay(self) -> None:
+        """Start a replay of the data file."""
+
+    def stop_replay(self) -> None:
+        """Stop the replay of the data file."""
 
     def change_theme(self, theme_name: str) -> None:
         """Handle the View::Theme selection command."""
