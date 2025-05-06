@@ -227,6 +227,7 @@ class DataViewer(guikit.AsyncWindow):
         app_icon = icon_to_image("chart-line", fill=app_icon_color, scale_to_height=256)
         self.root_window.iconphoto(True, app_icon)
         self.update_window_title(DataViewer.app_name)
+
         figure_dpi = 112
         figure_ratio = 16 / 9
         graph_min_width = 504
@@ -381,11 +382,13 @@ class DataViewer(guikit.AsyncWindow):
             accelerator="Ctrl-O",
             # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
         )
+        self.root_window.bind("<Control-o>", lambda e: self.open_file(self.file_menu))
         self.file_menu.add_command(
             command=functools.partial(self.reload_file, self.file_menu),
             label=DataViewer.MenuName.Reload,
             accelerator="F5",
         )
+        self.root_window.bind("<F5>", lambda e: self.reload_file(self.file_menu))
         self.file_menu.add_checkbutton(
             command=functools.partial(self.replay_data, self.file_menu),
             label=DataViewer.MenuName.Replay,
@@ -397,6 +400,7 @@ class DataViewer(guikit.AsyncWindow):
             accelerator="Ctrl-W",
             # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
         )
+        self.root_window.bind("<Control-w>", lambda e: self.close_file(self.file_menu))
         self.file_menu.add_separator(
             # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
         )
@@ -412,6 +416,7 @@ class DataViewer(guikit.AsyncWindow):
             label=DataViewer.MenuName.Exit,
             accelerator="Alt-F4",
         )
+        self.root_window.bind("<Alt-F4>", lambda e: self.exit())
 
         # Edit menu
         self.edit_menu = tk.Menu(self.menubar, name="edit_menu")
@@ -425,6 +430,7 @@ class DataViewer(guikit.AsyncWindow):
             label=DataViewer.MenuName.Copy,
             accelerator="Ctrl-C",
         )
+        self.root_window.bind("<Control-c>", lambda e: self.copy_canvas(self.edit_menu))
         self.edit_menu.add_command(
             command=functools.partial(self.export_canvas, self.edit_menu),
             label=DataViewer.MenuName.Export,
@@ -501,6 +507,7 @@ class DataViewer(guikit.AsyncWindow):
             label=DataViewer.MenuName.About,
             accelerator="F1",
         )
+        self.root_window.bind("<F1>", lambda e: self.show_about())
 
     def open_file(self, sender: tk.Widget) -> None:
         """Handle the File::Open menu command."""
