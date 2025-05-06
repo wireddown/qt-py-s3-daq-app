@@ -594,8 +594,8 @@ class DataViewer(guikit.AsyncWindow):
         """Toggle the visibility of the plot for series_name."""
         menu_variable = self.plots_variables[index]
         new_visibility = menu_variable.get()
-        plots_and_more = self.plot_axes.get_children()
-        plots_and_more[index].set_visible(new_visibility)
+        plot_lines = self.plot_axes.lines
+        plot_lines[index].set_visible(new_visibility)
         self.canvas_figure.draw()
 
     def replay_data(self, sender: tk.Widget) -> None:
