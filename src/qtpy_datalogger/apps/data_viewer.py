@@ -205,6 +205,8 @@ class DataViewer(guikit.AsyncWindow):
         Export = "Export..."
         View = "View"
         Plots = "Plots"
+        HideAll = "Hide all"
+        ShowAll = "Show all"
         Theme = "Theme"
         Light = "Light"
         Dark = "Dark"
@@ -581,14 +583,36 @@ class DataViewer(guikit.AsyncWindow):
                 owner.entryconfigure(entry, state=new_enabled_state)
         self.plots_menu.delete(0, "end")
         self.plots_variables.clear()
+        self.plots_menu.add_command(label=DataViewer.MenuName.HideAll, command=functools.partial(self.hide_all_plots, self.plots_menu))
+        self.plots_menu.add_command(label=DataViewer.MenuName.ShowAll, command=functools.partial(self.show_all_plots, self.plots_menu))
+        self.plots_menu.add_separator()
         for index, entry in enumerate(plots_entries):
             toggle_variable = tk.BooleanVar(self.plots_menu)
             self.plots_menu.add_checkbutton(label=entry, state=new_enabled_state, command=functools.partial(self.toggle_plot, index), variable=toggle_variable)
-            self.style_menu_entry(self.plots_menu, index)
             self.plots_variables.append(toggle_variable)
             if self.state.data_file != AppState.no_file:
                 toggle_variable.set(True)
+        for index in range(0, self.plots_menu.index("end") + 1):
+            self.style_menu_entry(self.plots_menu, index)
         self.update_window_title(new_window_title)
+
+    def hide_all_plots(self, sender:tk.Widget) -> None:
+        """Hide all plots."""
+        plot_lines = self.plot_axes.lines
+        for line in plot_lines:
+            line.set_visible(False)
+        self.canvas_figure.draw()
+        for variable in self.plots_variables:
+            variable.set(False)
+
+    def show_all_plots(self, sender: tk.Widget) -> None:
+        """Show all plots."""
+        plot_lines = self.plot_axes.lines
+        for line in plot_lines:
+            line.set_visible(True)
+        self.canvas_figure.draw()
+        for variable in self.plots_variables:
+            variable.set(True)
 
     def toggle_plot(self, index: int) -> None:
         """Toggle the visibility of the plot for series_name."""
