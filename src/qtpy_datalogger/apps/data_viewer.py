@@ -12,6 +12,7 @@ import pathlib
 import random
 import shutil
 import tempfile
+import time
 import tkinter as tk
 import webbrowser
 from enum import StrEnum
@@ -219,6 +220,8 @@ class DataViewer(guikit.AsyncWindow):
         """Create the main window and connect event handlers."""
         self.theme_variable = tk.StringVar()
         self.replay_variable = tk.BooleanVar()
+        self.replay_index = 0
+        self.next_update_time = time.time()
         self.state = AppState(self.root_window)
 
         self.svg_images: dict[str, tk.Image] = {}
@@ -250,6 +253,7 @@ class DataViewer(guikit.AsyncWindow):
         self.canvas_frame.rowconfigure(0, weight=1)
         self.plot_figure = mpl_figure.Figure(figsize=figure_aspect, dpi=figure_dpi)
         self.canvas_figure = ttkbootstrap_matplotlib.create_styled_plot_canvas(self.plot_figure, self.canvas_frame)
+        self.plot_figure.subplots_adjust(left=0.06, bottom=0.08, right=0.98, top=0.98)
 
         self.plot_axes = self.plot_figure.add_subplot()
 
@@ -352,6 +356,28 @@ class DataViewer(guikit.AsyncWindow):
     async def on_loop(self) -> None:
         """Update the UI with new information."""
         await asyncio.sleep(1e-6)
+        if not self.state.replay_active:
+            return
+        now = time.time()
+        if self.next_update_time > now:
+            return
+        self.next_update_time = now + 0.35
+        draw_to = self.replay_index + 1
+        self.replay_index = draw_to
+        time_coordinates, data_series = self.get_data()
+        if self.replay_index == len(time_coordinates):
+            self.state.replay_active = False
+            self.reload_file(self.reload_button)
+
+        # Only draw up to index
+        plot_lines = self.plot_axes.lines
+        times = time_coordinates[:draw_to]
+        for index, (_, series) in enumerate(data_series.items()):
+            measurements = series.tolist()[:draw_to]
+            plot = plot_lines[index]
+            plot.set_xdata(times)
+            plot.set_ydata(measurements)
+        self.canvas_figure.draw()
 
     def on_closing(self) -> None:
         """Clean up before exiting."""
@@ -546,6 +572,7 @@ class DataViewer(guikit.AsyncWindow):
 
     def reload_file(self, sender: tk.Widget) -> None:
         """Handle the File::Reload menu command."""
+        self.replay_index = 0
         self.plot_axes.clear()
         self.on_data_file_changed(tk.Event())
 
@@ -644,17 +671,6 @@ class DataViewer(guikit.AsyncWindow):
         self.replay_button.configure(bootstyle=new_style)
         self.replay_variable.set(replay_active)
 
-        if replay_active:
-            self.start_replay()
-            return
-        self.stop_replay()
-
-    def start_replay(self) -> None:
-        """Start a replay of the data file."""
-
-    def stop_replay(self) -> None:
-        """Stop the replay of the data file."""
-
     def change_theme(self, theme_name: str) -> None:
         """Handle the View::Theme selection command."""
         self.state.active_theme = theme_name
@@ -709,13 +725,9 @@ class DataViewer(guikit.AsyncWindow):
 
     def update_plot_axes(self) -> list[str]:
         """Reconfigure the plot for the new data and return the names of the measurement series."""
-        data_file_df = pd.read_csv(self.state.data_file)
-        time_index = data_file_df[data_file_df.columns[0]]
-        measurement_series = data_file_df.columns[1:]
-        series = data_file_df[measurement_series]
-        for name, data_series in series.items():
-            time_coordinates = time_index.to_list()
-            measurements = data_series.tolist()
+        time_coordinates, data_series = self.get_data()
+        for name, series in data_series.items():
+            measurements = series.tolist()
             self.plot_axes.plot(
                 time_coordinates,
                 measurements,
@@ -734,7 +746,17 @@ class DataViewer(guikit.AsyncWindow):
             draggable=True,
         )
         self.canvas_figure.draw()
-        return measurement_series.to_list()
+        return data_series.keys().to_list()
+
+    def get_data(self) -> tuple[list, pd.DataFrame]:
+        """Get the time coordinates and measurement series from the data file."""
+        data_file_df = pd.read_csv(self.state.data_file)
+        # Assume table format, with time in first column and data in subsequent columns
+        time_index = data_file_df[data_file_df.columns[0]]
+        time_coordinates = time_index.to_list()
+        series_names = data_file_df.columns[1:]
+        measurement_series = data_file_df[series_names]
+        return time_coordinates, measurement_series
 
 
 if __name__ == "__main__":
