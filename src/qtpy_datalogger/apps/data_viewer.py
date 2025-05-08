@@ -272,9 +272,6 @@ class DataViewer(guikit.AsyncWindow):
         action_panel.rowconfigure(0, weight=0)
         action_panel.rowconfigure(1, weight=0)
 
-        self.copy_view_button = self.create_icon_button(action_panel, text="Copy view", icon_name="image", char_width=16)
-        self.copy_view_button.grid(column=3, row=0, padx=8)
-        self.copy_view_button.configure(command=functools.partial(self.copy_canvas, self.copy_view_button))
         self.export_csv_button = self.create_icon_button(action_panel, text="Export", icon_name="table", char_width=12)
         self.export_csv_button.grid(column=4, row=0, padx=(8, 0))
         self.export_csv_button.configure(command=functools.partial(self.export_canvas, self.export_csv_button))
@@ -421,6 +418,10 @@ class DataViewer(guikit.AsyncWindow):
             variable=self.replay_variable,
         )
         self.file_menu.add_command(
+            command=functools.partial(self.export_canvas, self.file_menu),
+            label=DataViewer.MenuName.Export,
+        )
+        self.file_menu.add_command(
             command=functools.partial(self.close_file, self.file_menu),
             label=DataViewer.MenuName.Close,
             accelerator="Ctrl-W",
@@ -431,36 +432,11 @@ class DataViewer(guikit.AsyncWindow):
             # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
         )
         self.file_menu.add_command(
-            command=functools.partial(self.overlay_file, self.file_menu),
-            label=DataViewer.MenuName.Overlay,
-        )
-        self.file_menu.add_separator(
-            # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
-        )
-        self.file_menu.add_command(
             command=self.exit,
             label=DataViewer.MenuName.Exit,
             accelerator="Alt-F4",
         )
         self.root_window.bind("<Alt-F4>", lambda e: self.exit())
-
-        # Edit menu
-        self.edit_menu = tk.Menu(self.menubar, name="edit_menu")
-        self.menubar.add_cascade(
-            label=DataViewer.MenuName.Edit,
-            menu=self.edit_menu,
-            underline=0,
-        )
-        self.edit_menu.add_command(
-            command=functools.partial(self.copy_canvas, self.edit_menu),
-            label=DataViewer.MenuName.Copy,
-            accelerator="Ctrl-C",
-        )
-        self.root_window.bind("<Control-c>", lambda e: self.copy_canvas(self.edit_menu))
-        self.edit_menu.add_command(
-            command=functools.partial(self.export_canvas, self.edit_menu),
-            label=DataViewer.MenuName.Export,
-        )
 
         # View menu
         self.view_menu = tk.Menu(self.menubar, name="view_menu")
@@ -583,11 +559,33 @@ class DataViewer(guikit.AsyncWindow):
     def overlay_file(self, sender: tk.Widget) -> None:
         """Handle the File::Overlay menu command."""
 
-    def copy_canvas(self, sender: tk.Widget) -> None:
-        """Handle the Edit::Copy menu command."""
-
     def export_canvas(self, sender: tk.Widget) -> None:
         """Handle the Export CSV button command."""
+        file_name = filedialog.asksaveasfilename(
+            parent=self.root_window,
+            title="Specify a CSV file to use for exported data",
+            initialfile=f"{self.state.data_file.stem} - exported selection.csv",
+            filetypes=[
+                ("CSV files", "*.csv"),
+            ],
+        )
+        file_path = pathlib.Path(file_name)
+        if file_path == AppState.canceled_file:
+            return
+
+        file_path = file_path.with_suffix(".csv")
+
+        other_lower, other_upper = self.plot_axes.get_xbound()
+        time_coordinates, full_data_set = self.get_data()
+        time_series = pd.Series(time_coordinates)
+        above_limit = time_series >= other_lower
+        below_limit = time_series <= other_upper
+        time_values = time_series[above_limit & below_limit]
+        visible_series = [v.get() for v in self.plots_variables]
+        data_to_export = full_data_set.loc[time_values.index, visible_series]
+        data_to_export.index = time_values
+        data_to_export.index.name = "time"
+        data_to_export.to_csv(file_path)
 
     def on_data_file_changed(self, event_args: tk.Event) -> None:
         """Handle the File::Open menu or button command."""
@@ -605,14 +603,12 @@ class DataViewer(guikit.AsyncWindow):
         button_list = [
             self.reload_button,
             self.replay_button,
-            self.copy_view_button,
             self.export_csv_button,
         ]
         for button in button_list:
             button.configure(state=new_enabled_state)
         menu_entries = {
-            self.file_menu: [DataViewer.MenuName.Reload, DataViewer.MenuName.Replay, DataViewer.MenuName.Overlay, DataViewer.MenuName.Close],
-            self.edit_menu: [DataViewer.MenuName.Copy, DataViewer.MenuName.Export],
+            self.file_menu: [DataViewer.MenuName.Reload, DataViewer.MenuName.Replay, DataViewer.MenuName.Export, DataViewer.MenuName.Close],
         }
         for owner, entries in menu_entries.items():
             for entry in entries:
@@ -682,7 +678,6 @@ class DataViewer(guikit.AsyncWindow):
         self.startup_label.configure(background=guikit.hex_string_for_style(bootstyle.LIGHT))
         all_menus = [
             self.file_menu,
-            self.edit_menu,
             self.view_menu,
             self.plots_menu,
             self.themes_menu,
