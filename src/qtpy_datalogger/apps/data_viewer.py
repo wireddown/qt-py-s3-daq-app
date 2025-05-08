@@ -258,7 +258,7 @@ class DataViewer(guikit.AsyncWindow):
         self.canvas_frame.rowconfigure(0, weight=1)
         self.plot_figure = mpl_figure.Figure(figsize=figure_aspect, dpi=figure_dpi)
         self.canvas_figure = ttkbootstrap_matplotlib.create_styled_plot_canvas(self.plot_figure, self.canvas_frame)
-        self.plot_figure.subplots_adjust(left=0.06, bottom=0.08, right=0.98, top=0.98)
+        self.plot_figure.subplots_adjust(left=0.10, bottom=0.10, right=0.98, top=0.98)
 
         self.plot_axes = self.plot_figure.add_subplot()
 
