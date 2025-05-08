@@ -163,19 +163,23 @@ class AboutDialog(ttk_dialogs.Dialog):
 
     def create_buttonbox(self, master: tk.Widget) -> None:
         """Create the bottom row of buttons."""
+        if not self._toplevel:
+            raise RuntimeError()
         button_frame = ttk.Frame(self.main_frame)
         button_frame.grid(column=0, row=1, sticky=tk.NSEW, padx=(0, 16), pady=(8, 0))
         button_frame.columnconfigure(0, weight=1)
         button_frame.columnconfigure(1, weight=0)
         button_frame.rowconfigure(0, weight=0)
-        self.copy_version_button = ttk.Button(button_frame, text="Copy version", bootstyle=bootstyle.OUTLINE, command=self.copy_version, width=12)
+        self.copy_version_button = ttk.Button(button_frame, text=DataViewer.CommandName.CopyVersion, bootstyle=bootstyle.OUTLINE, command=self.copy_version, width=12)
         self.copy_version_button.grid(column=0, row=0, sticky=tk.E, padx=(0, 16))
-        ok_button = ttk.Button(button_frame, text="OK", command=self._toplevel.destroy)
+        ok_button = ttk.Button(button_frame, text=DataViewer.CommandName.OK, command=self._toplevel.destroy)
         ok_button.grid(column=1, row=0, sticky=tk.E)
         self._initial_focus = ok_button
 
     def copy_version(self) -> None:
         """Copy the version information to the clipboard."""
+        if not self._toplevel:
+            raise RuntimeError()
         notice = datatypes.SnsrNotice.get_package_notice_info(allow_dev_version=True)
         formatted_version = {
             "version": notice.version,
@@ -186,24 +190,21 @@ class AboutDialog(ttk_dialogs.Dialog):
         self._toplevel.clipboard_append(json.dumps(formatted_version))
         status_emoji = ttk_icons.Emoji.get("white heavy check mark")
         self.copy_version_button.configure(text=f"{status_emoji}   Copied!", bootstyle=bootstyle.SUCCESS)
-        self.copy_version_button.after(850, functools.partial(self.copy_version_button.configure, text="Copy version", bootstyle=(bootstyle.DEFAULT, bootstyle.OUTLINE)))
+        self.copy_version_button.after(850, functools.partial(self.copy_version_button.configure, text=DataViewer.CommandName.CopyVersion, bootstyle=(bootstyle.DEFAULT, bootstyle.OUTLINE)))
 
 class DataViewer(guikit.AsyncWindow):
     """A GUI that loads a CSV data file and plots the columns."""
 
-    class MenuName(StrEnum):
-        """Names used for entries in the app's menus."""
+    class CommandName(StrEnum):
+        """Names used for menus and commands in the app."""
 
         File = "File"
-        Open = "Open..."
+        Open = "Open"
         Reload= "Reload"
         Replay = "Replay"
-        Overlay = "Overlay..."
         Close = "Close"
         Exit = "Exit"
-        Edit = "Edit"
-        Copy = "Copy"
-        Export = "Export..."
+        Export = "Export"
         View = "View"
         Plots = "Plots"
         HideAll = "Hide all"
@@ -213,6 +214,10 @@ class DataViewer(guikit.AsyncWindow):
         Dark = "Dark"
         Help = "Help"
         About = "About"
+        OpenCSV = "Open CSV"
+        Demo = "Demo"
+        OK = "OK"
+        CopyVersion = "Copy version"
 
     app_name = "QT Py Data Viewer"
 
@@ -272,14 +277,14 @@ class DataViewer(guikit.AsyncWindow):
         action_panel.rowconfigure(0, weight=0)
         action_panel.rowconfigure(1, weight=0)
 
-        self.export_csv_button = self.create_icon_button(action_panel, text="Export", icon_name="table", char_width=12)
+        self.export_csv_button = self.create_icon_button(action_panel, text=DataViewer.CommandName.Export, icon_name="table", char_width=12)
         self.export_csv_button.grid(column=4, row=0, padx=(8, 0))
         self.export_csv_button.configure(command=functools.partial(self.export_canvas, self.export_csv_button))
 
-        self.reload_button = self.create_icon_button(action_panel, text="Reload", icon_name="rotate-left", char_width=12)
+        self.reload_button = self.create_icon_button(action_panel, text=DataViewer.CommandName.Reload, icon_name="rotate-left", char_width=12)
         self.reload_button.configure(command=functools.partial(self.reload_file, self.reload_button))
         self.reload_button.grid(column=0, row=0, padx=(0, 8))
-        self.replay_button = self.create_icon_button(action_panel, text="Replay", icon_name="clock-rotate-left", char_width=12)
+        self.replay_button = self.create_icon_button(action_panel, text=DataViewer.CommandName.Replay, icon_name="clock-rotate-left", char_width=12)
         self.replay_button.configure(command=functools.partial(self.replay_data, self.replay_button))
         self.replay_button.grid(column=1, row=0, padx=8)
 
@@ -298,12 +303,12 @@ class DataViewer(guikit.AsyncWindow):
         self.canvas_cover.rowconfigure(1, weight=0)
         self.canvas_cover.rowconfigure(2, weight=1)
 
-        self.startup_label = ttk.Label(self.canvas_cover, font=font.Font(weight="bold", size=24), text="QT Py Data Viewer")
+        self.startup_label = ttk.Label(self.canvas_cover, font=font.Font(weight="bold", size=24), text=DataViewer.app_name)
         self.startup_label.grid(column=0, row=0, pady=16)
-        open_file_button = self.create_icon_button(self.canvas_cover, text="Open CSV", icon_name="file-csv", spaces=2, bootstyle=bootstyle.INFO)
+        open_file_button = self.create_icon_button(self.canvas_cover, text=DataViewer.CommandName.OpenCSV, icon_name="file-csv", spaces=2, bootstyle=bootstyle.INFO)
         open_file_button.grid(column=0, row=1, sticky=tk.S, pady=(0, 16))
         open_file_button.configure(command=functools.partial(self.open_file, open_file_button))
-        demo_button = self.create_icon_button(self.canvas_cover, text="Demo", icon_name="chart-line", spaces=4, bootstyle=bootstyle.INFO)
+        demo_button = self.create_icon_button(self.canvas_cover, text=DataViewer.CommandName.Demo, icon_name="chart-line", spaces=4, bootstyle=bootstyle.INFO)
         demo_button.grid(column=0, row=2, sticky=tk.N, pady=(0, 16))
         demo_button.configure(command=functools.partial(self.open_demo, demo_button))
 
@@ -395,35 +400,35 @@ class DataViewer(guikit.AsyncWindow):
         # File menu
         self.file_menu = tk.Menu(self.menubar, name="file_menu")
         self.menubar.add_cascade(
-            label=DataViewer.MenuName.File,
+            label=DataViewer.CommandName.File,
             menu=self.file_menu,
             underline=0,
         )
         self.file_menu.add_command(
             command=functools.partial(self.open_file, self.file_menu),
-            label=DataViewer.MenuName.Open,
+            label=f"{DataViewer.CommandName.Open}...",
             accelerator="Ctrl-O",
             # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
         )
         self.root_window.bind("<Control-o>", lambda e: self.open_file(self.file_menu))
         self.file_menu.add_command(
             command=functools.partial(self.reload_file, self.file_menu),
-            label=DataViewer.MenuName.Reload,
+            label=DataViewer.CommandName.Reload,
             accelerator="F5",
         )
         self.root_window.bind("<F5>", lambda e: self.reload_file(self.file_menu))
         self.file_menu.add_checkbutton(
             command=functools.partial(self.replay_data, self.file_menu),
-            label=DataViewer.MenuName.Replay,
+            label=DataViewer.CommandName.Replay,
             variable=self.replay_variable,
         )
         self.file_menu.add_command(
             command=functools.partial(self.export_canvas, self.file_menu),
-            label=DataViewer.MenuName.Export,
+            label=f"{DataViewer.CommandName.Export}...",
         )
         self.file_menu.add_command(
             command=functools.partial(self.close_file, self.file_menu),
-            label=DataViewer.MenuName.Close,
+            label=DataViewer.CommandName.Close,
             accelerator="Ctrl-W",
             # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
         )
@@ -433,7 +438,7 @@ class DataViewer(guikit.AsyncWindow):
         )
         self.file_menu.add_command(
             command=self.exit,
-            label=DataViewer.MenuName.Exit,
+            label=DataViewer.CommandName.Exit,
             accelerator="Alt-F4",
         )
         self.root_window.bind("<Alt-F4>", lambda e: self.exit())
@@ -441,14 +446,14 @@ class DataViewer(guikit.AsyncWindow):
         # View menu
         self.view_menu = tk.Menu(self.menubar, name="view_menu")
         self.menubar.add_cascade(
-            label=DataViewer.MenuName.View,
+            label=DataViewer.CommandName.View,
             menu=self.view_menu,
             underline=0,
         )
         # Plots submenu
         self.plots_menu = tk.Menu(self.view_menu, name="plots_menu")
         self.view_menu.add_cascade(
-            label=DataViewer.MenuName.Plots,
+            label=DataViewer.CommandName.Plots,
             menu=self.plots_menu,
             underline=0,
         )
@@ -468,19 +473,19 @@ class DataViewer(guikit.AsyncWindow):
                 raise ValueError()
         self.themes_menu = tk.Menu(self.view_menu, name="themes_menu")
         self.view_menu.add_cascade(
-            label=DataViewer.MenuName.Theme,
+            label=DataViewer.CommandName.Theme,
             menu=self.themes_menu,
             underline=0,
         )
         self.light_menu = tk.Menu(self.themes_menu, name="light_themes_menu")
         self.themes_menu.add_cascade(
-            label=DataViewer.MenuName.Light,
+            label=DataViewer.CommandName.Light,
             menu=self.light_menu,
             underline=0,
         )
         self.dark_menu = tk.Menu(self.themes_menu, name="dark_themes_menu")
         self.themes_menu.add_cascade(
-            label=DataViewer.MenuName.Dark,
+            label=DataViewer.CommandName.Dark,
             menu=self.dark_menu,
             underline=0,
         )
@@ -500,13 +505,13 @@ class DataViewer(guikit.AsyncWindow):
         # Help menu
         self.help_menu = tk.Menu(self.menubar, name="help_menu")
         self.menubar.add_cascade(
-            label=DataViewer.MenuName.Help,
+            label=DataViewer.CommandName.Help,
             menu=self.help_menu,
             underline=0,
         )
         self.help_menu.add_command(
             command=self.show_about,
-            label=DataViewer.MenuName.About,
+            label=DataViewer.CommandName.About,
             accelerator="F1",
         )
         self.root_window.bind("<F1>", lambda e: self.show_about())
@@ -608,15 +613,15 @@ class DataViewer(guikit.AsyncWindow):
         for button in button_list:
             button.configure(state=new_enabled_state)
         menu_entries = {
-            self.file_menu: [DataViewer.MenuName.Reload, DataViewer.MenuName.Replay, DataViewer.MenuName.Export, DataViewer.MenuName.Close],
+            self.file_menu: [DataViewer.CommandName.Reload, DataViewer.CommandName.Replay, DataViewer.CommandName.Export, DataViewer.CommandName.Close],
         }
         for owner, entries in menu_entries.items():
             for entry in entries:
                 owner.entryconfigure(entry, state=new_enabled_state)
-        self.plots_menu.delete(0, "end")
+        self.plots_menu.delete(0, tk.END)
         self.plots_variables.clear()
-        self.plots_menu.add_command(label=DataViewer.MenuName.HideAll, command=functools.partial(self.hide_all_plots, self.plots_menu))
-        self.plots_menu.add_command(label=DataViewer.MenuName.ShowAll, command=functools.partial(self.show_all_plots, self.plots_menu))
+        self.plots_menu.add_command(label=DataViewer.CommandName.HideAll, command=functools.partial(self.hide_all_plots, self.plots_menu))
+        self.plots_menu.add_command(label=DataViewer.CommandName.ShowAll, command=functools.partial(self.show_all_plots, self.plots_menu))
         self.plots_menu.add_separator()
         for index, entry in enumerate(plots_entries):
             toggle_variable = tk.BooleanVar(self.plots_menu)
@@ -624,7 +629,7 @@ class DataViewer(guikit.AsyncWindow):
             self.plots_variables.append(toggle_variable)
             if self.state.data_file != AppState.no_file:
                 toggle_variable.set(True)
-        for index in range(0, self.plots_menu.index("end") + 1):
+        for index in range(0, self.plots_menu.index(tk.END) + 1):
             self.style_menu_entry(self.plots_menu, index)
         self.update_window_title(new_window_title)
 
@@ -687,7 +692,7 @@ class DataViewer(guikit.AsyncWindow):
         ]
         # Force light theme for menus
         for menu in all_menus:
-            for index in range(0, menu.index("end") + 1):
+            for index in range(0, menu.index(tk.END) + 1):
                 self.style_menu_entry(menu, index)
 
     def style_menu_entry(self, menu: tk.Menu, index: int) -> None:
