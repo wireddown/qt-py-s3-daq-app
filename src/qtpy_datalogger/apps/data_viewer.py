@@ -589,11 +589,11 @@ class DataViewer(guikit.AsyncWindow):
 
     def on_data_file_changed(self, event_args: tk.Event) -> None:
         """Handle the File::Open menu or button command."""
+        self.plot_axes.clear()
         if self.state.data_file == AppState.no_file:
             new_enabled_state = tk.DISABLED
             new_window_title = DataViewer.app_name
             plots_entries = ["(none)"]
-            self.plot_axes.clear()
             self.canvas_cover.grid(column=0, row=0, sticky=tk.NSEW)
         else:
             new_enabled_state =  tk.NORMAL
