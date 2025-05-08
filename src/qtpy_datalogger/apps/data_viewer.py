@@ -288,8 +288,8 @@ class DataViewer(guikit.AsyncWindow):
         self.replay_button.configure(command=functools.partial(self.replay_data, self.replay_button))
         self.replay_button.grid(column=1, row=0, padx=8)
 
-        self.file_message = ttk.Label(action_panel, text="Waiting for load")
-        self.file_message.grid(row=1, columnspan=5, pady=(8, 0))
+        self.file_message = ttk.Label(action_panel)
+        self.file_message.grid(row=1, columnspan=5, sticky=tk.W, pady=(8, 0))
 
         toolbar_frame = ttkbootstrap_matplotlib.create_styled_plot_toolbar(toolbar_row, self.canvas_figure)
         toolbar_frame.grid(column=1, row=0, sticky=(tk.EW, tk.N), padx=(8, 0))
@@ -380,6 +380,7 @@ class DataViewer(guikit.AsyncWindow):
             plot.set_xdata(times)
             plot.set_ydata(measurements)
         self.canvas_figure.draw()
+        self.update_file_message(f"Time: {times[-1]:.3f}")
 
     def on_closing(self) -> None:
         """Clean up before exiting."""
@@ -516,6 +517,10 @@ class DataViewer(guikit.AsyncWindow):
         )
         self.root_window.bind("<F1>", lambda e: self.show_about())
 
+    def update_file_message(self, new_message: str) -> None:
+        """Replace the file information text with new_message."""
+        self.file_message.configure(text=new_message)
+
     def open_file(self, sender: tk.Widget) -> None:
         """Handle the File::Open menu command."""
         file_path = filedialog.askopenfilename(
@@ -536,7 +541,7 @@ class DataViewer(guikit.AsyncWindow):
         channels = list(range(1, len(column_titles)))
         random.shuffle(channels)
         data_samples = [column_titles]
-        for sample_number in range(100):
+        for sample_number in range(101):
             scan = []
             timestamp = sample_number * 10
             scan.append(float(timestamp))
@@ -560,9 +565,6 @@ class DataViewer(guikit.AsyncWindow):
     def close_file(self, sender: tk.Widget) -> None:
         """Handle the File::Close menu command."""
         self.state.data_file = AppState.no_file
-
-    def overlay_file(self, sender: tk.Widget) -> None:
-        """Handle the File::Overlay menu command."""
 
     def export_canvas(self, sender: tk.Widget) -> None:
         """Handle the Export CSV button command."""
@@ -595,11 +597,13 @@ class DataViewer(guikit.AsyncWindow):
     def on_data_file_changed(self, event_args: tk.Event) -> None:
         """Handle the File::Open menu or button command."""
         self.plot_axes.clear()
+        self.replay_index = 0
         if self.state.data_file == AppState.no_file:
             new_enabled_state = tk.DISABLED
             new_window_title = DataViewer.app_name
             plots_entries = ["(none)"]
             self.canvas_cover.grid(column=0, row=0, sticky=tk.NSEW)
+            self.update_file_message("Waiting for file")
         else:
             new_enabled_state =  tk.NORMAL
             new_window_title = f"{self.state.data_file.name} - {DataViewer.app_name}"
@@ -613,7 +617,7 @@ class DataViewer(guikit.AsyncWindow):
         for button in button_list:
             button.configure(state=new_enabled_state)
         menu_entries = {
-            self.file_menu: [DataViewer.CommandName.Reload, DataViewer.CommandName.Replay, DataViewer.CommandName.Export, DataViewer.CommandName.Close],
+            self.file_menu: [DataViewer.CommandName.Reload, DataViewer.CommandName.Replay, f"{DataViewer.CommandName.Export}...", DataViewer.CommandName.Close],
         }
         for owner, entries in menu_entries.items():
             for entry in entries:
@@ -746,6 +750,7 @@ class DataViewer(guikit.AsyncWindow):
             draggable=True,
         )
         self.canvas_figure.draw()
+        self.update_file_message(f"Duration: {time_coordinates[-1]:.3f}")
         return data_series.keys().to_list()
 
     def get_data(self) -> tuple[list, pd.DataFrame]:
