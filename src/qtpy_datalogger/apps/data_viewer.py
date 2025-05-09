@@ -594,7 +594,8 @@ class DataViewer(guikit.AsyncWindow):
         time_values = time_series[above_limit & below_limit]
         visible_series = [v.get() for v in self.plots_variables]
         data_to_export = full_data_set.loc[time_values.index, visible_series]
-        data_to_export.index = time_values
+
+        data_to_export = data_to_export.set_index(time_values.values)
         data_to_export.index.name = "time"
         data_to_export.to_csv(file_path)
 
