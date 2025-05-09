@@ -629,8 +629,8 @@ class DataViewer(guikit.AsyncWindow):
                 owner.entryconfigure(entry, state=new_enabled_state)
         self.plots_menu.delete(0, tk.END)
         self.plots_variables.clear()
-        self.plots_menu.add_command(label=DataViewer.CommandName.HideAll, command=functools.partial(self.hide_all_plots, self.plots_menu))
-        self.plots_menu.add_command(label=DataViewer.CommandName.ShowAll, command=functools.partial(self.show_all_plots, self.plots_menu))
+        self.plots_menu.add_command(label=DataViewer.CommandName.HideAll, command=functools.partial(self.set_all_plots_visibility, new_visibility=False))
+        self.plots_menu.add_command(label=DataViewer.CommandName.ShowAll, command=functools.partial(self.set_all_plots_visibility, new_visibility=True))
         self.plots_menu.add_separator()
         for index, entry in enumerate(plots_entries):
             toggle_variable = tk.BooleanVar(self.plots_menu)
@@ -644,14 +644,6 @@ class DataViewer(guikit.AsyncWindow):
         for index in range(last_entry + 1):
             self.style_menu_entry(self.plots_menu, index)
         self.update_window_title(new_window_title)
-
-    def hide_all_plots(self, sender: tk.Widget) -> None:
-        """Hide all plots."""
-        self.set_all_plots_visibility(new_visibility=False)
-
-    def show_all_plots(self, sender: tk.Widget) -> None:
-        """Show all plots."""
-        self.set_all_plots_visibility(new_visibility=True)
 
     def set_all_plots_visibility(self, new_visibility: bool) -> None:
         """Show or hide all plots according to new_visibility."""
