@@ -335,7 +335,7 @@ class DataViewer(guikit.AsyncWindow):
 
         self.on_data_file_changed(event_args=tk.Event())
 
-    def create_icon_button(
+    def create_icon_button(  # noqa PLR0913 -- allow many parameters for a factory method
             self,
             parent: tk.Widget,
             text: str,
@@ -541,7 +541,7 @@ class DataViewer(guikit.AsyncWindow):
     def open_demo(self, sender: tk.Widget) -> None:
         """Handle the Demo button command."""
         channel_count = 8
-        trend_function = random.choice([math.log10, math.cbrt])
+        trend_function = random.choice([math.log10, math.cbrt])  # noqa: S311 -- no cryptography happening here
         column_titles = ["time (s)"]
         column_titles.extend([f"v{N+1}" for N in range(channel_count)])
         channels = list(range(1, len(column_titles)))
@@ -552,7 +552,7 @@ class DataViewer(guikit.AsyncWindow):
             timestamp = sample_number * 10
             scan.append(float(timestamp))
             for channel in channels:
-                noise = random.random()
+                noise = random.random()  # noqa: S311 -- no cryptography happening here
                 channel_sample = channel * trend_function(timestamp + 50) - 0.2 * noise
                 scan.append(channel_sample)
             data_samples.append(scan)
@@ -638,7 +638,10 @@ class DataViewer(guikit.AsyncWindow):
             self.plots_variables.append(toggle_variable)
             if self.state.data_file != AppState.no_file:
                 toggle_variable.set(True)
-        for index in range(0, self.plots_menu.index(tk.END) + 1):
+        last_entry = self.plots_menu.index(tk.END)
+        if not last_entry:
+            raise ValueError()
+        for index in range(last_entry + 1):
             self.style_menu_entry(self.plots_menu, index)
         self.update_window_title(new_window_title)
 
@@ -700,7 +703,10 @@ class DataViewer(guikit.AsyncWindow):
         ]
         # Force light theme for menus
         for menu in all_menus:
-            for index in range(0, menu.index(tk.END) + 1):
+            last_entry = menu.index(tk.END)
+            if not last_entry:
+                raise ValueError()
+            for index in range(last_entry + 1):
                 self.style_menu_entry(menu, index)
 
     def style_menu_entry(self, menu: tk.Menu, index: int) -> None:
