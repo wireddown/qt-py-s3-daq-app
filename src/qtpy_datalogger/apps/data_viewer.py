@@ -632,17 +632,13 @@ class DataViewer(guikit.AsyncWindow):
         self.plots_menu.add_command(label=DataViewer.CommandName.HideAll, command=functools.partial(self.set_all_plots_visibility, new_visibility=False))
         self.plots_menu.add_command(label=DataViewer.CommandName.ShowAll, command=functools.partial(self.set_all_plots_visibility, new_visibility=True))
         self.plots_menu.add_separator()
-        for index, entry in enumerate(plots_entries):
+        for plot_index, entry in enumerate(plots_entries):
             toggle_variable = tk.BooleanVar(self.plots_menu)
-            self.plots_menu.add_checkbutton(label=entry, state=new_enabled_state, command=functools.partial(self.toggle_plot, index), variable=toggle_variable)
+            self.plots_menu.add_checkbutton(label=entry, state=new_enabled_state, command=functools.partial(self.toggle_plot, plot_index), variable=toggle_variable)
             self.plots_variables.append(toggle_variable)
             if self.state.data_file != AppState.no_file:
                 toggle_variable.set(True)
-        last_entry = self.plots_menu.index(tk.END)
-        if last_entry is None:
-            raise ValueError()
-        for index in range(last_entry + 1):
-            self.style_menu_entry(self.plots_menu, index)
+        self.style_menu(self.plots_menu)
         self.update_window_title(new_window_title)
 
     def set_all_plots_visibility(self, new_visibility: bool) -> None:
@@ -695,11 +691,15 @@ class DataViewer(guikit.AsyncWindow):
         ]
         # Force light theme for menus
         for menu in all_menus:
-            last_entry = menu.index(tk.END)
-            if last_entry is None:
-                raise ValueError()
-            for index in range(last_entry + 1):
-                self.style_menu_entry(menu, index)
+            self.style_menu(menu)
+
+    def style_menu(self, menu: tk.Menu) -> None:
+        """Style every entry in the specified menu."""
+        last_entry = menu.index(tk.END)  # DRY
+        if last_entry is None:
+            raise ValueError()
+        for index in range(last_entry + 1):
+            self.style_menu_entry(menu, index)
 
     def style_menu_entry(self, menu: tk.Menu, index: int) -> None:
         """Style the specified menu entry."""
