@@ -34,6 +34,13 @@ logger = logging.getLogger(pathlib.Path(__file__).stem)
 app_icon_color = "#07a000"
 
 
+class StyleKey(StrEnum):
+    """A class that extends the palette names of ttkbootstrap styles."""
+
+    Fg = "fg"
+    SelectFg = "selectfg"
+
+
 class AppState:
     """A class that models and controls the app's settings and runtime state."""
 
@@ -136,7 +143,7 @@ class AboutDialog(ttk_dialogs.Dialog):
         message_frame.rowconfigure(7, weight=0, minsize=20)  # Filler
 
         icon_height = 48
-        icon_color = guikit.hex_string_for_style("fg")
+        icon_color = guikit.hex_string_for_style(StyleKey.Fg)
         self.microchip_icon = icon_to_image("microchip", fill=icon_color, scale_to_height=icon_height)
         microchip_label = ttk.Label(message_frame, image=self.microchip_icon, padding=3)
         microchip_label.grid(column=1, row=1, rowspan=2)
@@ -154,10 +161,10 @@ class AboutDialog(ttk_dialogs.Dialog):
         version_label.grid(column=5, row=2, sticky=tk.W, padx=(4, 0))
         separator = ttk.Separator(message_frame)
         separator.grid(column=1, row=3, columnspan=5, sticky=tk.EW, pady=4)
-        self.help_icon = icon_to_image("parachute-box", fill=guikit.hex_string_for_style("selectfg"), scale_to_width=16)  # suitcase-medical
+        self.help_icon = icon_to_image("parachute-box", fill=guikit.hex_string_for_style(StyleKey.SelectFg), scale_to_width=16)
         help_button = ttk.Button(message_frame, compound=tk.LEFT, image=self.help_icon, text="   Online help ", style=bootstyle.INFO, width=18, command=functools.partial(webbrowser.open_new_tab, datatypes.Links.Homepage))
         help_button.grid(column=5, row=4, sticky=tk.W, pady=(18, 0))
-        self.source_icon = icon_to_image("github-alt", fill=guikit.hex_string_for_style("selectfg"), scale_to_width=16)
+        self.source_icon = icon_to_image("github-alt", fill=guikit.hex_string_for_style(StyleKey.SelectFg), scale_to_width=16)
         source_button = ttk.Button(message_frame, compound=tk.LEFT, image=self.source_icon, text="   Source code", style=bootstyle.INFO, width=18, command=functools.partial(webbrowser.open_new_tab, datatypes.Links.Source))
         source_button.grid(column=5, row=5, sticky=tk.W, pady=(22, 0))
 
@@ -339,7 +346,7 @@ class DataViewer(guikit.AsyncWindow):
         ) -> ttk.Button:
         """Create a ttk.Button using the specified text and FontAwesome icon_name."""
         text_spacing = 3 * " "
-        button_image = icon_to_image(icon_name, fill=guikit.hex_string_for_style("selectfg"), scale_to_height=24)
+        button_image = icon_to_image(icon_name, fill=guikit.hex_string_for_style(StyleKey.SelectFg), scale_to_height=24)
         self.svg_images[icon_name] = button_image
         button = ttk.Button(
             parent,
@@ -358,11 +365,13 @@ class DataViewer(guikit.AsyncWindow):
     async def on_loop(self) -> None:
         """Update the UI with new information."""
         await asyncio.sleep(1e-6)
+
         if not self.state.replay_active:
             return
         now = time.time()
         if self.next_update_time > now:
             return
+
         self.next_update_time = now + 0.35
         draw_to = self.replay_index + 1
         self.replay_index = draw_to
@@ -371,7 +380,6 @@ class DataViewer(guikit.AsyncWindow):
             self.state.replay_active = False
             self.reload_file(self.reload_button)
 
-        # Only draw up to index
         plot_lines = self.plot_axes.lines
         times = time_coordinates[:draw_to]
         for index, (_, series) in enumerate(data_series.items()):
@@ -431,11 +439,9 @@ class DataViewer(guikit.AsyncWindow):
             command=functools.partial(self.close_file, self.file_menu),
             label=DataViewer.CommandName.Close,
             accelerator="Ctrl-W",
-            # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
         )
         self.root_window.bind("<Control-w>", lambda e: self.close_file(self.file_menu))
         self.file_menu.add_separator(
-            # Styling is supported here, but the bounding frame surrounding the menu entries follows Windows System settings
         )
         self.file_menu.add_command(
             command=self.exit,
@@ -558,8 +564,6 @@ class DataViewer(guikit.AsyncWindow):
 
     def reload_file(self, sender: tk.Widget) -> None:
         """Handle the File::Reload menu command."""
-        self.replay_index = 0
-        self.plot_axes.clear()
         self.on_data_file_changed(tk.Event())
 
     def close_file(self, sender: tk.Widget) -> None:
@@ -582,11 +586,11 @@ class DataViewer(guikit.AsyncWindow):
 
         file_path = file_path.with_suffix(".csv")
 
-        other_lower, other_upper = self.plot_axes.get_xbound()
+        lower_bound, upper_bound = self.plot_axes.get_xbound()
         time_coordinates, full_data_set = self.get_data()
         time_series = pd.Series(time_coordinates)
-        above_limit = time_series >= other_lower
-        below_limit = time_series <= other_upper
+        above_limit = time_series >= lower_bound
+        below_limit = time_series <= upper_bound
         time_values = time_series[above_limit & below_limit]
         visible_series = [v.get() for v in self.plots_variables]
         data_to_export = full_data_set.loc[time_values.index, visible_series]
@@ -597,6 +601,7 @@ class DataViewer(guikit.AsyncWindow):
     def on_data_file_changed(self, event_args: tk.Event) -> None:
         """Handle the File::Open menu or button command."""
         self.plot_axes.clear()
+        self.state.replay_active = False
         self.replay_index = 0
         if self.state.data_file == AppState.no_file:
             new_enabled_state = tk.DISABLED
@@ -637,23 +642,22 @@ class DataViewer(guikit.AsyncWindow):
             self.style_menu_entry(self.plots_menu, index)
         self.update_window_title(new_window_title)
 
-    def hide_all_plots(self, sender:tk.Widget) -> None:
+    def hide_all_plots(self, sender: tk.Widget) -> None:
         """Hide all plots."""
-        plot_lines = self.plot_axes.lines
-        for line in plot_lines:
-            line.set_visible(False)
-        self.canvas_figure.draw()
-        for variable in self.plots_variables:
-            variable.set(False)
+        self.set_all_plots_visibility(new_visibility=False)
 
     def show_all_plots(self, sender: tk.Widget) -> None:
         """Show all plots."""
+        self.set_all_plots_visibility(new_visibility=True)
+
+    def set_all_plots_visibility(self, new_visibility: bool) -> None:
+        """Show or hide all plots according to new_visibility."""
         plot_lines = self.plot_axes.lines
         for line in plot_lines:
-            line.set_visible(True)
+            line.set_visible(new_visibility)
         self.canvas_figure.draw()
         for variable in self.plots_variables:
-            variable.set(True)
+            variable.set(new_visibility)
 
     def toggle_plot(self, index: int) -> None:
         """Toggle the visibility of the plot for series_name."""
@@ -755,8 +759,8 @@ class DataViewer(guikit.AsyncWindow):
 
     def get_data(self) -> tuple[list, pd.DataFrame]:
         """Get the time coordinates and measurement series from the data file."""
-        data_file_df = pd.read_csv(self.state.data_file)
         # Assume table format, with time in first column and data in subsequent columns
+        data_file_df = pd.read_csv(self.state.data_file)
         time_index = data_file_df[data_file_df.columns[0]]
         time_coordinates = time_index.to_list()
         series_names = data_file_df.columns[1:]
