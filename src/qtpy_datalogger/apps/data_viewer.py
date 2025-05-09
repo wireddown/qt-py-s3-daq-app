@@ -177,7 +177,7 @@ class AboutDialog(ttk_dialogs.Dialog):
         button_frame.columnconfigure(0, weight=1)
         button_frame.columnconfigure(1, weight=0)
         button_frame.rowconfigure(0, weight=0)
-        self.copy_version_button = ttk.Button(button_frame, text=DataViewer.CommandName.CopyVersion, bootstyle=bootstyle.OUTLINE, command=self.copy_version, width=12)
+        self.copy_version_button = ttk.Button(button_frame, text=DataViewer.CommandName.CopyVersion, style=bootstyle.OUTLINE, command=self.copy_version, width=12)
         self.copy_version_button.grid(column=0, row=0, sticky=tk.E, padx=(0, 16))
         ok_button = ttk.Button(button_frame, text=DataViewer.CommandName.OK, command=self._toplevel.destroy)
         ok_button.grid(column=1, row=0, sticky=tk.E)
@@ -639,7 +639,7 @@ class DataViewer(guikit.AsyncWindow):
             if self.state.data_file != AppState.no_file:
                 toggle_variable.set(True)
         last_entry = self.plots_menu.index(tk.END)
-        if not last_entry:
+        if last_entry is None:
             raise ValueError()
         for index in range(last_entry + 1):
             self.style_menu_entry(self.plots_menu, index)
@@ -704,7 +704,7 @@ class DataViewer(guikit.AsyncWindow):
         # Force light theme for menus
         for menu in all_menus:
             last_entry = menu.index(tk.END)
-            if not last_entry:
+            if last_entry is None:
                 raise ValueError()
             for index in range(last_entry + 1):
                 self.style_menu_entry(menu, index)
