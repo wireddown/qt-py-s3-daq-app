@@ -106,6 +106,15 @@ class AppState:
         """Return the folder used for demo files."""
         return self._demo_folder
 
+    def load_data_file(self) -> None:
+        """Load the data file into memory."""
+        if self.data_file in [AppState.no_file, AppState.canceled_file]:
+            raise RuntimeError()
+        self.data_file_df = pd.read_csv(self.data_file)
+
+    def get_data(self) -> pd.DataFrame:
+        """Return the loaded data as a DataFrame."""
+        return self.data_file_df.copy()
 
 class AboutDialog(ttk_dialogs.Dialog):
     """A class that presents information about the app."""
@@ -613,6 +622,7 @@ class DataViewer(guikit.AsyncWindow):
         else:
             new_enabled_state =  tk.NORMAL
             new_window_title = f"{self.state.data_file.name} - {DataViewer.app_name}"
+            self.state.load_data_file()
             plots_entries = self.update_plot_axes()
             self.canvas_cover.grid_forget()
         button_list = [
@@ -759,7 +769,7 @@ class DataViewer(guikit.AsyncWindow):
     def get_data(self) -> tuple[list, pd.DataFrame]:
         """Get the time coordinates and measurement series from the data file."""
         # Assume table format, with time in first column and data in subsequent columns
-        data_file_df = pd.read_csv(self.state.data_file)
+        data_file_df = self.state.get_data()
         time_index = data_file_df[data_file_df.columns[0]]
         time_coordinates = time_index.to_list()
         series_names = data_file_df.columns[1:]
