@@ -196,8 +196,8 @@ class AboutDialog(ttk_dialogs.Dialog):
         self._toplevel.clipboard_clear()
         self._toplevel.clipboard_append(json.dumps(formatted_version))
         status_emoji = ttk_icons.Emoji.get("white heavy check mark")
-        self.copy_version_button.configure(text=f"{status_emoji}   Copied!", bootstyle=bootstyle.SUCCESS)
-        self.copy_version_button.after(850, functools.partial(self.copy_version_button.configure, text=DataViewer.CommandName.CopyVersion, bootstyle=(bootstyle.DEFAULT, bootstyle.OUTLINE)))
+        self.copy_version_button.configure(text=f"{status_emoji}   Copied!", bootstyle=bootstyle.SUCCESS)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+        self.copy_version_button.after(850, functools.partial(self.copy_version_button.configure, text=DataViewer.CommandName.CopyVersion, bootstyle=(bootstyle.DEFAULT, bootstyle.OUTLINE)))  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
 
 class DataViewer(guikit.AsyncWindow):
     """A GUI that loads a CSV data file and plots the columns."""
@@ -299,7 +299,7 @@ class DataViewer(guikit.AsyncWindow):
         self.file_message.grid(row=1, columnspan=5, sticky=tk.W, pady=(8, 0))
 
         toolbar_frame = ttkbootstrap_matplotlib.create_styled_plot_toolbar(toolbar_row, self.canvas_figure)
-        toolbar_frame.grid(column=1, row=0, sticky=(tk.EW, tk.N), padx=(8, 0))
+        toolbar_frame.grid(column=1, row=0, sticky=(tk.EW, tk.N), padx=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
         self.state.active_theme = "flatly"
 
@@ -355,7 +355,7 @@ class DataViewer(guikit.AsyncWindow):
             compound=tk.RIGHT,
             width=char_width,
             padding=(4, 6, 4, 4),
-            bootstyle=bootstyle,
+            bootstyle=bootstyle,  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
         )
         return button
 
@@ -672,7 +672,7 @@ class DataViewer(guikit.AsyncWindow):
         """Update UI state when replay_active changes state."""
         replay_active = self.state.replay_active
         new_style = bootstyle.SUCCESS if replay_active else bootstyle.DEFAULT
-        self.replay_button.configure(bootstyle=new_style)
+        self.replay_button.configure(bootstyle=new_style)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         self.replay_variable.set(replay_active)
 
     def change_theme(self, theme_name: str) -> None:
