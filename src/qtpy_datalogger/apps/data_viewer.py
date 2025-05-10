@@ -531,9 +531,6 @@ class DataViewer(guikit.AsyncWindow):
             underline=0,
         )
         # Themes submenu
-        style = ttk.Style.get_instance()
-        if not (style and style.theme):
-            raise ValueError()
         light_themes = []
         dark_themes = []
         for theme_name, definition in ttk_themes.STANDARD_THEMES.items():
