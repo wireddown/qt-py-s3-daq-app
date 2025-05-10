@@ -838,7 +838,7 @@ class DataViewer(guikit.AsyncWindow):
         self.update_file_message(f"Duration: {time_coordinates[-1]:.3f}")
         return data_series.keys().to_list()
 
-    def get_data(self) -> tuple[list, pd.DataFrame]:
+    def get_data(self) -> tuple[list[float], pd.DataFrame]:
         """Get the time coordinates and measurement series from the data file."""
         # Assume table format, with time in first column and data in subsequent columns
         data_file_df = self.state.get_data()
