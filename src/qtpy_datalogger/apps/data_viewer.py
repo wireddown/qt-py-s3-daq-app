@@ -116,6 +116,7 @@ class AppState:
         """Return the loaded data as a DataFrame."""
         return self.data_file_df.copy()
 
+
 class AboutDialog(ttk_dialogs.Dialog):
     """A class that presents information about the app."""
 
@@ -166,15 +167,38 @@ class AboutDialog(ttk_dialogs.Dialog):
         name_label = ttk.Label(message_frame, font=font.Font(weight="bold", size=28), text=DataViewer.app_name)
         name_label.grid(column=5, row=1, sticky=tk.W)
         version_information = datatypes.SnsrNotice.get_package_notice_info(allow_dev_version=True)
-        version_label = ttk.Label(message_frame, text=f"{version_information.version} {ttk_icons.Emoji.get('black medium small square')} {version_information.timestamp:%Y-%m-%d} {ttk_icons.Emoji.get('black medium small square')} {version_information.commit}")
+        version_label = ttk.Label(
+            message_frame,
+            text=f"{version_information.version} {ttk_icons.Emoji.get('black medium small square')} {version_information.timestamp:%Y-%m-%d} {ttk_icons.Emoji.get('black medium small square')} {version_information.commit}",
+        )
         version_label.grid(column=5, row=2, sticky=tk.W, padx=(4, 0))
         separator = ttk.Separator(message_frame)
         separator.grid(column=1, row=3, columnspan=5, sticky=tk.EW, pady=4)
-        self.help_icon = icon_to_image("parachute-box", fill=guikit.hex_string_for_style(StyleKey.SelectFg), scale_to_width=16)
-        help_button = ttk.Button(message_frame, compound=tk.LEFT, image=self.help_icon, text="   Online help ", style=bootstyle.INFO, width=18, command=functools.partial(webbrowser.open_new_tab, datatypes.Links.Homepage))
+        self.help_icon = icon_to_image(
+            "parachute-box", fill=guikit.hex_string_for_style(StyleKey.SelectFg), scale_to_width=16
+        )
+        help_button = ttk.Button(
+            message_frame,
+            compound=tk.LEFT,
+            image=self.help_icon,
+            text="   Online help ",
+            style=bootstyle.INFO,
+            width=18,
+            command=functools.partial(webbrowser.open_new_tab, datatypes.Links.Homepage),
+        )
         help_button.grid(column=5, row=4, sticky=tk.W, pady=(18, 0))
-        self.source_icon = icon_to_image("github-alt", fill=guikit.hex_string_for_style(StyleKey.SelectFg), scale_to_width=16)
-        source_button = ttk.Button(message_frame, compound=tk.LEFT, image=self.source_icon, text="   Source code", style=bootstyle.INFO, width=18, command=functools.partial(webbrowser.open_new_tab, datatypes.Links.Source))
+        self.source_icon = icon_to_image(
+            "github-alt", fill=guikit.hex_string_for_style(StyleKey.SelectFg), scale_to_width=16
+        )
+        source_button = ttk.Button(
+            message_frame,
+            compound=tk.LEFT,
+            image=self.source_icon,
+            text="   Source code",
+            style=bootstyle.INFO,
+            width=18,
+            command=functools.partial(webbrowser.open_new_tab, datatypes.Links.Source),
+        )
         source_button.grid(column=5, row=5, sticky=tk.W, pady=(22, 0))
 
     def create_buttonbox(self, master: tk.Widget) -> None:
@@ -186,7 +210,13 @@ class AboutDialog(ttk_dialogs.Dialog):
         button_frame.columnconfigure(0, weight=1)
         button_frame.columnconfigure(1, weight=0)
         button_frame.rowconfigure(0, weight=0)
-        self.copy_version_button = ttk.Button(button_frame, text=DataViewer.CommandName.CopyVersion, style=bootstyle.OUTLINE, command=self.copy_version, width=12)
+        self.copy_version_button = ttk.Button(
+            button_frame,
+            text=DataViewer.CommandName.CopyVersion,
+            style=bootstyle.OUTLINE,
+            command=self.copy_version,
+            width=12,
+        )
         self.copy_version_button.grid(column=0, row=0, sticky=tk.E, padx=(0, 16))
         ok_button = ttk.Button(button_frame, text=DataViewer.CommandName.OK, command=self._toplevel.destroy)
         ok_button.grid(column=1, row=0, sticky=tk.E)
@@ -206,7 +236,15 @@ class AboutDialog(ttk_dialogs.Dialog):
         self._toplevel.clipboard_append(json.dumps(formatted_version))
         status_emoji = ttk_icons.Emoji.get("white heavy check mark")
         self.copy_version_button.configure(text=f"{status_emoji}   Copied!", bootstyle=bootstyle.SUCCESS)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
-        self.copy_version_button.after(850, functools.partial(self.copy_version_button.configure, text=DataViewer.CommandName.CopyVersion, bootstyle=(bootstyle.DEFAULT, bootstyle.OUTLINE)))  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+        self.copy_version_button.after(
+            850,
+            functools.partial(
+                self.copy_version_button.configure,
+                text=DataViewer.CommandName.CopyVersion,
+                bootstyle=(bootstyle.DEFAULT, bootstyle.OUTLINE),  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+            ),
+        )
+
 
 class DataViewer(guikit.AsyncWindow):
     """A GUI that loads a CSV data file and plots the columns."""
@@ -216,7 +254,7 @@ class DataViewer(guikit.AsyncWindow):
 
         File = "File"
         Open = "Open"
-        Reload= "Reload"
+        Reload = "Reload"
         Replay = "Replay"
         Close = "Close"
         Exit = "Exit"
@@ -293,14 +331,20 @@ class DataViewer(guikit.AsyncWindow):
         action_panel.rowconfigure(0, weight=0)
         action_panel.rowconfigure(1, weight=0)
 
-        self.export_csv_button = self.create_icon_button(action_panel, text=DataViewer.CommandName.Export, icon_name="table", char_width=12)
+        self.export_csv_button = self.create_icon_button(
+            action_panel, text=DataViewer.CommandName.Export, icon_name="table", char_width=12
+        )
         self.export_csv_button.grid(column=4, row=0, padx=(8, 0))
         self.export_csv_button.configure(command=functools.partial(self.export_canvas, self.export_csv_button))
 
-        self.reload_button = self.create_icon_button(action_panel, text=DataViewer.CommandName.Reload, icon_name="rotate-left", char_width=12)
+        self.reload_button = self.create_icon_button(
+            action_panel, text=DataViewer.CommandName.Reload, icon_name="rotate-left", char_width=12
+        )
         self.reload_button.configure(command=functools.partial(self.reload_file, self.reload_button))
         self.reload_button.grid(column=0, row=0, padx=(0, 8))
-        self.replay_button = self.create_icon_button(action_panel, text=DataViewer.CommandName.Replay, icon_name="clock-rotate-left", char_width=12)
+        self.replay_button = self.create_icon_button(
+            action_panel, text=DataViewer.CommandName.Replay, icon_name="clock-rotate-left", char_width=12
+        )
         self.replay_button.configure(command=functools.partial(self.replay_data, self.replay_button))
         self.replay_button.grid(column=1, row=0, padx=8)
 
@@ -319,12 +363,26 @@ class DataViewer(guikit.AsyncWindow):
         self.canvas_cover.rowconfigure(1, weight=0)
         self.canvas_cover.rowconfigure(2, weight=1)
 
-        self.startup_label = ttk.Label(self.canvas_cover, font=font.Font(weight="bold", size=24), text=DataViewer.app_name)
+        self.startup_label = ttk.Label(
+            self.canvas_cover, font=font.Font(weight="bold", size=24), text=DataViewer.app_name
+        )
         self.startup_label.grid(column=0, row=0, pady=16)
-        open_file_button = self.create_icon_button(self.canvas_cover, text=DataViewer.CommandName.OpenCSV, icon_name="file-csv", spaces=2, bootstyle=bootstyle.INFO)
+        open_file_button = self.create_icon_button(
+            self.canvas_cover,
+            text=DataViewer.CommandName.OpenCSV,
+            icon_name="file-csv",
+            spaces=2,
+            bootstyle=bootstyle.INFO,
+        )
         open_file_button.grid(column=0, row=1, sticky=tk.S, pady=(0, 16))
         open_file_button.configure(command=functools.partial(self.open_file, open_file_button))
-        demo_button = self.create_icon_button(self.canvas_cover, text=DataViewer.CommandName.Demo, icon_name="chart-line", spaces=4, bootstyle=bootstyle.INFO)
+        demo_button = self.create_icon_button(
+            self.canvas_cover,
+            text=DataViewer.CommandName.Demo,
+            icon_name="chart-line",
+            spaces=4,
+            bootstyle=bootstyle.INFO,
+        )
         demo_button.grid(column=0, row=2, sticky=tk.N, pady=(0, 16))
         demo_button.configure(command=functools.partial(self.open_demo, demo_button))
 
@@ -345,14 +403,14 @@ class DataViewer(guikit.AsyncWindow):
         self.on_data_file_changed(event_args=tk.Event())
 
     def create_icon_button(  # noqa PLR0913 -- allow many parameters for a factory method
-            self,
-            parent: tk.Widget,
-            text: str,
-            icon_name: str,
-            char_width: int = 15,
-            spaces: int = 2,
-            bootstyle: str = bootstyle.DEFAULT,
-        ) -> ttk.Button:
+        self,
+        parent: tk.Widget,
+        text: str,
+        icon_name: str,
+        char_width: int = 15,
+        spaces: int = 2,
+        bootstyle: str = bootstyle.DEFAULT,
+    ) -> ttk.Button:
         """Create a ttk.Button using the specified text and FontAwesome icon_name."""
         text_spacing = 3 * " "
         button_image = icon_to_image(icon_name, fill=guikit.hex_string_for_style(StyleKey.SelectFg), scale_to_height=24)
@@ -450,8 +508,7 @@ class DataViewer(guikit.AsyncWindow):
             accelerator="Ctrl-W",
         )
         self.root_window.bind("<Control-w>", lambda e: self.close_file(self.file_menu))
-        self.file_menu.add_separator(
-        )
+        self.file_menu.add_separator()
         self.file_menu.add_command(
             command=self.exit,
             label=DataViewer.CommandName.Exit,
@@ -552,7 +609,7 @@ class DataViewer(guikit.AsyncWindow):
         channel_count = 8
         trend_function = random.choice([math.log10, math.cbrt])  # noqa: S311 -- no cryptography happening here
         column_titles = ["time (s)"]
-        column_titles.extend([f"v{N+1}" for N in range(channel_count)])
+        column_titles.extend([f"v{N + 1}" for N in range(channel_count)])
         channels = list(range(1, len(column_titles)))
         random.shuffle(channels)
         data_samples = [column_titles]
@@ -565,7 +622,9 @@ class DataViewer(guikit.AsyncWindow):
                 channel_sample = channel * trend_function(timestamp + 50) - 0.2 * noise
                 scan.append(channel_sample)
             data_samples.append(scan)
-        with self.state.demo_folder.joinpath("Data Viewer Demo.csv").open(encoding="UTF-8", mode="w", newline="") as demo_file:
+        with self.state.demo_folder.joinpath("Data Viewer Demo.csv").open(
+            encoding="UTF-8", mode="w", newline=""
+        ) as demo_file:
             csv_writer = csv.writer(demo_file)
             csv_writer.writerows(data_samples)
             demo_file.flush()
@@ -620,7 +679,7 @@ class DataViewer(guikit.AsyncWindow):
             self.canvas_cover.grid(column=0, row=0, sticky=tk.NSEW)
             self.update_file_message("Waiting for file")
         else:
-            new_enabled_state =  tk.NORMAL
+            new_enabled_state = tk.NORMAL
             new_window_title = f"{self.state.data_file.name} - {DataViewer.app_name}"
             self.state.load_data_file()
             plots_entries = self.update_plot_axes()
@@ -633,19 +692,35 @@ class DataViewer(guikit.AsyncWindow):
         for button in button_list:
             button.configure(state=new_enabled_state)
         menu_entries = {
-            self.file_menu: [DataViewer.CommandName.Reload, DataViewer.CommandName.Replay, f"{DataViewer.CommandName.Export}...", DataViewer.CommandName.Close],
+            self.file_menu: [
+                DataViewer.CommandName.Reload,
+                DataViewer.CommandName.Replay,
+                f"{DataViewer.CommandName.Export}...",
+                DataViewer.CommandName.Close,
+            ],
         }
         for owner, entries in menu_entries.items():
             for entry in entries:
                 owner.entryconfigure(entry, state=new_enabled_state)
         self.plots_menu.delete(0, tk.END)
         self.plots_variables.clear()
-        self.plots_menu.add_command(label=DataViewer.CommandName.HideAll, command=functools.partial(self.set_all_plots_visibility, new_visibility=False))
-        self.plots_menu.add_command(label=DataViewer.CommandName.ShowAll, command=functools.partial(self.set_all_plots_visibility, new_visibility=True))
+        self.plots_menu.add_command(
+            label=DataViewer.CommandName.HideAll,
+            command=functools.partial(self.set_all_plots_visibility, new_visibility=False),
+        )
+        self.plots_menu.add_command(
+            label=DataViewer.CommandName.ShowAll,
+            command=functools.partial(self.set_all_plots_visibility, new_visibility=True),
+        )
         self.plots_menu.add_separator()
         for plot_index, entry in enumerate(plots_entries):
             toggle_variable = tk.BooleanVar(self.plots_menu)
-            self.plots_menu.add_checkbutton(label=entry, state=new_enabled_state, command=functools.partial(self.toggle_plot, plot_index), variable=toggle_variable)
+            self.plots_menu.add_checkbutton(
+                label=entry,
+                state=new_enabled_state,
+                command=functools.partial(self.toggle_plot, plot_index),
+                variable=toggle_variable,
+            )
             self.plots_variables.append(toggle_variable)
             if self.state.data_file != AppState.no_file:
                 toggle_variable.set(True)
