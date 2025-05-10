@@ -199,6 +199,7 @@ def style_tree(widget: tk.Widget, theme_palette: dict[str, str]) -> None:
         for child in widget.children.values():
             style_tree(child, theme_palette)
 
+
 def style_frame(frame: tk.Frame, style_palette: dict) -> None:
     """Style a tk.Frame using the specified colors."""
     frame_color = style_palette[palette_color_key["background"]]
