@@ -3,7 +3,6 @@
 import asyncio
 import atexit
 import contextlib
-import csv
 import functools
 import json
 import logging
@@ -622,10 +621,9 @@ class DataViewer(guikit.AsyncWindow):
         with self.state.demo_folder.joinpath("Data Viewer Demo.csv").open(
             encoding="UTF-8", mode="w", newline=""
         ) as demo_file:
-            csv_writer = csv.writer(demo_file)
-            csv_writer.writerows(data_samples)
-            demo_file.flush()
-            self.state.data_file = pathlib.Path(demo_file.name)
+            data_frame = pd.DataFrame(data_samples[1:], columns=data_samples[0])
+            data_frame.to_csv(demo_file, index=False)
+        self.state.data_file = pathlib.Path(demo_file.name)
 
     def reload_file(self, sender: tk.Widget) -> None:
         """Handle the File::Reload menu command."""
