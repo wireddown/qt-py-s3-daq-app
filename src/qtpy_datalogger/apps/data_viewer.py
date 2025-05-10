@@ -310,11 +310,11 @@ class DataViewer(guikit.AsyncWindow):
         self.canvas_frame.grid(column=0, row=0, sticky=tk.NSEW)
         self.canvas_frame.columnconfigure(0, weight=1)
         self.canvas_frame.rowconfigure(0, weight=1)
-        self.plot_figure = mpl_figure.Figure(figsize=figure_aspect, dpi=figure_dpi)
-        self.canvas_figure = ttkbootstrap_matplotlib.create_styled_plot_canvas(self.plot_figure, self.canvas_frame)
-        self.plot_figure.subplots_adjust(left=0.10, bottom=0.10, right=0.98, top=0.98)
+        plot_figure = mpl_figure.Figure(figsize=figure_aspect, dpi=figure_dpi)
+        self.canvas_figure = ttkbootstrap_matplotlib.create_styled_plot_canvas(plot_figure, self.canvas_frame)
+        plot_figure.subplots_adjust(left=0.10, bottom=0.10, right=0.98, top=0.98)
 
-        self.plot_axes = self.plot_figure.add_subplot()
+        self.plot_axes = plot_figure.add_subplot()
 
         toolbar_row = ttk.Frame(main, name="toolbar_row")
         toolbar_row.grid(column=0, row=1, sticky=tk.NSEW, padx=40, pady=(8, 0))
