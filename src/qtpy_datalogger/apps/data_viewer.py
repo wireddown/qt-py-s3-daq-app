@@ -54,12 +54,12 @@ class AppState:
 
     def __init__(self, tk_root: tk.Tk) -> None:
         """Initialize a new AppState instance."""
-        self._tk_notifier = tk_root
+        self._tk_notifier: tk.Tk = tk_root
         self._theme_name: str = ""
-        self._data_file = AppState.no_file
+        self._data_file: pathlib.Path = AppState.no_file
         self._replay_active: bool = False
         self._demo_folder: pathlib.Path = pathlib.Path(tempfile.mkdtemp())
-        atexit.register(functools.partial(shutil.rmtree, self._demo_folder))
+        atexit.register(shutil.rmtree, self._demo_folder)
 
     @property
     def active_theme(self) -> str:
@@ -123,7 +123,7 @@ class AboutDialog(ttk_dialogs.Dialog):
         """Initialize a new AboutDialog instance."""
         super().__init__(parent, title, alert=False)
 
-    def create_body(self, master: tk.Widget) -> None:
+    def create_body(self, master: tk.Widget) -> None:  # noqa: PLR0915 -- allow long function to create the UI
         """Create the UI for the dialog."""
         master.columnconfigure(0, weight=1)
         master.rowconfigure(0, weight=1)
@@ -131,7 +131,6 @@ class AboutDialog(ttk_dialogs.Dialog):
         self.main_frame.grid(column=0, row=0, sticky=tk.NSEW)
         self.main_frame.columnconfigure(0, weight=1)
         self.main_frame.rowconfigure(0, weight=1)
-        self.main_frame.rowconfigure(1, weight=1)
 
         message_frame = ttk.Frame(self.main_frame)
         message_frame.grid(column=0, row=0, sticky=tk.NSEW)
@@ -144,12 +143,12 @@ class AboutDialog(ttk_dialogs.Dialog):
         message_frame.columnconfigure(6, weight=0, minsize=40)  # Filler
         message_frame.rowconfigure(0, weight=0, minsize=20)  # Filler
         message_frame.rowconfigure(1, weight=0)  # Icons and Name
-        message_frame.rowconfigure(2, weight=0)  # Version
+        message_frame.rowconfigure(2, weight=0)  # Icons and Version
         message_frame.rowconfigure(3, weight=0)  # Separator
         message_frame.rowconfigure(4, weight=0)  # Help
         message_frame.rowconfigure(5, weight=0)  # Source
         message_frame.rowconfigure(6, weight=0)  # Source2
-        message_frame.rowconfigure(7, weight=0, minsize=20)  # Filler
+        message_frame.rowconfigure(7, weight=0, minsize=50)  # Filler
 
         icon_height = 48
         icon_color = guikit.hex_string_for_style(StyleKey.Fg)
@@ -165,35 +164,34 @@ class AboutDialog(ttk_dialogs.Dialog):
 
         name_label = ttk.Label(message_frame, font=font.Font(weight="bold", size=28), text=DataViewer.app_name)
         name_label.grid(column=5, row=1, sticky=tk.W)
-        version_information = datatypes.SnsrNotice.get_package_notice_info(allow_dev_version=True)
+        self.notice_information = datatypes.SnsrNotice.get_package_notice_info(allow_dev_version=True)
+        bullet = ttk_icons.Emoji.get("black medium small square")
         version_label = ttk.Label(
             message_frame,
-            text=f"{version_information.version} {ttk_icons.Emoji.get('black medium small square')} {version_information.timestamp:%Y-%m-%d} {ttk_icons.Emoji.get('black medium small square')} {version_information.commit}",
+            text=f"{self.notice_information.version} {bullet} {self.notice_information.timestamp:%Y-%m-%d} {bullet} {self.notice_information.commit}",
         )
         version_label.grid(column=5, row=2, sticky=tk.W, padx=(4, 0))
         separator = ttk.Separator(message_frame)
         separator.grid(column=1, row=3, columnspan=5, sticky=tk.EW, pady=4)
-        self.help_icon = icon_to_image(
-            "parachute-box", fill=guikit.hex_string_for_style(StyleKey.SelectFg), scale_to_width=16
-        )
+        button_text_color = guikit.hex_string_for_style(StyleKey.SelectFg)
+        spacer = "   "
+        self.help_icon = icon_to_image("parachute-box", fill=button_text_color, scale_to_width=16)
         help_button = ttk.Button(
             message_frame,
             compound=tk.LEFT,
             image=self.help_icon,
-            text="   Online help ",
+            text=f"{spacer}Online help ",  # The trailing space helps with internal margins
             style=bootstyle.INFO,
             width=18,
             command=functools.partial(webbrowser.open_new_tab, datatypes.Links.Homepage),
         )
         help_button.grid(column=5, row=4, sticky=tk.W, pady=(18, 0))
-        self.source_icon = icon_to_image(
-            "github-alt", fill=guikit.hex_string_for_style(StyleKey.SelectFg), scale_to_width=16
-        )
+        self.source_icon = icon_to_image("github-alt", fill=button_text_color, scale_to_width=16)
         source_button = ttk.Button(
             message_frame,
             compound=tk.LEFT,
             image=self.source_icon,
-            text="   Source code",
+            text=f"{spacer}Source code",
             style=bootstyle.INFO,
             width=18,
             command=functools.partial(webbrowser.open_new_tab, datatypes.Links.Source),
@@ -204,6 +202,8 @@ class AboutDialog(ttk_dialogs.Dialog):
         """Create the bottom row of buttons."""
         if not self._toplevel:
             raise RuntimeError()
+        self.main_frame.rowconfigure(1, weight=1)
+
         button_frame = ttk.Frame(self.main_frame)
         button_frame.grid(column=0, row=1, sticky=tk.NSEW, padx=(0, 16), pady=(8, 0))
         button_frame.columnconfigure(0, weight=1)
@@ -225,11 +225,10 @@ class AboutDialog(ttk_dialogs.Dialog):
         """Copy the version information to the clipboard."""
         if not self._toplevel:
             raise RuntimeError()
-        notice = datatypes.SnsrNotice.get_package_notice_info(allow_dev_version=True)
         formatted_version = {
-            "version": notice.version,
-            "timestamp": str(notice.timestamp),
-            "commit": notice.commit,
+            "version": self.notice_information.version,
+            "timestamp": str(self.notice_information.timestamp),
+            "commit": self.notice_information.commit,
         }
         self._toplevel.clipboard_clear()
         self._toplevel.clipboard_append(json.dumps(formatted_version))
@@ -276,25 +275,26 @@ class DataViewer(guikit.AsyncWindow):
 
     def create_user_interface(self) -> None:  # noqa: PLR0915 -- allow long function to create the UI
         """Create the main window and connect event handlers."""
+        # Supports UI widget state
         self.theme_variable = tk.StringVar()
         self.replay_variable = tk.BooleanVar()
+        self.plots_variables: list[tk.BooleanVar] = []
+        self.svg_images: dict[str, tk.Image] = {}
+
+        # Supports app state
         self.replay_index = 0
         self.next_update_time = time.time()
         self.state = AppState(self.root_window)
 
-        self.svg_images: dict[str, tk.Image] = {}
-        self.plots_variables: list[tk.BooleanVar] = []
-
         app_icon = icon_to_image("chart-line", fill=app_icon_color, scale_to_height=256)
         self.root_window.iconphoto(True, app_icon)
-        self.update_window_title(DataViewer.app_name)
 
         figure_dpi = 112
         figure_ratio = 16 / 9
         graph_min_width = 504
         graph_aspect_size = graph_min_width / figure_dpi
         figure_aspect = (graph_aspect_size, graph_aspect_size / figure_ratio)
-        self.root_window.minsize(width=(1136 + 32), height=(639 + 32 + 8 + 65))  # Account for padding
+        self.root_window.minsize(width=(1136 + 32), height=(639 + 32 + 8 + 65))  # Measure live and account for widgets and padding
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
         self.build_window_menu()
@@ -302,8 +302,8 @@ class DataViewer(guikit.AsyncWindow):
         main = ttk.Frame(self.root_window, name="main_frame", padding=16)
         main.grid(column=0, row=0, sticky=tk.NSEW)
         main.columnconfigure(0, weight=1)
-        main.rowconfigure(0, weight=1)
-        main.rowconfigure(1, weight=0)
+        main.rowconfigure(0, weight=1)  # Graph area
+        main.rowconfigure(1, weight=0)  # Tool area
 
         self.canvas_frame = ttk.Frame(main, name="canvas_frame")
         self.canvas_frame.grid(column=0, row=0, sticky=tk.NSEW)
@@ -311,24 +311,24 @@ class DataViewer(guikit.AsyncWindow):
         self.canvas_frame.rowconfigure(0, weight=1)
         plot_figure = mpl_figure.Figure(figsize=figure_aspect, dpi=figure_dpi)
         self.canvas_figure = ttkbootstrap_matplotlib.create_styled_plot_canvas(plot_figure, self.canvas_frame)
-        plot_figure.subplots_adjust(left=0.10, bottom=0.10, right=0.98, top=0.98)
+        plot_figure.subplots_adjust(left=0.10, bottom=0.10, right=0.98, top=0.98)  # Leave room on left and bottom for axis labels
 
         self.plot_axes = plot_figure.add_subplot()
 
         toolbar_row = ttk.Frame(main, name="toolbar_row")
         toolbar_row.grid(column=0, row=1, sticky=tk.NSEW, padx=40, pady=(8, 0))
-        toolbar_row.columnconfigure(0, weight=1)
-        toolbar_row.columnconfigure(1, weight=0)
+        toolbar_row.columnconfigure(0, weight=1)  # Action panel
+        toolbar_row.columnconfigure(1, weight=0)  # Graph toolbar
 
         action_panel = ttk.Frame(toolbar_row, name="action_panel")
         action_panel.grid(column=0, row=0, sticky=tk.EW, padx=(0, 8))
-        action_panel.columnconfigure(0, weight=0)
-        action_panel.columnconfigure(1, weight=0)
-        action_panel.columnconfigure(2, weight=1)
-        action_panel.columnconfigure(3, weight=0)
-        action_panel.columnconfigure(4, weight=0)
-        action_panel.rowconfigure(0, weight=0)
-        action_panel.rowconfigure(1, weight=0)
+        action_panel.columnconfigure(0, weight=0)  # Button one
+        action_panel.columnconfigure(1, weight=0)  # Button two
+        action_panel.columnconfigure(2, weight=1)  # Spacer
+        action_panel.columnconfigure(3, weight=0)  # Button three
+        action_panel.columnconfigure(4, weight=0)  # Button four
+        action_panel.rowconfigure(0, weight=0)  # Buttons
+        action_panel.rowconfigure(1, weight=0)  # Message
 
         self.export_csv_button = self.create_icon_button(
             action_panel, text=DataViewer.CommandName.Export, icon_name="table", char_width=12
@@ -353,14 +353,15 @@ class DataViewer(guikit.AsyncWindow):
         toolbar_frame = ttkbootstrap_matplotlib.create_styled_plot_toolbar(toolbar_row, self.canvas_figure)
         toolbar_frame.grid(column=1, row=0, sticky=(tk.EW, tk.N), padx=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
+        # matplotlib elements must be created before setting the theme or the button icons initialize with poor color contrast
         self.state.active_theme = "flatly"
 
         self.canvas_cover = ttk.Frame(main, name="canvas_cover", style=bootstyle.LIGHT)
         self.canvas_cover.grid(column=0, row=0, sticky=tk.NSEW)
         self.canvas_cover.columnconfigure(0, weight=1)
-        self.canvas_cover.rowconfigure(0, weight=1)
-        self.canvas_cover.rowconfigure(1, weight=0)
-        self.canvas_cover.rowconfigure(2, weight=1)
+        self.canvas_cover.rowconfigure(0, weight=1)  # Name label
+        self.canvas_cover.rowconfigure(1, weight=0)  # Button one
+        self.canvas_cover.rowconfigure(2, weight=1)  # Button two
 
         self.startup_label = ttk.Label(
             self.canvas_cover, font=font.Font(weight="bold", size=24), text=DataViewer.app_name
@@ -399,7 +400,7 @@ class DataViewer(guikit.AsyncWindow):
             lambda e: self.on_theme_changed(e),
         )
 
-        self.on_data_file_changed(event_args=tk.Event())
+        self.reload_file(sender=main)
 
     def create_icon_button(  # noqa PLR0913 -- allow many parameters for a factory method
         self,
@@ -459,7 +460,6 @@ class DataViewer(guikit.AsyncWindow):
 
     def build_window_menu(self) -> None:
         """Create the entries for the window menu bar."""
-        self.root_window.option_add("*tearOff", False)
         self.menubar = tk.Menu(
             self.root_window,
             # No styling support here -- Windows Settings for Light vs Dark mode control the menubar
@@ -602,7 +602,7 @@ class DataViewer(guikit.AsyncWindow):
         column_titles.extend([f"v{N + 1}" for N in range(channel_count)])
         channels = list(range(1, len(column_titles)))
         random.shuffle(channels)
-        data_samples = [column_titles]
+        data_samples = []
         for sample_number in range(101):
             scan = []
             timestamp = sample_number * 10
@@ -615,7 +615,7 @@ class DataViewer(guikit.AsyncWindow):
         with self.state.demo_folder.joinpath("Data Viewer Demo.csv").open(
             encoding="UTF-8", mode="w", newline=""
         ) as demo_file:
-            data_frame = pd.DataFrame(data_samples[1:], columns=data_samples[0])
+            data_frame = pd.DataFrame(data_samples, columns=column_titles)
             data_frame.to_csv(demo_file, index=False)
         self.state.data_file = pathlib.Path(demo_file.name)
 
@@ -650,8 +650,8 @@ class DataViewer(guikit.AsyncWindow):
         below_limit = time_series <= upper_bound
         time_values = time_series[above_limit & below_limit]
         visible_series = [v.get() for v in self.plots_variables]
-        data_to_export = full_data_set.loc[time_values.index, visible_series]
 
+        data_to_export = full_data_set.loc[time_values.index, visible_series]
         data_to_export = data_to_export.set_index(time_values.values)
         data_to_export.index.name = "time"
         data_to_export.to_csv(file_path)
@@ -718,8 +718,7 @@ class DataViewer(guikit.AsyncWindow):
 
     def set_all_plots_visibility(self, new_visibility: bool) -> None:
         """Show or hide all plots according to new_visibility."""
-        plot_lines = self.plot_axes.lines
-        for line in plot_lines:
+        for line in self.plot_axes.lines:
             line.set_visible(new_visibility)
         self.canvas_figure.draw()
         for variable in self.plots_variables:
@@ -729,8 +728,7 @@ class DataViewer(guikit.AsyncWindow):
         """Toggle the visibility of the plot at the specified index."""
         menu_variable = self.plots_variables[index]
         new_visibility = menu_variable.get()
-        plot_lines = self.plot_axes.lines
-        plot_lines[index].set_visible(new_visibility)
+        self.plot_axes.lines[index].set_visible(new_visibility)
         self.canvas_figure.draw()
 
     def replay_data(self, sender: tk.Widget) -> None:
@@ -769,7 +767,7 @@ class DataViewer(guikit.AsyncWindow):
 
     def style_menu(self, menu: tk.Menu) -> None:
         """Style every entry in the specified menu."""
-        last_entry = menu.index(tk.END)  # DRY
+        last_entry = menu.index(tk.END)
         if last_entry is None:
             raise ValueError()
         for index in range(last_entry + 1):
@@ -826,6 +824,8 @@ class DataViewer(guikit.AsyncWindow):
             loc="upper left",
             draggable=True,
         )
+        requested_theme = ttk_themes.STANDARD_THEMES[self.state.active_theme]
+        ttkbootstrap_matplotlib.apply_legend_style(self.plot_axes.get_legend(), requested_theme)
         self.canvas_figure.draw()
         self.update_file_message(f"Duration: {time_coordinates[-1]:.3f}")
         return data_series.keys().to_list()
