@@ -623,7 +623,7 @@ class DataViewer(guikit.AsyncWindow):
         with self.state.demo_folder.joinpath("Data Viewer Demo.csv").open(
             encoding="UTF-8", mode="w", newline=""
         ) as demo_file:
-            data_frame = pd.DataFrame(data_samples, columns=column_titles)
+            data_frame = pd.DataFrame(data_samples, columns=column_titles)  # pyright: ignore reportArgumentType
             data_frame.to_csv(demo_file, index=False)
         self.state.data_file = pathlib.Path(demo_file.name)
 
@@ -659,8 +659,8 @@ class DataViewer(guikit.AsyncWindow):
         time_values = time_series[above_limit & below_limit]
         visible_series = [v.get() for v in self.plots_variables]
 
-        data_to_export = full_data_set.loc[time_values.index, visible_series]
-        data_to_export = data_to_export.set_index(time_values.values)
+        data_to_export = full_data_set.loc[time_values.index, visible_series]  # pyright: ignore reportAttributeAccessIssue
+        data_to_export = data_to_export.set_index(time_values.values)  # pyright: ignore reportAttributeAccessIssue
         data_to_export.index.name = "time"
         data_to_export.to_csv(file_path)
 
@@ -846,7 +846,7 @@ class DataViewer(guikit.AsyncWindow):
         time_coordinates = time_index.to_list()
         series_names = data_file_df.columns[1:]
         measurement_series = data_file_df[series_names]
-        return time_coordinates, measurement_series
+        return time_coordinates, measurement_series  # pyright: ignore reportReturnType
 
 
 if __name__ == "__main__":
