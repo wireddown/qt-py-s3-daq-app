@@ -247,6 +247,8 @@ class AboutDialog(ttk_dialogs.Dialog):
 class DataViewer(guikit.AsyncWindow):
     """A GUI that loads a CSV data file and plots the columns."""
 
+    app_name = "QT Py Data Viewer"
+
     class CommandName(StrEnum):
         """Names used for menus and commands in the app."""
 
@@ -270,8 +272,6 @@ class DataViewer(guikit.AsyncWindow):
         Demo = "Demo"
         OK = "OK"
         CopyVersion = "Copy version"
-
-    app_name = "QT Py Data Viewer"
 
     def create_user_interface(self) -> None:  # noqa: PLR0915 -- allow long function to create the UI
         """Create the main window and connect event handlers."""
@@ -338,22 +338,23 @@ class DataViewer(guikit.AsyncWindow):
         action_panel.rowconfigure(0, weight=0)  # Buttons
         action_panel.rowconfigure(1, weight=0)  # Message
 
-        self.export_csv_button = self.create_icon_button(
-            action_panel, text=DataViewer.CommandName.Export, icon_name="table", char_width=12
-        )
-        self.export_csv_button.grid(column=4, row=0, padx=(8, 0))
-        self.export_csv_button.configure(command=functools.partial(self.export_canvas, self.export_csv_button))
-
         self.reload_button = self.create_icon_button(
             action_panel, text=DataViewer.CommandName.Reload, icon_name="rotate-left", char_width=12
         )
         self.reload_button.configure(command=functools.partial(self.reload_file, self.reload_button))
         self.reload_button.grid(column=0, row=0, padx=(0, 8))
+
         self.replay_button = self.create_icon_button(
             action_panel, text=DataViewer.CommandName.Replay, icon_name="clock-rotate-left", char_width=12
         )
         self.replay_button.configure(command=functools.partial(self.replay_data, self.replay_button))
         self.replay_button.grid(column=1, row=0, padx=8)
+
+        self.export_csv_button = self.create_icon_button(
+            action_panel, text=DataViewer.CommandName.Export, icon_name="table", char_width=12
+        )
+        self.export_csv_button.grid(column=4, row=0, padx=(8, 0))
+        self.export_csv_button.configure(command=functools.partial(self.export_canvas, self.export_csv_button))
 
         self.file_message = ttk.Label(action_panel)
         self.file_message.grid(row=1, columnspan=5, sticky=tk.W, pady=(8, 0))
@@ -375,6 +376,7 @@ class DataViewer(guikit.AsyncWindow):
             self.canvas_cover, font=font.Font(weight="bold", size=24), text=DataViewer.app_name
         )
         self.startup_label.grid(column=0, row=0, pady=16)
+
         open_file_button = self.create_icon_button(
             self.canvas_cover,
             text=DataViewer.CommandName.OpenCSV,
@@ -384,6 +386,7 @@ class DataViewer(guikit.AsyncWindow):
         )
         open_file_button.grid(column=0, row=1, sticky=tk.S, pady=(0, 16))
         open_file_button.configure(command=functools.partial(self.open_file, open_file_button))
+
         demo_button = self.create_icon_button(
             self.canvas_cover,
             text=DataViewer.CommandName.Demo,
@@ -398,7 +401,6 @@ class DataViewer(guikit.AsyncWindow):
             AppState.Event.DataFileChanged,
             lambda e: self.on_data_file_changed(e),
         )
-
         self.root_window.bind(
             AppState.Event.ReplayActiveChanged,
             lambda e: self.on_replay_active_changed(e),
@@ -409,62 +411,6 @@ class DataViewer(guikit.AsyncWindow):
         )
 
         self.reload_file(sender=main)
-
-    def create_icon_button(  # noqa PLR0913 -- allow many parameters for a factory method
-        self,
-        parent: tk.Widget,
-        text: str,
-        icon_name: str,
-        char_width: int = 15,
-        spaces: int = 2,
-        bootstyle: str = bootstyle.DEFAULT,
-    ) -> ttk.Button:
-        """Create a ttk.Button using the specified text and FontAwesome icon_name."""
-        text_spacing = 3 * " "
-        button_image = icon_to_image(icon_name, fill=guikit.hex_string_for_style(StyleKey.SelectFg), scale_to_height=24)
-        self.svg_images[icon_name] = button_image
-        button = ttk.Button(
-            parent,
-            text=text + spaces * text_spacing,
-            image=button_image,
-            compound=tk.RIGHT,
-            width=char_width,
-            padding=(4, 6, 4, 4),
-            bootstyle=bootstyle,  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
-        )
-        return button
-
-    async def on_loop(self) -> None:
-        """Update the UI with new information."""
-        await asyncio.sleep(1e-6)
-
-        if not self.state.replay_active:
-            return
-        now = time.time()
-        if self.next_update_time > now:
-            return
-
-        self.next_update_time = now + 0.35
-        draw_to = self.replay_index + 1
-        self.replay_index = draw_to
-        time_coordinates, data_series = self.get_data()
-        if self.replay_index == len(time_coordinates):
-            self.state.replay_active = False
-            self.reload_file(self.reload_button)
-
-        plot_lines = self.plot_axes.lines
-        times = time_coordinates[:draw_to]
-        for index, (_, series) in enumerate(data_series.items()):
-            measurements = series.tolist()[:draw_to]
-            plot = plot_lines[index]
-            plot.set_xdata(times)
-            plot.set_ydata(measurements)
-        self.canvas_figure.draw()
-        self.update_file_message(f"Time: {times[-1]:.3f}")
-
-    def update_window_title(self, new_title: str) -> None:
-        """Update the application's window title."""
-        self.root_window.title(new_title)
 
     def build_window_menu(self) -> None:
         """Create the entries for the window menu bar."""
@@ -587,20 +533,57 @@ class DataViewer(guikit.AsyncWindow):
         )
         self.root_window.bind("<F1>", lambda e: self.show_about())
 
-    def update_file_message(self, new_message: str) -> None:
-        """Replace the file information text with new_message."""
-        self.file_message.configure(text=new_message)
-
-    def open_file(self, sender: tk.Widget) -> None:
-        """Handle the File::Open menu command."""
-        file_path = filedialog.askopenfilename(
-            parent=self.root_window,
-            title="Select a CSV data file",
-            filetypes=[
-                ("CSV files", "*.csv"),
-            ],
+    def create_icon_button(  # noqa PLR0913 -- allow many parameters for a factory method
+        self,
+        parent: tk.Widget,
+        text: str,
+        icon_name: str,
+        char_width: int = 15,
+        spaces: int = 2,
+        bootstyle: str = bootstyle.DEFAULT,
+    ) -> ttk.Button:
+        """Create a ttk.Button using the specified text and FontAwesome icon_name."""
+        text_spacing = 3 * " "
+        button_image = icon_to_image(icon_name, fill=guikit.hex_string_for_style(StyleKey.SelectFg), scale_to_height=24)
+        self.svg_images[icon_name] = button_image
+        button = ttk.Button(
+            parent,
+            text=text + spaces * text_spacing,
+            image=button_image,
+            compound=tk.RIGHT,
+            width=char_width,
+            padding=(4, 6, 4, 4),
+            bootstyle=bootstyle,  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
         )
-        self.state.data_file = pathlib.Path(file_path)
+        return button
+
+    async def on_loop(self) -> None:
+        """Update the UI with new information."""
+        await asyncio.sleep(1e-6)
+
+        if not self.state.replay_active:
+            return
+        now = time.time()
+        if self.next_update_time > now:
+            return
+
+        self.next_update_time = now + 0.35
+        draw_to = self.replay_index + 1
+        self.replay_index = draw_to
+        time_coordinates, data_series = self.get_data()
+        if self.replay_index == len(time_coordinates):
+            self.state.replay_active = False
+            self.reload_file(self.reload_button)
+
+        plot_lines = self.plot_axes.lines
+        times = time_coordinates[:draw_to]
+        for index, (_, series) in enumerate(data_series.items()):
+            measurements = series.tolist()[:draw_to]
+            plot = plot_lines[index]
+            plot.set_xdata(times)
+            plot.set_ydata(measurements)
+        self.canvas_figure.draw()
+        self.update_file_message(f"Time: {times[-1]:.3f}")
 
     def open_demo(self, sender: tk.Widget) -> None:
         """Handle the Demo button command."""
@@ -627,13 +610,26 @@ class DataViewer(guikit.AsyncWindow):
             data_frame.to_csv(demo_file, index=False)
         self.state.data_file = pathlib.Path(demo_file.name)
 
+    def open_file(self, sender: tk.Widget) -> None:
+        """Handle the File::Open menu command."""
+        file_path = filedialog.askopenfilename(
+            parent=self.root_window,
+            title="Select a CSV data file",
+            filetypes=[
+                ("CSV files", "*.csv"),
+            ],
+        )
+        self.state.data_file = pathlib.Path(file_path)
+
     def reload_file(self, sender: tk.Widget) -> None:
         """Handle the File::Reload menu command."""
         self.on_data_file_changed(tk.Event())
 
-    def close_file(self, sender: tk.Widget) -> None:
-        """Handle the File::Close menu command."""
-        self.state.data_file = AppState.no_file
+    def replay_data(self, sender: tk.Widget) -> None:
+        """Handle the View::Replay menu or button command."""
+        current_replay = self.state.replay_active
+        new_replay = not current_replay
+        self.state.replay_active = new_replay
 
     def export_canvas(self, sender: tk.Widget) -> None:
         """Handle the Export CSV button command."""
@@ -663,6 +659,34 @@ class DataViewer(guikit.AsyncWindow):
         data_to_export = data_to_export.set_index(time_values.values)  # pyright: ignore reportAttributeAccessIssue
         data_to_export.index.name = "time"
         data_to_export.to_csv(file_path)
+
+    def close_file(self, sender: tk.Widget) -> None:
+        """Handle the File::Close menu command."""
+        self.state.data_file = AppState.no_file
+
+    def set_all_plots_visibility(self, new_visibility: bool) -> None:
+        """Show or hide all plots according to new_visibility."""
+        for line in self.plot_axes.lines:
+            line.set_visible(new_visibility)
+        self.canvas_figure.draw()
+        for variable in self.plots_variables:
+            variable.set(new_visibility)
+
+    def toggle_plot(self, index: int) -> None:
+        """Toggle the visibility of the plot at the specified index."""
+        menu_variable = self.plots_variables[index]
+        new_visibility = menu_variable.get()
+        self.plot_axes.lines[index].set_visible(new_visibility)
+        self.canvas_figure.draw()
+
+    def change_theme(self, theme_name: str) -> None:
+        """Handle the View::Theme selection command."""
+        self.state.active_theme = theme_name
+
+    def show_about(self) -> None:
+        """Handle the Help::About menu command."""
+        about_dialog = AboutDialog(parent=self.root_window, title=f"About {DataViewer.app_name}")
+        about_dialog.show()
 
     def on_data_file_changed(self, event_args: tk.Event) -> None:
         """Handle the DataFileChanged event."""
@@ -724,37 +748,12 @@ class DataViewer(guikit.AsyncWindow):
         self.style_menu(self.plots_menu)
         self.update_window_title(new_window_title)
 
-    def set_all_plots_visibility(self, new_visibility: bool) -> None:
-        """Show or hide all plots according to new_visibility."""
-        for line in self.plot_axes.lines:
-            line.set_visible(new_visibility)
-        self.canvas_figure.draw()
-        for variable in self.plots_variables:
-            variable.set(new_visibility)
-
-    def toggle_plot(self, index: int) -> None:
-        """Toggle the visibility of the plot at the specified index."""
-        menu_variable = self.plots_variables[index]
-        new_visibility = menu_variable.get()
-        self.plot_axes.lines[index].set_visible(new_visibility)
-        self.canvas_figure.draw()
-
-    def replay_data(self, sender: tk.Widget) -> None:
-        """Handle the View::Replay menu or button command."""
-        current_replay = self.state.replay_active
-        new_replay = not current_replay
-        self.state.replay_active = new_replay
-
     def on_replay_active_changed(self, event_args: tk.Event) -> None:
         """Handle the ReplayActiveChanged event."""
         replay_active = self.state.replay_active
         new_style = bootstyle.SUCCESS if replay_active else bootstyle.DEFAULT
         self.replay_button.configure(bootstyle=new_style)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         self.replay_variable.set(replay_active)
-
-    def change_theme(self, theme_name: str) -> None:
-        """Handle the View::Theme selection command."""
-        self.state.active_theme = theme_name
 
     def on_theme_changed(self, event_args: tk.Event) -> None:
         """Handle the ThemeChanged event."""
@@ -805,10 +804,13 @@ class DataViewer(guikit.AsyncWindow):
                 activebackground="grey42",
             )
 
-    def show_about(self) -> None:
-        """Handle the Help::About menu command."""
-        about_dialog = AboutDialog(parent=self.root_window, title=f"About {DataViewer.app_name}")
-        about_dialog.show()
+    def update_window_title(self, new_title: str) -> None:
+        """Update the application's window title."""
+        self.root_window.title(new_title)
+
+    def update_file_message(self, new_message: str) -> None:
+        """Replace the file information text with new_message."""
+        self.file_message.configure(text=new_message)
 
     def update_plot_axes(self) -> list[str]:
         """Reconfigure the plot for the new data and return the names of the measurement series."""
