@@ -68,7 +68,7 @@ class AppState:
 
     @active_theme.setter
     def active_theme(self, new_value: str) -> None:
-        """Set a new value for the active_theme."""
+        """Set a new value for active_theme and change themes to match."""
         if new_value == self._theme_name:
             return
         self._theme_name = new_value
@@ -81,7 +81,7 @@ class AppState:
 
     @data_file.setter
     def data_file(self, new_value: pathlib.Path) -> None:
-        """Set a new value for the data_file."""
+        """Set a new value for data_file and notify DataFileChanged event subscribers."""
         if new_value in [self._data_file, AppState.canceled_file]:
             return
         self._data_file = new_value
@@ -94,7 +94,7 @@ class AppState:
 
     @replay_active.setter
     def replay_active(self, new_value: bool) -> None:
-        """Set a new value for replay_active."""
+        """Set a new value for replay_active and notify ReplayActiveChanged event subscribers."""
         if new_value == self._replay_active:
             return
         self._replay_active = new_value
@@ -425,9 +425,6 @@ class DataViewer(guikit.AsyncWindow):
         )
         return button
 
-    def on_show(self) -> None:
-        """Initialize UI before entering main loop."""
-
     async def on_loop(self) -> None:
         """Update the UI with new information."""
         await asyncio.sleep(1e-6)
@@ -455,9 +452,6 @@ class DataViewer(guikit.AsyncWindow):
             plot.set_ydata(measurements)
         self.canvas_figure.draw()
         self.update_file_message(f"Time: {times[-1]:.3f}")
-
-    def on_closing(self) -> None:
-        """Clean up before exiting."""
 
     def update_window_title(self, new_title: str) -> None:
         """Update the application's window title."""
@@ -663,7 +657,7 @@ class DataViewer(guikit.AsyncWindow):
         data_to_export.to_csv(file_path)
 
     def on_data_file_changed(self, event_args: tk.Event) -> None:
-        """Handle the File::Open menu or button command."""
+        """Handle the DataFileChanged event."""
         self.plot_axes.clear()
         self.state.replay_active = False
         self.replay_index = 0
@@ -732,7 +726,7 @@ class DataViewer(guikit.AsyncWindow):
             variable.set(new_visibility)
 
     def toggle_plot(self, index: int) -> None:
-        """Toggle the visibility of the plot for series_name."""
+        """Toggle the visibility of the plot at the specified index."""
         menu_variable = self.plots_variables[index]
         new_visibility = menu_variable.get()
         plot_lines = self.plot_axes.lines
@@ -746,7 +740,7 @@ class DataViewer(guikit.AsyncWindow):
         self.state.replay_active = new_replay
 
     def on_replay_active_changed(self, event_args: tk.Event) -> None:
-        """Update UI state when replay_active changes state."""
+        """Handle the ReplayActiveChanged event."""
         replay_active = self.state.replay_active
         new_style = bootstyle.SUCCESS if replay_active else bootstyle.DEFAULT
         self.replay_button.configure(bootstyle=new_style)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
@@ -757,7 +751,7 @@ class DataViewer(guikit.AsyncWindow):
         self.state.active_theme = theme_name
 
     def on_theme_changed(self, event_args: tk.Event) -> None:
-        """Update UI state when active_theme changes state."""
+        """Handle the ThemeChanged event."""
         theme_name = self.state.active_theme
         self.theme_variable.set(theme_name.capitalize())
         self.startup_label.configure(background=guikit.hex_string_for_style(bootstyle.LIGHT))
@@ -770,7 +764,6 @@ class DataViewer(guikit.AsyncWindow):
             self.dark_menu,
             self.help_menu,
         ]
-        # Force light theme for menus
         for menu in all_menus:
             self.style_menu(menu)
 
@@ -784,6 +777,7 @@ class DataViewer(guikit.AsyncWindow):
 
     def style_menu_entry(self, menu: tk.Menu, index: int) -> None:
         """Style the specified menu entry."""
+        # Force light theme for menus
         with contextlib.suppress(tk.TclError):
             menu.entryconfigure(
                 index,
