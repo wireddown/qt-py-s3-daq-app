@@ -184,6 +184,7 @@ def apply_legend_style(mpl_legend: Legend, requested_theme: dict) -> None:
         owning_plot = plot_line.axes.lines[index]
         plot_line.set_color(owning_plot.get_color())
 
+
 def apply_toolbar_style(tk_widget: tk.Widget, requested_theme: dict) -> None:
     """Apply the specified theme to the specified tk.Frame."""
     theme_palette = requested_theme["colors"]

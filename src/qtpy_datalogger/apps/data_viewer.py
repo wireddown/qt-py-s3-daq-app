@@ -294,7 +294,10 @@ class DataViewer(guikit.AsyncWindow):
         graph_min_width = 504
         graph_aspect_size = graph_min_width / figure_dpi
         figure_aspect = (graph_aspect_size, graph_aspect_size / figure_ratio)
-        self.root_window.minsize(width=(1136 + 32), height=(639 + 32 + 8 + 65))  # Measure live and account for widgets and padding
+        self.root_window.minsize(
+            width=(1136 + 32),  # Measure live and account for widgets and padding
+            height=(639 + 32 + 8 + 65),
+        )
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
         self.build_window_menu()
@@ -311,7 +314,12 @@ class DataViewer(guikit.AsyncWindow):
         self.canvas_frame.rowconfigure(0, weight=1)
         plot_figure = mpl_figure.Figure(figsize=figure_aspect, dpi=figure_dpi)
         self.canvas_figure = ttkbootstrap_matplotlib.create_styled_plot_canvas(plot_figure, self.canvas_frame)
-        plot_figure.subplots_adjust(left=0.10, bottom=0.10, right=0.98, top=0.98)  # Leave room on left and bottom for axis labels
+        plot_figure.subplots_adjust(
+            left=0.10,  # Leave room on left and bottom for axis labels
+            bottom=0.10,
+            right=0.98,
+            top=0.98,
+        )
 
         self.plot_axes = plot_figure.add_subplot()
 
