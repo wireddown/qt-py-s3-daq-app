@@ -103,7 +103,6 @@ class PlottingApp(guikit.AsyncWindow):
         )
 
         self.canvas = ttkbootstrap_matplotlib.create_styled_plot_canvas(fig, canvas_frame)
-        self.canvas.get_tk_widget().grid(column=0, row=0, sticky=tk.NSEW)
         self.canvas.mpl_connect("key_press_event", lambda event: print(f"Received {event.key}"))  # type: ignore # noqa T201 -- allow printing to demonstrate event handling
         self.canvas.mpl_connect("key_press_event", key_press_handler)  # pyright: ignore reportArgumentType -- matplotlib type annotations are also a little too strict
 
@@ -124,7 +123,7 @@ class PlottingApp(guikit.AsyncWindow):
         style = ttk.Style.get_instance()
         if not style:
             raise ValueError()
-        self.theme_combobox.set(theme_name)
+        self.theme_combobox.set(theme_name.capitalize())
         style.theme_use(theme_name)
 
     async def on_loop(self) -> None:

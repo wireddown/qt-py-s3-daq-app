@@ -24,6 +24,8 @@ gmqtt = "^0.7.0"
 psutil = "^7.0.0"
 ttkbootstrap = "^1.12.2"
 matplotlib = "^3.10.1"
+pandas = "^2.2.3"
+tkfontawesome = "^0.3.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"

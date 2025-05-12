@@ -209,9 +209,9 @@ def create_theme_combobox(parent: tk.BaseWidget) -> ttk.Combobox:
     for theme_name, definition in ttk_themes.STANDARD_THEMES.items():
         theme_kind = definition["type"]
         if theme_kind == "light":
-            light_themes.append(theme_name)
+            light_themes.append(theme_name.capitalize())
         elif theme_kind == "dark":
-            dark_themes.append(theme_name)
+            dark_themes.append(theme_name.capitalize())
         else:
             raise ValueError()
     sorted_by_kind = [*sorted(light_themes), *sorted(dark_themes)]
@@ -221,14 +221,14 @@ def create_theme_combobox(parent: tk.BaseWidget) -> ttk.Combobox:
         width=12,
         values=sorted_by_kind,
     )
-    theme_combobox.set(active_theme.name)
+    theme_combobox.set(active_theme.name.capitalize())
     theme_combobox.configure(state=ttk.READONLY)
     theme_combobox.selection_clear()
 
     def handle_change_theme(event_args: tk.Event) -> None:
         """Handle the selection event for the theme Combobox."""
         sending_combobox = event_args.widget
-        theme_name = sending_combobox.get()
+        theme_name = sending_combobox.get().lower()
         style = ttk.Style.get_instance()
         if not style:
             raise ValueError()
@@ -238,6 +238,17 @@ def create_theme_combobox(parent: tk.BaseWidget) -> ttk.Combobox:
 
     theme_combobox.bind("<<ComboboxSelected>>", handle_change_theme)
     return theme_combobox
+
+
+def hex_string_for_style(style_name: str, theme_name: str = "") -> str:
+    """Return the '#RRGGBB' string for the specified style name for the active or specified theme."""
+    if not theme_name:
+        style = ttk.Style.get_instance()
+        if not (style and style.theme):
+            raise ValueError()
+        theme_name = style.theme.name
+    palette = ttk_themes.STANDARD_THEMES[theme_name]["colors"]
+    return palette[style_name]
 
 
 def toggle_visual_debug(frame: tk.Widget) -> None:

@@ -14,6 +14,7 @@ from matplotlib.backends.backend_tkagg import (
     NavigationToolbar2Tk,  # pyright: ignore reportPrivateImportUsage -- matplotlib exposes this indirectly
 )
 from matplotlib.figure import Figure
+from matplotlib.legend import Legend
 from ttkbootstrap import constants as bootstyle
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,8 @@ def create_styled_plot_canvas(
     """Return a FigureCanvasTkAgg from matplotlib that responds to the ttkbootstrap '<<ThemeChanged>>' event."""
     canvas = FigureCanvasTkAgg(figure, canvas_frame)
     setattr(canvas.get_tk_widget(), ReservedName.EmbeddedFigure, canvas)
+    canvas.get_tk_widget().grid(column=0, row=0, sticky=tk.NSEW)
+    canvas.get_tk_widget().bind("<Expose>", handle_theme_changed)
     canvas.get_tk_widget().bind("<<ThemeChanged>>", handle_theme_changed)
     return canvas
 
@@ -64,6 +67,7 @@ def create_styled_plot_toolbar(
     toolbar_border.columnconfigure(0, weight=0, minsize=final_width)
     toolbar_border.rowconfigure(0, weight=0, minsize=final_height)
     toolbar_border.grid_propagate(False)  # Lock the height and width by ignoring child size requests
+    toolbar_border.bind("<Expose>", handle_theme_changed)
     toolbar_border.bind("<<ThemeChanged>>", handle_theme_changed)
 
     toolbar_frame = tk.Frame(toolbar_border, name="toolbar_frame")
@@ -148,29 +152,37 @@ def apply_figure_style(canvas: tk.Canvas, requested_theme: dict) -> None:
             ax.get_ylabel(),
             color=text_color,
         )
-
         legend = ax.get_legend()
         if not legend:
             continue
-        legend_frame = legend.get_frame()
-        legend_frame.set_alpha(0.9)
-        legend_frame.set_facecolor(fill_color)
-        legend_frame.set_edgecolor(text_color)
-
-        legend_title = legend.get_title()
-        legend_title.set_color(text_color)
-
-        legend_labels = legend.get_texts()
-        for plot_label in legend_labels:
-            plot_label.set_color(text_color)
-
-        legend_lines = legend.get_lines()
-        for index, plot_line in enumerate(legend_lines):
-            if not plot_line.axes:
-                continue
-            owning_plot = plot_line.axes.lines[index]
-            plot_line.set_color(owning_plot.get_color())
+        apply_legend_style(legend, requested_theme)
     mpl_figure_canvas.draw()
+
+
+def apply_legend_style(mpl_legend: Legend, requested_theme: dict) -> None:
+    """Apply the specified theme to the matplotlib Legend."""
+    theme_palette = requested_theme["colors"]
+    fill_color = theme_palette[palette_color_key["xtra_window_bg"]]
+    text_color = theme_palette[palette_color_key["xtra_window_fg"]]
+
+    legend_frame = mpl_legend.get_frame()
+    legend_frame.set_alpha(0.9)
+    legend_frame.set_facecolor(fill_color)
+    legend_frame.set_edgecolor(text_color)
+
+    legend_title = mpl_legend.get_title()
+    legend_title.set_color(text_color)
+
+    legend_labels = mpl_legend.get_texts()
+    for plot_label in legend_labels:
+        plot_label.set_color(text_color)
+
+    legend_lines = mpl_legend.get_lines()
+    for index, plot_line in enumerate(legend_lines):
+        if not plot_line.axes:
+            continue
+        owning_plot = plot_line.axes.lines[index]
+        plot_line.set_color(owning_plot.get_color())
 
 
 def apply_toolbar_style(tk_widget: tk.Widget, requested_theme: dict) -> None:
@@ -195,6 +207,7 @@ def style_tree(widget: tk.Widget, theme_palette: dict[str, str]) -> None:
     if widget.children:
         for child in widget.children.values():
             style_tree(child, theme_palette)
+
 
 def style_frame(frame: tk.Frame, style_palette: dict) -> None:
     """Style a tk.Frame using the specified colors."""
