@@ -24,8 +24,8 @@ gmqtt = "^0.7.0"
 psutil = "^7.0.0"
 ttkbootstrap = "^1.12.2"
 matplotlib = "^3.10.1"
-tksvg = "^0.7.4"
 pandas = "^2.2.3"
+tkfontawesome = "^0.3.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
@@ -69,7 +69,6 @@ verboseOutput = true
 exclude = [
     ".venv",
     "docs/legacy",
-    "src/qtpy_datalogger/vendor",
 ]
 executionEnvironments = [
     { root = "src/qtpy_datalogger/sensor_node", reportMissingModuleSource = "information", reportAttributeAccessIssue = "information" },
@@ -80,7 +79,6 @@ executionEnvironments = [
 line-length = 120
 extend-exclude = [
     "docs/legacy",
-    "src/qtpy_datalogger/vendor",
 ]
 
 [tool.ruff.lint]

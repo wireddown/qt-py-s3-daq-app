@@ -23,10 +23,10 @@ import ttkbootstrap as ttk
 import ttkbootstrap.dialogs as ttk_dialogs
 import ttkbootstrap.icons as ttk_icons
 import ttkbootstrap.themes.standard as ttk_themes
+from tkfontawesome import icon_to_image
 from ttkbootstrap import constants as bootstyle
 
 from qtpy_datalogger import datatypes, guikit, ttkbootstrap_matplotlib
-from qtpy_datalogger.vendor.tkfontawesome import icon_to_image
 
 logger = logging.getLogger(pathlib.Path(__file__).stem)
 
