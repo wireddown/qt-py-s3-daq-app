@@ -73,7 +73,7 @@ class SoilSwell(guikit.AsyncWindow):
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
 
-        main = ttk.Frame(self.root_window, name="main_frame", padding=16, style=bootstyle.SECONDARY)
+        main = ttk.Frame(self.root_window, name="main_frame", style=bootstyle.DEFAULT)
         main.grid(column=0, row=0, sticky=tk.NSEW)
         main.columnconfigure(0, weight=1)  # Graph panel
         main.columnconfigure(1, weight=0)  # Control panel
@@ -81,7 +81,7 @@ class SoilSwell(guikit.AsyncWindow):
 
         # matplotlib elements must be created before setting the theme or the button icons initialize with poor color contrast
         self.graph_frame = ttk.Frame(main, name="graph_frame", style=bootstyle.LIGHT)
-        self.graph_frame.grid(column=0, row=0, sticky=tk.NSEW)
+        self.graph_frame.grid(column=0, row=0, sticky=tk.NSEW, padx=(16, 0), pady=16)
         self.graph_frame.columnconfigure(0, weight=1)
         self.graph_frame.rowconfigure(0, weight=1)
         plot_figure = mpl_figure.Figure(figsize=(7, 5), dpi=figure_dpi)
@@ -110,19 +110,22 @@ class SoilSwell(guikit.AsyncWindow):
 
         tool_panel = ttk.Frame(main, name="tool_panel", style=bootstyle.PRIMARY)
         tool_panel.grid(column=1, row=0, sticky=tk.NSEW)
-        tool_panel.columnconfigure(0, weight=1, minsize=36)
-        tool_panel.rowconfigure(0, weight=0, minsize=24)  # Status
-        tool_panel.rowconfigure(1, weight=0, minsize=24)  # Settings
-        tool_panel.rowconfigure(2, weight=1, minsize=24)  # Action
+        tool_panel.columnconfigure(0, weight=1, minsize=240)
+        tool_panel.rowconfigure(0, weight=0, minsize=36)  # Filler
+        tool_panel.rowconfigure(1, weight=0, minsize=60)  # Status
+        tool_panel.rowconfigure(2, weight=0, minsize=24)  # Filler
+        tool_panel.rowconfigure(3, weight=0, minsize=60)  # Settings
+        tool_panel.rowconfigure(4, weight=0, minsize=24)  # Filler
+        tool_panel.rowconfigure(5, weight=0, minsize=60)  # Action
 
         status_panel = ttk.Frame(tool_panel, name="status_panel", style=bootstyle.INFO)
-        status_panel.grid(column=0, row=0, sticky=tk.NSEW, padx=4, pady=4)
+        status_panel.grid(column=0, row=1, sticky=tk.NSEW, padx=(26, 24))
 
         settings_panel = ttk.Frame(tool_panel, name="settings_panel", style=bootstyle.WARNING)
-        settings_panel.grid(column=0, row=1, sticky=tk.NSEW, padx=4)
+        settings_panel.grid(column=0, row=3, sticky=tk.NSEW, padx=(26, 24))
 
         action_panel = ttk.Frame(tool_panel, name="action_panel", style=bootstyle.DANGER)
-        action_panel.grid(column=0, row=2, sticky=tk.NSEW, padx=4, pady=4)
+        action_panel.grid(column=0, row=5, sticky=tk.NSEW, padx=(26, 24))
 
         self.root_window.bind("<<ThemeChanged>>", self.on_theme_changed)
 
