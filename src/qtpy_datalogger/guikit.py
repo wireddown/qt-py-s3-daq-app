@@ -1,6 +1,8 @@
 """Shared classes and helpers for creating GUIs."""
 
 import asyncio
+import enum
+import functools
 import logging
 import tkinter as tk
 
@@ -39,6 +41,100 @@ class AsyncApp:
         # Present the UI
         app.root_window.deiconify()
         await app.show()
+
+
+class DialogBehavior(enum.StrEnum):
+    """
+    Supported behaviors for AsyncDialogs.
+
+    Modal:
+    Prevent input to all other app windows until dismissed. Hide the maximize and minimize buttons and the icon in the Windows task bar.
+
+    Modeless:
+    Allow input to all other app windows. Hide the maximize and minimize buttons and the icon in the Windows task bar.
+
+    Standalone:
+    Allow input to all other app windows. Show the maximize and minimize buttons and the icon in the Windows task bar.
+
+    All dialogs close when the the main parent window closes.
+    """
+
+    Modal = "Modal"
+    Modeless = "Modeless"
+    Standalone = "Standalone"
+
+
+class AsyncDialog:
+    """
+    A Tk Toplevel wrapper that cooperates with asyncio.
+
+    Define a subclass of AsyncDialog to create a dialog with Tk that cooperates with asyncio code.
+
+    Required overrides
+    - create_user_interface(self) -> None
+
+    Remaining overrides
+    - async def on_loop(self) -> None
+    - def on_closing(self) -> None
+
+    Helper methods
+    - self.close()
+    """
+
+    def __init__(self, parent: ttk.Toplevel | ttk.Window, title: str) -> None:
+        """Initialize a new Tk Toplevel and cache the asyncio event loop."""
+        self.parent = parent
+        self.root_window = ttk.Toplevel(master=self.parent, title=title)
+        self.root_window.withdraw()
+
+        self.io_loop = asyncio.get_running_loop()
+        self.should_run_loop = True
+
+        def __on_closing(event: tk.Event | None = None) -> None:
+            self.on_closing()
+            self.exit()
+
+        self.root_window.protocol("WM_DELETE_WINDOW", __on_closing)
+        self.root_window.bind("<Escape>", __on_closing)
+
+        self.result = None
+        self.initial_focus = self.root_window
+        self.create_user_interface()
+        self.root_window.update_idletasks() # Calculate geometry and size information
+
+    async def show(self, behavior: DialogBehavior) -> object | None:
+        """Show the UI and cooperatively run with asyncio."""
+        if behavior != DialogBehavior.Standalone and self.parent.winfo_viewable():
+            self.root_window.transient(self.parent)
+
+        self.root_window.deiconify()  # Render and present
+        self.initial_focus.focus_set()
+        self.root_window.wait_visibility()
+
+        if behavior == DialogBehavior.Modal:
+            self.root_window.grab_set()
+
+        while self.should_run_loop:
+            await asyncio.sleep(0)
+            await self.on_loop()
+            self.root_window.update()
+
+        self.root_window.master.focus_set()
+        self.root_window.destroy()
+        return self.result
+
+    def create_user_interface(self) -> None:
+        """Create the layout and widget event handlers."""
+
+    async def on_loop(self) -> None:
+        """Update UI elements."""
+
+    def on_closing(self) -> None:
+        """Handle the click event for the title bar's close button."""
+
+    def exit(self) -> None:
+        """Close the UI and exit."""
+        self.should_run_loop = False
 
 
 class AsyncWindow:
@@ -118,64 +214,16 @@ class DemoWithAnimation(AsyncWindow):
         self.root_window.iconphoto(True, icon)
 
         self.animation = "🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🩶🖤"
-        self.root = ttk.Frame(self.root_window, padding=10)
-        self.root.pack()
+        main_frame, self.label, self.progressbar = create_demo_ui(self.root_window, self.io_loop)
 
-        self.label = ttk.Label(self.root, text="")
-        self.label.grid(
-            row=0,
-            columnspan=3,
-            padx=(8, 8),
-            pady=(8, 0),
-        )
+        modal_button = ttk.Button(main_frame, text="Modal", command=functools.partial(self.open_dialog, DialogBehavior.Modal), style=(bootstyle.SECONDARY, bootstyle.INFO))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
+        modal_button.grid(column=0, row=3, sticky=tk.EW, padx=8)
 
-        self.progressbar = ttk.Progressbar(
-            self.root,
-            length=280,
-            style=(bootstyle.STRIPED, bootstyle.SUCCESS),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
-        )
-        self.progressbar.grid(
-            row=1,
-            columnspan=3,
-            padx=(8, 8),
-            pady=(16, 0),
-        )
+        modeless_button = ttk.Button(main_frame, text="Modeless", command=functools.partial(self.open_dialog, DialogBehavior.Modeless), style=(bootstyle.SECONDARY, bootstyle.INFO))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
+        modeless_button.grid(column=1, row=3, sticky=tk.EW, pady=8)
 
-        button_block = ttk.Button(
-            self.root,
-            text="Sync",
-            width=10,
-            style=bootstyle.PRIMARY,
-            command=self.calculate_sync,
-        )
-        button_block.grid(
-            row=2,
-            column=0,
-            sticky=tk.W,
-            padx=8,
-            pady=8,
-        )
-
-        theme_combobox = create_theme_combobox(self.root)
-        theme_combobox.grid(
-            row=2,
-            column=1,
-        )
-
-        button_non_block = ttk.Button(
-            self.root,
-            text="Async",
-            width=10,
-            style=bootstyle.INFO,
-            command=lambda: self.io_loop.create_task(self.calculate_async()),
-        )
-        button_non_block.grid(
-            row=2,
-            column=2,
-            sticky=tk.E,
-            padx=8,
-            pady=8,
-        )
+        standalone_button = ttk.Button(main_frame, text="Standalone", command=functools.partial(self.open_dialog, DialogBehavior.Standalone), style=bootstyle.SECONDARY)
+        standalone_button.grid(column=2, row=3, sticky=tk.EW, padx=8)
 
     async def on_loop(self) -> None:
         """Update the animation."""
@@ -183,19 +231,110 @@ class DemoWithAnimation(AsyncWindow):
         self.animation = self.animation[-1] + self.animation[0:-1]
         await asyncio.sleep(0.06)
 
-    def calculate_sync(self) -> None:
-        """Run without yielding to other waiting tasks."""
-        limit = 1200000
-        for i in range(1, limit):
-            self.progressbar["value"] = i / limit * 100
+    def open_dialog(self, behavior: DialogBehavior) -> None:
+        """Open an AsyncDialog using the specified Behavior."""
+        dialog = DialogWithAnimation(self.root_window, title=f"{behavior} dialog")
+        self.io_loop.create_task(dialog.show(behavior))
 
-    async def calculate_async(self) -> None:
-        """Run but regularly yield execution to other waiting tasks."""
-        limit = 1200000
-        for i in range(1, limit):
-            self.progressbar["value"] = i / limit * 100
-            if i % 1000 == 0:
-                await asyncio.sleep(0)
+
+class DialogWithAnimation(AsyncDialog):
+    """Host synchronous and asynchronous calls in a dialog."""
+
+    def __init__(self, parent: ttk.Toplevel | ttk.Window, title: str) -> None:
+        """Call the parent initializer."""
+        super().__init__(parent, title)
+
+    def create_user_interface(self) -> None:
+        """Create the layout and widget event handlers."""
+        self.animation = "⬛⬛⬛⬛⬛⬛⬛⬛⬛⬜⬜"
+        _, self.label, self.progressbar = create_demo_ui(self.root_window, self.io_loop)
+
+    async def on_loop(self) -> None:
+        """Update UI elements."""
+        self.label["text"] = self.animation
+        self.animation = self.animation[-1] + self.animation[0:-1]
+        await asyncio.sleep(0.06)
+
+
+def create_demo_ui(root_window: ttk.Window | ttk.Toplevel, io_loop: asyncio.AbstractEventLoop) -> tuple[ttk.Frame, ttk.Label, ttk.Progressbar]:
+    """Create a demo UI and return its dynamic elements."""
+    root = ttk.Frame(root_window, padding=10)
+    root.pack()
+
+    label = ttk.Label(root, text="")
+    label.grid(
+        row=0,
+        columnspan=3,
+        padx=(8, 8),
+        pady=(8, 0),
+    )
+
+    progressbar = ttk.Progressbar(
+        root,
+        length=280,
+        style=(bootstyle.STRIPED, bootstyle.SUCCESS),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
+    )
+    progressbar.grid(
+        row=1,
+        columnspan=3,
+        padx=(8, 8),
+        pady=(16, 0),
+    )
+
+    button_block = ttk.Button(
+        root,
+        text="Sync",
+        width=10,
+        style=bootstyle.PRIMARY,
+        command=functools.partial(calculate_sync, progressbar),
+    )
+    button_block.grid(
+        row=2,
+        column=0,
+        sticky=tk.W,
+        padx=8,
+        pady=8,
+    )
+
+    theme_combobox = create_theme_combobox(root)
+    theme_combobox.grid(
+        row=2,
+        column=1,
+    )
+
+    button_non_block = ttk.Button(
+        root,
+        text="Async",
+        width=10,
+        style=bootstyle.INFO,
+        command=lambda: io_loop.create_task(calculate_async(progressbar)),
+    )
+    button_non_block.grid(
+        row=2,
+        column=2,
+        sticky=tk.E,
+        padx=8,
+        pady=8,
+    )
+    return root, label, progressbar
+
+
+def calculate_sync(progressbar: ttk.Progressbar) -> None:
+    """Run without yielding to other waiting tasks."""
+    limit = 1200000
+    for i in range(1, limit):
+        progressbar["value"] = i / limit * 100
+    progressbar.after(850, functools.partial(progressbar.configure, value=0))
+
+
+async def calculate_async(progressbar: ttk.Progressbar) -> None:
+    """Run but regularly yield execution to other waiting tasks."""
+    limit = 1200000
+    for i in range(1, limit):
+        progressbar["value"] = i / limit * 100
+        if i % 1000 == 0:
+            await asyncio.sleep(0)
+    progressbar.after(850, functools.partial(progressbar.configure, value=0))
 
 
 def create_theme_combobox(parent: tk.BaseWidget) -> ttk.Combobox:
