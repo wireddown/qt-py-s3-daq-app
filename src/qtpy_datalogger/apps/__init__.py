@@ -36,7 +36,7 @@ class Catalog:
             AppInformation("async-demo", "qtpy_datalogger.guikit"),
             AppInformation("scanner", "qtpy_datalogger.apps.scanner"),
             AppInformation("data-viewer", "qtpy_datalogger.apps.data_viewer"),
-            AppInformation("8ch-adc-with-adxl", "#TODO"),
+            AppInformation("soil-swell", "qtpy_datalogger.apps.soil_swell"),
             AppInformation("matplotlib-demo", "qtpy_datalogger.apps.matplotlib_demo"),
         }
     )
