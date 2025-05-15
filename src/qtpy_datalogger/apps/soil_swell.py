@@ -17,6 +17,7 @@ import webbrowser
 from enum import StrEnum
 from tkinter import filedialog, font
 
+import matplotlib.axes as mpl_axes
 import matplotlib.figure as mpl_figure
 import pandas as pd
 import ttkbootstrap as ttk
@@ -83,36 +84,49 @@ class SoilSwell(guikit.AsyncWindow):
         self.graph_frame.grid(column=0, row=0, sticky=tk.NSEW)
         self.graph_frame.columnconfigure(0, weight=1)
         self.graph_frame.rowconfigure(0, weight=1)
-        plot_figure = mpl_figure.Figure(figsize=(4, 4), dpi=figure_dpi)
+        plot_figure = mpl_figure.Figure(figsize=(7, 5), dpi=figure_dpi)
         self.canvas_figure = ttkbootstrap_matplotlib.create_styled_plot_canvas(plot_figure, self.graph_frame)
         plot_figure.subplots_adjust(
             left=0.10,
             bottom=0.10,
-            right=0.90,
-            top=0.90,
+            right=0.95,
+            top=0.97,
         )
 
-        self.plot_axes = plot_figure.add_subplot()
+        all_subplots = plot_figure.subplots(
+            nrows=3,
+            ncols=1,
+            sharex=True,
+        )
+        self.position_axes: mpl_axes.Axes = all_subplots[0]
+        self.displacement_axes: mpl_axes.Axes = all_subplots[1]
+        self.g_level_axes: mpl_axes.Axes = all_subplots[2]
+        self.position_axes.set_ylabel("LVDT position (cm)")
+        self.displacement_axes.set_ylabel("Displacement (cm)")
+        self.g_level_axes.set_ylabel("Acceleration (g)")
+        self.g_level_axes.set_xlabel("Time (minutes)")
 
         ttk.Style().theme_use("vapor")
 
         tool_panel = ttk.Frame(main, name="tool_panel", style=bootstyle.PRIMARY)
         tool_panel.grid(column=1, row=0, sticky=tk.NSEW)
         tool_panel.columnconfigure(0, weight=1, minsize=36)
-        tool_panel.rowconfigure(0, weight=1, minsize=24)  # Status
-        tool_panel.rowconfigure(1, weight=1, minsize=24)  # Settings
+        tool_panel.rowconfigure(0, weight=0, minsize=24)  # Status
+        tool_panel.rowconfigure(1, weight=0, minsize=24)  # Settings
         tool_panel.rowconfigure(2, weight=1, minsize=24)  # Action
 
         status_panel = ttk.Frame(tool_panel, name="status_panel", style=bootstyle.INFO)
-        status_panel.grid(column=0, row=0, sticky=tk.NSEW, padx=8, pady=8)
+        status_panel.grid(column=0, row=0, sticky=tk.NSEW, padx=4, pady=4)
 
         settings_panel = ttk.Frame(tool_panel, name="settings_panel", style=bootstyle.WARNING)
-        settings_panel.grid(column=0, row=1, sticky=tk.NSEW, padx=8, pady=8)
+        settings_panel.grid(column=0, row=1, sticky=tk.NSEW, padx=4)
 
         action_panel = ttk.Frame(tool_panel, name="action_panel", style=bootstyle.DANGER)
-        action_panel.grid(column=0, row=2, sticky=tk.NSEW, padx=8, pady=8)
+        action_panel.grid(column=0, row=2, sticky=tk.NSEW, padx=4, pady=4)
 
         self.root_window.bind("<<ThemeChanged>>", self.on_theme_changed)
+
+        self.update_window_title("Centrifuge Test")
 
     def build_window_menu(self) -> None:
         """Create the entries for the window menu bar."""
@@ -143,11 +157,41 @@ class SoilSwell(guikit.AsyncWindow):
             underline=0,
         )
         # Themes submenu
+        light_mode = ttk_icons.Emoji.get("BLACK SUN WITH RAYS")
+        dark_mode = ttk_icons.Emoji.get("WANING CRESCENT MOON SYMBOL")
+        debug_mode = ttk_icons.Emoji.get("WARNING SIGN")
         self.themes_menu = tk.Menu(self.view_menu, name="themes_menu")
         self.view_menu.add_cascade(
             label=SoilSwell.CommandName.Theme,
             menu=self.themes_menu,
             underline=0,
+        )
+        self.themes_menu.add_radiobutton(
+            command=functools.partial(self.change_theme, "cosmo"),
+            label=f"{light_mode}  Cosmo",
+            variable=self.theme_variable,
+        )
+        self.themes_menu.add_radiobutton(
+            command=functools.partial(self.change_theme, "flatly"),
+            label=f"{light_mode}  Flatly",
+            variable=self.theme_variable,
+        )
+        self.themes_menu.add_separator()
+        self.themes_menu.add_radiobutton(
+            command=functools.partial(self.change_theme, "cyborg"),
+            label=f"{dark_mode}  Cyborg",
+            variable=self.theme_variable,
+        )
+        self.themes_menu.add_radiobutton(
+            command=functools.partial(self.change_theme, "darkly"),
+            label=f"{dark_mode}  Darkly",
+            variable=self.theme_variable,
+        )
+        self.themes_menu.add_separator()
+        self.themes_menu.add_radiobutton(
+            command=functools.partial(self.change_theme, "vapor"),
+            label=f"{debug_mode}  Debug",
+            variable=self.theme_variable,
         )
 
         # Help menu
@@ -194,6 +238,11 @@ class SoilSwell(guikit.AsyncWindow):
 
     def show_about(self) -> None:
         """Handle the Help::About menu command."""
+
+    def change_theme(self, theme_name:str) -> None:
+        """Handle the View::Theme selection command."""
+        # >>> self.state.active_theme = theme_name
+        ttk.Style().theme_use(theme_name)
 
     def on_theme_changed(self, event_args: tk.Event) -> None:
         """Handle the ThemeChanged event."""
