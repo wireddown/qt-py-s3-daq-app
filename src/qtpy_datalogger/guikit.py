@@ -107,6 +107,7 @@ class AsyncDialog:
         if behavior != DialogBehavior.Standalone and self.parent.winfo_viewable():
             self.root_window.transient(self.parent)
 
+        self.set_position()
         self.root_window.deiconify()  # Render and present
         self.initial_focus.focus_set()
         self.root_window.wait_visibility()
@@ -122,6 +123,14 @@ class AsyncDialog:
         self.root_window.master.focus_set()
         self.root_window.destroy()
         return self.result
+
+    def set_position(self) -> None:
+        """Set the dialog's position."""
+        parent_x = self.parent.winfo_rootx()
+        parent_y = self.parent.winfo_rooty()
+        x_pos = parent_x + 100
+        y_pos = parent_y + 50
+        self.root_window.geometry(f"+{x_pos}+{y_pos}")
 
     def create_user_interface(self) -> None:
         """Create the layout and widget event handlers."""
