@@ -55,6 +55,9 @@ class SoilSwell(guikit.AsyncWindow):
         Theme = "Theme"
         Help = "Help"
         About = "About"
+        Acquire = "Acquire"
+        LogData = "Log Data"
+        Reset = "Reset"
 
     def create_user_interface(self) -> None:  # noqa: PLR 0915 -- allow long function to create the UI
         """Create the main window and connect event handlers."""
@@ -107,16 +110,17 @@ class SoilSwell(guikit.AsyncWindow):
         self.g_level_axes.set_xlabel("Time (minutes)")
 
         ttk.Style().theme_use("vapor")
+        self.theme_variable.set("  Debug")
 
-        tool_panel = ttk.Frame(main, name="tool_panel", style=bootstyle.PRIMARY)
+        tool_panel = ttk.Frame(main, name="tool_panel", style=bootstyle.LIGHT)
         tool_panel.grid(column=1, row=0, sticky=tk.NSEW)
-        tool_panel.columnconfigure(0, weight=1, minsize=240)
+        tool_panel.columnconfigure(0, weight=1)
         tool_panel.rowconfigure(0, weight=0, minsize=36)  # Filler
         tool_panel.rowconfigure(1, weight=0, minsize=60)  # Status
         tool_panel.rowconfigure(2, weight=0, minsize=24)  # Filler
         tool_panel.rowconfigure(3, weight=0, minsize=60)  # Settings
         tool_panel.rowconfigure(4, weight=0, minsize=24)  # Filler
-        tool_panel.rowconfigure(5, weight=0, minsize=60)  # Action
+        tool_panel.rowconfigure(5, weight=0)  # Action
 
         status_panel = ttk.Frame(tool_panel, name="status_panel", style=bootstyle.INFO)
         status_panel.grid(column=0, row=1, sticky=tk.NSEW, padx=(26, 24))
@@ -125,7 +129,11 @@ class SoilSwell(guikit.AsyncWindow):
         settings_panel.grid(column=0, row=3, sticky=tk.NSEW, padx=(26, 24))
 
         action_panel = ttk.Frame(tool_panel, name="action_panel", style=bootstyle.DANGER)
+        action_panel.columnconfigure(0, weight=1)
+        action_panel.rowconfigure(0, weight=1)
         action_panel.grid(column=0, row=5, sticky=tk.NSEW, padx=(26, 24))
+        action_contents = self.create_action_panel()
+        action_contents.grid(in_=action_panel, column=0, row=0, padx=2, pady=2, sticky=tk.NSEW)
 
         self.root_window.bind("<<ThemeChanged>>", self.on_theme_changed)
 
@@ -177,14 +185,14 @@ class SoilSwell(guikit.AsyncWindow):
             command=functools.partial(self.change_theme, "cosmo"),
             label="  Cosmo",
             image=light_mode_icon,
-            compound="left",
+            compound=tk.LEFT,
             variable=self.theme_variable,
         )
         self.themes_menu.add_radiobutton(
             command=functools.partial(self.change_theme, "flatly"),
             label="  Flatly",
             image=light_mode_icon,
-            compound="left",
+            compound=tk.LEFT,
             variable=self.theme_variable,
         )
         self.themes_menu.add_separator()
@@ -192,14 +200,14 @@ class SoilSwell(guikit.AsyncWindow):
             command=functools.partial(self.change_theme, "cyborg"),
             label="   Cyborg",
             image=dark_mode_icon,
-            compound="left",
+            compound=tk.LEFT,
             variable=self.theme_variable,
         )
         self.themes_menu.add_radiobutton(
             command=functools.partial(self.change_theme, "darkly"),
             label="   Darkly",
             image=dark_mode_icon,
-            compound="left",
+            compound=tk.LEFT,
             variable=self.theme_variable,
         )
         self.themes_menu.add_separator()
@@ -207,7 +215,7 @@ class SoilSwell(guikit.AsyncWindow):
             command=functools.partial(self.change_theme, "vapor"),
             label="  Debug",
             image=debug_mode_icon,
-            compound="left",
+            compound=tk.LEFT,
             variable=self.theme_variable,
         )
 
@@ -224,6 +232,39 @@ class SoilSwell(guikit.AsyncWindow):
             accelerator="F1",
         )
         self.root_window.bind("<F1>", lambda e: self.show_about())
+
+    def create_action_panel(self) -> ttk.Frame:
+        """Create the action panel region of the app."""
+        panel = ttk.Frame()
+        panel.columnconfigure(0, weight=1)
+        panel.rowconfigure(0, weight=1)
+
+        acquire_button = self.create_icon_button(
+            panel,
+            text=SoilSwell.CommandName.Acquire,
+            icon_name="satellite-dish",
+        )
+        acquire_button.configure(command=functools.partial(self.handle_acquire, acquire_button))
+        acquire_button.grid(column=0, row=0, padx=8, pady=8, sticky=tk.NSEW)
+
+        log_data_button = self.create_icon_button(
+            panel,
+            text=SoilSwell.CommandName.LogData,
+            icon_name="file-waveform",
+        )
+        acquire_button.configure(command=functools.partial(self.handle_log_data, acquire_button))
+        log_data_button.grid(column=0, row=1, padx=8, pady=8, sticky=tk.NSEW)
+
+        reset_button = self.create_icon_button(
+            panel,
+            text=SoilSwell.CommandName.Reset,
+            icon_name="rotate-left",
+            spaces=4,
+        )
+        acquire_button.configure(command=functools.partial(self.handle_reset, acquire_button))
+        reset_button.grid(column=0, row=2, padx=8, pady=8, sticky=tk.NSEW)
+
+        return panel
 
     def create_icon_button(  # noqa PLR0913 -- allow many parameters for a factory method
         self,
@@ -263,6 +304,14 @@ class SoilSwell(guikit.AsyncWindow):
 
     def on_theme_changed(self, event_args: tk.Event) -> None:
         """Handle the ThemeChanged event."""
+        all_menus = [
+            self.file_menu,
+            self.view_menu,
+            self.themes_menu,
+            self.help_menu,
+        ]
+        for menu in all_menus:
+            self.style_menu(menu)
 
     def style_menu(self, menu: tk.Menu) -> None:
         """Style every entry in the specified menu."""
@@ -295,6 +344,15 @@ class SoilSwell(guikit.AsyncWindow):
                 index,
                 activebackground="grey42",
             )
+
+    def handle_acquire(self, sender: tk.Widget) -> None:
+        """Handle the Acquire command."""
+
+    def handle_log_data(self, sender: tk.Widget) -> None:
+        """Handle the Acquire command."""
+
+    def handle_reset(self, sender: tk.Widget) -> None:
+        """Handle the Acquire command."""
 
     def update_window_title(self, new_title: str) -> None:
         """Update the application's window title."""
