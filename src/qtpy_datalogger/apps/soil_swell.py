@@ -160,9 +160,13 @@ class SoilSwell(guikit.AsyncWindow):
             underline=0,
         )
         # Themes submenu
-        light_mode = ttk_icons.Emoji.get("BLACK SUN WITH RAYS")
-        dark_mode = ttk_icons.Emoji.get("WANING CRESCENT MOON SYMBOL")
-        debug_mode = ttk_icons.Emoji.get("WARNING SIGN")
+        icon_color = guikit.hex_string_for_style(StyleKey.Fg)
+        light_mode_icon = icon_to_image("sun", fill=icon_color, scale_to_height=15)
+        dark_mode_icon = icon_to_image("moon", fill=icon_color, scale_to_height=15)
+        debug_mode_icon = icon_to_image("bolt", fill=icon_color, scale_to_height=15)
+        self.svg_images["sun"] = light_mode_icon
+        self.svg_images["moon"] = dark_mode_icon
+        self.svg_images["bolt"] = debug_mode_icon
         self.themes_menu = tk.Menu(self.view_menu, name="themes_menu")
         self.view_menu.add_cascade(
             label=SoilSwell.CommandName.Theme,
@@ -171,29 +175,39 @@ class SoilSwell(guikit.AsyncWindow):
         )
         self.themes_menu.add_radiobutton(
             command=functools.partial(self.change_theme, "cosmo"),
-            label=f"{light_mode}  Cosmo",
+            label="  Cosmo",
+            image=light_mode_icon,
+            compound="left",
             variable=self.theme_variable,
         )
         self.themes_menu.add_radiobutton(
             command=functools.partial(self.change_theme, "flatly"),
-            label=f"{light_mode}  Flatly",
+            label="  Flatly",
+            image=light_mode_icon,
+            compound="left",
             variable=self.theme_variable,
         )
         self.themes_menu.add_separator()
         self.themes_menu.add_radiobutton(
             command=functools.partial(self.change_theme, "cyborg"),
-            label=f"{dark_mode}  Cyborg",
+            label="   Cyborg",
+            image=dark_mode_icon,
+            compound="left",
             variable=self.theme_variable,
         )
         self.themes_menu.add_radiobutton(
             command=functools.partial(self.change_theme, "darkly"),
-            label=f"{dark_mode}  Darkly",
+            label="   Darkly",
+            image=dark_mode_icon,
+            compound="left",
             variable=self.theme_variable,
         )
         self.themes_menu.add_separator()
         self.themes_menu.add_radiobutton(
             command=functools.partial(self.change_theme, "vapor"),
-            label=f"{debug_mode}  Debug",
+            label="  Debug",
+            image=debug_mode_icon,
+            compound="left",
             variable=self.theme_variable,
         )
 
