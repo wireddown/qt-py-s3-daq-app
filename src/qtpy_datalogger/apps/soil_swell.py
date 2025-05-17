@@ -336,6 +336,13 @@ class SoilSwell(guikit.AsyncWindow):
         panel.columnconfigure(0, weight=1)
         panel.rowconfigure(0, weight=1)
 
+        self.refresh_battery_icons()
+        self.battery_level_indicator = ttk.Label(panel, image=self.svg_images["battery-full"], font=font.Font(weight=font.BOLD), compound=tk.CENTER)
+        self.battery_level_indicator.grid(column=0, row=0)
+        return panel
+
+    def refresh_battery_icons(self) -> None:
+        """Create the icon images for the battery level indicator."""
         full_battery_icon = icon_to_image("battery-full", fill=guikit.hex_string_for_style(bootstyle.SUCCESS), scale_to_height=24)
         self.svg_images["battery-full"] = full_battery_icon
 
@@ -408,7 +415,7 @@ class SoilSwell(guikit.AsyncWindow):
             icon_name="rotate-left",
             icon_fill=guikit.hex_string_for_style(bootstyle.WARNING),
             spaces=4,
-            bootstyle=(bootstyle.OUTLINE, bootstyle.WARNING),
+            bootstyle=(bootstyle.OUTLINE, bootstyle.WARNING),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         )
         self.svg_images["hover-rotate-left"] = icon_to_image("rotate-left", fill=guikit.hex_string_for_style(StyleKey.SelectFg), scale_to_height=24)
         self.reset_button.configure(command=functools.partial(self.handle_reset, self.reset_button))
@@ -469,6 +476,12 @@ class SoilSwell(guikit.AsyncWindow):
 
         # Select the active theme in the menu
         self.theme_variable.set(self.menu_text_for_theme[self.state.active_theme])
+
+        # Update image colors -- this adds a noticeable delay, should be cached rather than recalculated
+        self.svg_images["rotate-left"] = icon_to_image("rotate-left", guikit.hex_string_for_style(bootstyle.WARNING), scale_to_height=24)
+        self.reset_button.configure(image=self.svg_images["rotate-left"])
+
+        self.refresh_battery_icons()
 
     def style_menu(self, menu: tk.Menu) -> None:
         """Style every entry in the specified menu."""
