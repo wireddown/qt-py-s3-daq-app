@@ -55,14 +55,19 @@ class SoilSwell(guikit.AsyncWindow):
         Theme = "Theme"
         Help = "Help"
         About = "About"
+        Fast = "Fast"
+        Normal = "Normal"
+        Slow = "Slow"
         Acquire = "Acquire"
         LogData = "Log Data"
         Reset = "Reset"
 
-    def create_user_interface(self) -> None:  # noqa: PLR 0915 -- allow long function to create the UI
+    def create_user_interface(self) -> None:  # noqa: PLR0915 -- allow long function to create the UI
         """Create the main window and connect event handlers."""
         # Supports UI widget state
         self.theme_variable = tk.StringVar()
+        self.sensor_node_group_variable = tk.StringVar()
+        self.sample_rate_variable = tk.StringVar()
         self.acquire_variable = tk.BooleanVar()
         self.log_variable = tk.BooleanVar()
         self.svg_images: dict[str, tk.Image] = {}
@@ -118,7 +123,7 @@ class SoilSwell(guikit.AsyncWindow):
         tool_panel.rowconfigure(0, weight=0, minsize=36)  # Filler
         tool_panel.rowconfigure(1, weight=0, minsize=60)  # Status
         tool_panel.rowconfigure(2, weight=0, minsize=24)  # Filler
-        tool_panel.rowconfigure(3, weight=0, minsize=60)  # Settings
+        tool_panel.rowconfigure(3, weight=0)  # Settings
         tool_panel.rowconfigure(4, weight=0, minsize=24)  # Filler
         tool_panel.rowconfigure(5, weight=0)  # Action
 
@@ -126,6 +131,10 @@ class SoilSwell(guikit.AsyncWindow):
         status_panel.grid(column=0, row=1, sticky=tk.NSEW, padx=(26, 24))
 
         settings_panel = ttk.Frame(tool_panel, name="settings_panel", style=bootstyle.WARNING)
+        settings_panel.columnconfigure(0, weight=1)
+        settings_panel.rowconfigure(0, weight=1)
+        settings_contents = self.create_settings_panel()
+        settings_contents.grid(in_=settings_panel, column=0, row=0, padx=2, pady=2, sticky=tk.NSEW)
         settings_panel.grid(column=0, row=3, sticky=tk.NSEW, padx=(26, 24))
 
         action_panel = ttk.Frame(tool_panel, name="action_panel", style=bootstyle.DANGER)
@@ -232,6 +241,31 @@ class SoilSwell(guikit.AsyncWindow):
             accelerator="F1",
         )
         self.root_window.bind("<F1>", lambda e: self.show_about())
+
+    def create_settings_panel(self) -> ttk.Frame:
+        """Create the settings panel region of the app."""
+        panel = ttk.Frame()
+        panel.columnconfigure(0, weight=1)
+        panel.rowconfigure(0, weight=1)
+
+        sensor_node_group_label = ttk.Label(panel, text="Sensor node group")
+        sensor_node_group_label.grid(column=0, row=0, padx=8, pady=(8, 2), sticky=tk.NSEW)
+
+        sensor_node_group = ttk.Entry(panel, textvariable=self.sensor_node_group_variable)
+        sensor_node_group.grid(column=0, row=1, padx=16, pady=(2, 8), sticky=tk.NSEW)
+
+        sample_rate_label = ttk.Label(panel, text="Sample rate")
+        sample_rate_label.grid(column=0, row=2, padx=8, pady=(8, 2), sticky=tk.NSEW)
+
+        slow_option = ttk.Radiobutton(panel, command=self.handle_change_sample_rate, text=SoilSwell.CommandName.Slow, variable=self.sample_rate_variable, value=SoilSwell.CommandName.Slow)
+        slow_option.grid(column=0, row=3, padx=(16, 8), pady=4, sticky=tk.NSEW)
+        normal_option = ttk.Radiobutton(panel, command=self.handle_change_sample_rate, text=SoilSwell.CommandName.Normal, variable=self.sample_rate_variable, value=SoilSwell.CommandName.Normal)
+        normal_option.grid(column=0, row=4, padx=(16, 8), pady=4, sticky=tk.NSEW)
+        fast_option = ttk.Radiobutton(panel, command=self.handle_change_sample_rate, text=SoilSwell.CommandName.Fast, variable=self.sample_rate_variable, value=SoilSwell.CommandName.Fast)
+        fast_option.grid(column=0, row=5, padx=(16, 8), pady=(4, 12), sticky=tk.NSEW)
+        self.sample_rate_variable.set(SoilSwell.CommandName.Fast)
+
+        return panel
 
     def create_action_panel(self) -> ttk.Frame:
         """Create the action panel region of the app."""
@@ -344,6 +378,9 @@ class SoilSwell(guikit.AsyncWindow):
                 index,
                 activebackground="grey42",
             )
+
+    def handle_change_sample_rate(self) -> None:
+        """Handle the selection event for the sample rate Radiobuttons."""
 
     def handle_acquire(self, sender: tk.Widget) -> None:
         """Handle the Acquire command."""
