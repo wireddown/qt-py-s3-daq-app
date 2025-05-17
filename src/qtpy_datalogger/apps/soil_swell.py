@@ -6,23 +6,18 @@ import contextlib
 import functools
 import json
 import logging
-import math
 import pathlib
-import random
 import shutil
 import tempfile
-import time
 import tkinter as tk
 import webbrowser
 from enum import StrEnum
-from tkinter import filedialog, font
+from tkinter import font
 
 import matplotlib.axes as mpl_axes
 import matplotlib.figure as mpl_figure
 import pandas as pd
 import ttkbootstrap as ttk
-import ttkbootstrap.dialogs as ttk_dialogs
-import ttkbootstrap.icons as ttk_icons
 import ttkbootstrap.themes.standard as ttk_themes
 from tkfontawesome import icon_to_image
 from ttkbootstrap import constants as bootstyle
@@ -39,6 +34,76 @@ class StyleKey(StrEnum):
 
     Fg = "fg"
     SelectFg = "selectfg"
+
+
+class BatteryLevel(StrEnum):
+    """An ordered enumeration that represents the sensor node's battery level."""
+
+    Unknown = "Unknown"
+    Low = "Low"
+    Half = "Half"
+    High = "High"
+    Full = "Full"
+
+
+class AppState:
+    """A class that models and controls the app's settings and runtime state."""
+
+    class Event(StrEnum):
+        """Events emitted when properties change."""
+
+        AcquireDataChanged = "<<AcquireDataChanged>>"
+        BatteryLevelChanged = "<<BatteryLevelChanged>>"
+        LogDataChanged = "<<LogDataChanged>>"
+        SampleRateChanged = "<<SampleRateChanged>>"
+        SensorGroupChanged = "<<SensorGroupChanged>>"
+
+    def __init__(self, tk_root: tk.Tk) -> None:
+        """Initialize a new AppState instance."""
+        self._tk_notifier = tk_root
+        self._theme_name = ""
+        self._acquire_active = False
+        self._log_data_active = False
+        self._battery_level = BatteryLevel.Unknown
+
+    @property
+    def active_theme(self) -> str:
+        """Return the name of the active ttkbootstrap theme."""
+        return self._theme_name
+
+    @active_theme.setter
+    def active_theme(self, new_value: str) -> None:
+        """Set a new value for active_theme and change themes to match."""
+        if new_value == self._theme_name:
+            return
+        self._theme_name = new_value
+        ttk.Style().theme_use(new_value)
+
+    @property
+    def acquire_active(self) -> bool:
+        """Return True when the app is acquiring data."""
+        return self._acquire_active
+
+    @acquire_active.setter
+    def acquire_active(self, new_value: bool) -> None:
+        """Set a new value for acquire_active and notify AcquireDataChanged event subscribers."""
+        if new_value == self._acquire_active:
+            return
+        self._acquire_active = new_value
+        self._tk_notifier.event_generate(AppState.Event.AcquireDataChanged)
+
+    @property
+    def log_data_active(self) -> bool:
+        """Return True when the app is logging data."""
+        return self._log_data_active
+
+    @log_data_active.setter
+    def log_data_active(self, new_value: bool) -> None:
+        """Set a new value for log_data_active and notify LogDataChanged event subscribers."""
+        if new_value == self._log_data_active:
+            return
+        self._log_data_active = new_value
+        self._tk_notifier.event_generate(AppState.Event.LogDataChanged)
 
 
 class SoilSwell(guikit.AsyncWindow):
@@ -69,10 +134,14 @@ class SoilSwell(guikit.AsyncWindow):
         self.sensor_node_group_variable = tk.StringVar()
         self.sample_rate_variable = tk.StringVar()
         self.acquire_variable = tk.BooleanVar()
-        self.log_variable = tk.BooleanVar()
+        self.log_data_variable = tk.BooleanVar()
         self.svg_images: dict[str, tk.Image] = {}
 
-        app_icon = icon_to_image("chart-line", fill=app_icon_color, scale_to_height=256)
+        # Supports app state
+        self.state = AppState(self.root_window)
+
+        # arrow-up-from-ground-water droplet
+        app_icon = icon_to_image("arrow-up-from-ground-water", fill=app_icon_color, scale_to_height=256)
         self.root_window.iconphoto(True, app_icon)
         self.build_window_menu()
 
@@ -83,8 +152,8 @@ class SoilSwell(guikit.AsyncWindow):
 
         main = ttk.Frame(self.root_window, name="main_frame", style=bootstyle.DEFAULT)
         main.grid(column=0, row=0, sticky=tk.NSEW)
-        main.columnconfigure(0, weight=1)  # Graph panel
-        main.columnconfigure(1, weight=0)  # Control panel
+        main.columnconfigure(0, weight=1)  # Graph frame
+        main.columnconfigure(1, weight=0)  # Control frame
         main.rowconfigure(0, weight=1)
 
         # matplotlib elements must be created before setting the theme or the button icons initialize with poor color contrast
@@ -114,34 +183,31 @@ class SoilSwell(guikit.AsyncWindow):
         self.g_level_axes.set_ylabel("Acceleration (g)")
         self.g_level_axes.set_xlabel("Time (minutes)")
 
-        ttk.Style().theme_use("vapor")
-        self.theme_variable.set("  Debug")
+        tool_frame = ttk.Frame(main, name="tool_panel", style=bootstyle.LIGHT)
+        tool_frame.grid(column=1, row=0, sticky=tk.NSEW)
+        tool_frame.columnconfigure(0, weight=1)
+        tool_frame.rowconfigure(0, weight=0, minsize=36)  # Filler
+        tool_frame.rowconfigure(1, weight=0)  # Status
+        tool_frame.rowconfigure(2, weight=0, minsize=24)  # Filler
+        tool_frame.rowconfigure(3, weight=0)  # Settings
+        tool_frame.rowconfigure(4, weight=0, minsize=24)  # Filler
+        tool_frame.rowconfigure(5, weight=0)  # Action
 
-        tool_panel = ttk.Frame(main, name="tool_panel", style=bootstyle.LIGHT)
-        tool_panel.grid(column=1, row=0, sticky=tk.NSEW)
-        tool_panel.columnconfigure(0, weight=1)
-        tool_panel.rowconfigure(0, weight=0, minsize=36)  # Filler
-        tool_panel.rowconfigure(1, weight=0)  # Status
-        tool_panel.rowconfigure(2, weight=0, minsize=24)  # Filler
-        tool_panel.rowconfigure(3, weight=0)  # Settings
-        tool_panel.rowconfigure(4, weight=0, minsize=24)  # Filler
-        tool_panel.rowconfigure(5, weight=0)  # Action
-
-        status_panel = ttk.Frame(tool_panel, name="status_panel", style=bootstyle.INFO)
+        status_panel = ttk.Frame(tool_frame, name="status_panel", style=bootstyle.INFO)
         status_panel.columnconfigure(0, weight=1)
         status_panel.rowconfigure(0, weight=1)
         status_panel.grid(column=0, row=1, sticky=tk.NSEW, padx=(26, 24))
         status_contents = self.create_status_panel()
         status_contents.grid(in_=status_panel, column=0, row=0, padx=8, pady=8, sticky=tk.NSEW)
 
-        settings_panel = ttk.Frame(tool_panel, name="settings_panel", style=bootstyle.WARNING)
+        settings_panel = ttk.Frame(tool_frame, name="settings_panel", style=bootstyle.WARNING)
         settings_panel.columnconfigure(0, weight=1)
         settings_panel.rowconfigure(0, weight=1)
         settings_contents = self.create_settings_panel()
         settings_contents.grid(in_=settings_panel, column=0, row=0, padx=2, pady=2, sticky=tk.NSEW)
         settings_panel.grid(column=0, row=3, sticky=tk.NSEW, padx=(26, 24))
 
-        action_panel = ttk.Frame(tool_panel, name="action_panel", style=bootstyle.DANGER)
+        action_panel = ttk.Frame(tool_frame, name="action_panel", style=bootstyle.DANGER)
         action_panel.columnconfigure(0, weight=1)
         action_panel.rowconfigure(0, weight=1)
         action_panel.grid(column=0, row=5, sticky=tk.NSEW, padx=(26, 24))
@@ -149,6 +215,15 @@ class SoilSwell(guikit.AsyncWindow):
         action_contents.grid(in_=action_panel, column=0, row=0, padx=2, pady=2, sticky=tk.NSEW)
 
         self.root_window.bind("<<ThemeChanged>>", self.on_theme_changed)
+        self.root_window.bind(
+            AppState.Event.AcquireDataChanged,
+            self.on_acquire_changed,
+        )
+        self.root_window.bind(
+            AppState.Event.LogDataChanged,
+            self.on_log_data_changed,
+        )
+
 
         self.update_window_title("Centrifuge Test")
 
@@ -267,7 +342,7 @@ class SoilSwell(guikit.AsyncWindow):
         unknown_battery_icon = icon_to_image("battery-empty", fill=guikit.hex_string_for_style(bootstyle.SECONDARY), scale_to_height=24)
         self.svg_images["battery-empty"] = unknown_battery_icon
 
-        self.battery_level_indicator = ttk.Label(panel, image=high_battery_icon)
+        self.battery_level_indicator = ttk.Label(panel, image=high_battery_icon, font=font.Font(weight=font.BOLD), compound=tk.CENTER)
         self.battery_level_indicator.grid(column=0, row=0)
         return panel
 
@@ -302,30 +377,35 @@ class SoilSwell(guikit.AsyncWindow):
         panel.columnconfigure(0, weight=1)
         panel.rowconfigure(0, weight=1)
 
-        acquire_button = self.create_icon_button(
+        self.acquire_button = self.create_icon_button(
             panel,
             text=SoilSwell.CommandName.Acquire,
             icon_name="satellite-dish",
         )
-        acquire_button.configure(command=functools.partial(self.handle_acquire, acquire_button))
-        acquire_button.grid(column=0, row=0, padx=8, pady=8, sticky=tk.NSEW)
+        self.acquire_button.configure(command=functools.partial(self.handle_acquire, self.acquire_button))
+        self.acquire_button.grid(column=0, row=0, padx=8, pady=8, sticky=tk.NSEW)
 
-        log_data_button = self.create_icon_button(
+        self.log_data_button = self.create_icon_button(
             panel,
             text=SoilSwell.CommandName.LogData,
             icon_name="file-waveform",
         )
-        acquire_button.configure(command=functools.partial(self.handle_log_data, acquire_button))
-        log_data_button.grid(column=0, row=1, padx=8, pady=8, sticky=tk.NSEW)
+        self.log_data_button.configure(command=functools.partial(self.handle_log_data, self.log_data_button))
+        self.log_data_button.grid(column=0, row=1, padx=8, pady=8, sticky=tk.NSEW)
 
-        reset_button = self.create_icon_button(
+        self.reset_button = self.create_icon_button(
             panel,
             text=SoilSwell.CommandName.Reset,
             icon_name="rotate-left",
+            icon_fill=guikit.hex_string_for_style(bootstyle.WARNING),
             spaces=4,
+            bootstyle=(bootstyle.OUTLINE, bootstyle.WARNING),
         )
-        acquire_button.configure(command=functools.partial(self.handle_reset, acquire_button))
-        reset_button.grid(column=0, row=2, padx=8, pady=8, sticky=tk.NSEW)
+        self.svg_images["hover-rotate-left"] = icon_to_image("rotate-left", fill=guikit.hex_string_for_style(StyleKey.SelectFg), scale_to_height=24)
+        self.reset_button.configure(command=functools.partial(self.handle_reset, self.reset_button))
+        self.reset_button.bind("<Enter>", self.on_mouse_enter)
+        self.reset_button.bind("<Leave>", self.on_mouse_leave)
+        self.reset_button.grid(column=0, row=2, padx=8, pady=8, sticky=tk.NSEW)
 
         return panel
 
@@ -334,13 +414,15 @@ class SoilSwell(guikit.AsyncWindow):
         parent: tk.Widget,
         text: str,
         icon_name: str,
+        icon_fill: str = "",
         char_width: int = 15,
         spaces: int = 2,
         bootstyle: str = bootstyle.DEFAULT,
     ) -> ttk.Button:
         """Create a ttk.Button using the specified text and FontAwesome icon_name."""
         text_spacing = 3 * " "
-        button_image = icon_to_image(icon_name, fill=guikit.hex_string_for_style(StyleKey.SelectFg), scale_to_height=24)
+        fill = icon_fill if icon_fill else guikit.hex_string_for_style(StyleKey.SelectFg)
+        button_image = icon_to_image(icon_name, fill=fill, scale_to_height=24)
         self.svg_images[icon_name] = button_image
         button = ttk.Button(
             parent,
@@ -413,9 +495,37 @@ class SoilSwell(guikit.AsyncWindow):
 
     def handle_acquire(self, sender: tk.Widget) -> None:
         """Handle the Acquire command."""
+        current_acquire = self.state.acquire_active
+        new_acquire = not current_acquire
+        self.state.acquire_active = new_acquire
+
+    def on_acquire_changed(self, event_args: tk.Event) -> None:
+        """Handle the AcquireDataChanged event."""
+        acquire_active = self.state.acquire_active
+        new_style = bootstyle.SUCCESS if acquire_active else bootstyle.DEFAULT
+        self.acquire_button.configure(bootstyle=new_style)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
+        self.acquire_variable.set(acquire_active)
 
     def handle_log_data(self, sender: tk.Widget) -> None:
         """Handle the Acquire command."""
+        current_log_data = self.state.log_data_active
+        new_log_data = not current_log_data
+        self.state.log_data_active = new_log_data
+
+    def on_log_data_changed(self, event_args: tk.Event) -> None:
+        """Handle the LogDataChanged event."""
+        log_data_active = self.state.log_data_active
+        new_style = bootstyle.SUCCESS if log_data_active else bootstyle.DEFAULT
+        self.log_data_button.configure(bootstyle=new_style)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
+        self.log_data_variable.set(log_data_active)
+
+    def on_mouse_enter(self, event_args: tk.Event) -> None:
+        """Handle the mouse Enter event."""
+        self.reset_button.configure(image=self.svg_images["hover-rotate-left"])
+
+    def on_mouse_leave(self, event_args: tk.Event) -> None:
+        """Handle the mouse Leave event."""
+        self.reset_button.configure(image=self.svg_images["rotate-left"])
 
     def handle_reset(self, sender: tk.Widget) -> None:
         """Handle the Acquire command."""
