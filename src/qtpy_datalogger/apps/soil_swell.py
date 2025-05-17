@@ -139,6 +139,14 @@ class SoilSwell(guikit.AsyncWindow):
 
         # Supports app state
         self.state = AppState(self.root_window)
+        self.menu_text_for_theme = {
+            "cosmo": "  Cosmo",
+            "flatly": "  Flatly",
+            "cyborg": "   Cyborg",
+            "darkly": "   Darkly",
+            "vapor": "  Debug",
+        }
+        self.menu_text_for_theme["vapor"] = "  Debug"
 
         # arrow-up-from-ground-water droplet
         app_icon = icon_to_image("arrow-up-from-ground-water", fill=app_icon_color, scale_to_height=256)
@@ -224,8 +232,9 @@ class SoilSwell(guikit.AsyncWindow):
             self.on_log_data_changed,
         )
 
-
         self.update_window_title("Centrifuge Test")
+        self.state.active_theme = "vapor"
+
 
     def build_window_menu(self) -> None:
         """Create the entries for the window menu bar."""
@@ -271,14 +280,14 @@ class SoilSwell(guikit.AsyncWindow):
         )
         self.themes_menu.add_radiobutton(
             command=functools.partial(self.change_theme, "cosmo"),
-            label="  Cosmo",
+            label=self.menu_text_for_theme["cosmo"],
             image=light_mode_icon,
             compound=tk.LEFT,
             variable=self.theme_variable,
         )
         self.themes_menu.add_radiobutton(
             command=functools.partial(self.change_theme, "flatly"),
-            label="  Flatly",
+            label=self.menu_text_for_theme["flatly"],
             image=light_mode_icon,
             compound=tk.LEFT,
             variable=self.theme_variable,
@@ -286,14 +295,14 @@ class SoilSwell(guikit.AsyncWindow):
         self.themes_menu.add_separator()
         self.themes_menu.add_radiobutton(
             command=functools.partial(self.change_theme, "cyborg"),
-            label="   Cyborg",
+            label=self.menu_text_for_theme["cyborg"],
             image=dark_mode_icon,
             compound=tk.LEFT,
             variable=self.theme_variable,
         )
         self.themes_menu.add_radiobutton(
             command=functools.partial(self.change_theme, "darkly"),
-            label="   Darkly",
+            label=self.menu_text_for_theme["darkly"],
             image=dark_mode_icon,
             compound=tk.LEFT,
             variable=self.theme_variable,
@@ -301,7 +310,7 @@ class SoilSwell(guikit.AsyncWindow):
         self.themes_menu.add_separator()
         self.themes_menu.add_radiobutton(
             command=functools.partial(self.change_theme, "vapor"),
-            label="  Debug",
+            label=self.menu_text_for_theme["vapor"],
             image=debug_mode_icon,
             compound=tk.LEFT,
             variable=self.theme_variable,
@@ -444,11 +453,11 @@ class SoilSwell(guikit.AsyncWindow):
 
     def change_theme(self, theme_name:str) -> None:
         """Handle the View::Theme selection command."""
-        # >>> self.state.active_theme = theme_name
-        ttk.Style().theme_use(theme_name)
+        self.state.active_theme = theme_name
 
     def on_theme_changed(self, event_args: tk.Event) -> None:
         """Handle the ThemeChanged event."""
+        # Style the menus
         all_menus = [
             self.file_menu,
             self.view_menu,
@@ -457,6 +466,9 @@ class SoilSwell(guikit.AsyncWindow):
         ]
         for menu in all_menus:
             self.style_menu(menu)
+
+        # Select the active theme in the menu
+        self.theme_variable.set(self.menu_text_for_theme[self.state.active_theme])
 
     def style_menu(self, menu: tk.Menu) -> None:
         """Style every entry in the specified menu."""
