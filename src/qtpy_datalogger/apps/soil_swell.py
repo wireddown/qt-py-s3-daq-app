@@ -46,6 +46,14 @@ class BatteryLevel(StrEnum):
     Full = "Full"
 
 
+class SampleRate(StrEnum):
+    """Supported settings for the app's sample rate."""
+
+    Fast = "Fast"
+    Normal = "Normal"
+    Slow = "Slow"
+
+
 class AppState:
     """A class that models and controls the app's settings and runtime state."""
 
@@ -62,6 +70,7 @@ class AppState:
         """Initialize a new AppState instance."""
         self._tk_notifier = tk_root
         self._theme_name = ""
+        self._sample_rate = SampleRate.Fast
         self._acquire_active = False
         self._log_data_active = False
         self._battery_level = BatteryLevel.Unknown
@@ -78,6 +87,19 @@ class AppState:
             return
         self._theme_name = new_value
         ttk.Style().theme_use(new_value)
+
+    @property
+    def sample_rate(self) -> SampleRate:
+        """Get the active sample_rate."""
+        return self._sample_rate
+
+    @sample_rate.setter
+    def sample_rate(self, new_value: SampleRate) -> None:
+        """Set a new value for sample_rate and notify SampleRateChanged event subscribers."""
+        if new_value != self._sample_rate:
+            return
+        self._sample_rate = new_value
+        self._tk_notifier.event_generate(AppState.Event.SampleRateChanged)
 
     @property
     def acquire_active(self) -> bool:
@@ -133,9 +155,6 @@ class SoilSwell(guikit.AsyncWindow):
         Theme = "Theme"
         Help = "Help"
         About = "About"
-        Fast = "Fast"
-        Normal = "Normal"
-        Slow = "Slow"
         Acquire = "Acquire"
         LogData = "Log Data"
         Reset = "Reset"
@@ -245,9 +264,11 @@ class SoilSwell(guikit.AsyncWindow):
         self.root_window.bind(AppState.Event.AcquireDataChanged, self.on_acquire_changed)
         self.root_window.bind(AppState.Event.LogDataChanged, self.on_log_data_changed)
         self.root_window.bind(AppState.Event.BatteryLevelChanged, self.on_battery_level_changed)
+        self.root_window.bind(AppState.Event.SampleRateChanged, self.on_sample_rate_changed)
 
         self.update_window_title("Centrifuge Test")
         self.state.active_theme = "vapor"
+        self.handle_reset(sender=self.reset_button)
 
 
     def build_window_menu(self) -> None:
@@ -391,13 +412,12 @@ class SoilSwell(guikit.AsyncWindow):
         sample_rate_label = ttk.Label(panel, text="Sample rate")
         sample_rate_label.grid(column=0, row=2, padx=8, pady=(8, 2), sticky=tk.NSEW)
 
-        slow_option = ttk.Radiobutton(panel, command=self.handle_change_sample_rate, text=SoilSwell.CommandName.Slow, variable=self.sample_rate_variable, value=SoilSwell.CommandName.Slow)
+        slow_option = ttk.Radiobutton(panel, command=self.handle_change_sample_rate, text=SampleRate.Slow, variable=self.sample_rate_variable, value=SampleRate.Slow)
         slow_option.grid(column=0, row=3, padx=(16, 8), pady=4, sticky=tk.NSEW)
-        normal_option = ttk.Radiobutton(panel, command=self.handle_change_sample_rate, text=SoilSwell.CommandName.Normal, variable=self.sample_rate_variable, value=SoilSwell.CommandName.Normal)
+        normal_option = ttk.Radiobutton(panel, command=self.handle_change_sample_rate, text=SampleRate.Normal, variable=self.sample_rate_variable, value=SampleRate.Normal)
         normal_option.grid(column=0, row=4, padx=(16, 8), pady=4, sticky=tk.NSEW)
-        fast_option = ttk.Radiobutton(panel, command=self.handle_change_sample_rate, text=SoilSwell.CommandName.Fast, variable=self.sample_rate_variable, value=SoilSwell.CommandName.Fast)
+        fast_option = ttk.Radiobutton(panel, command=self.handle_change_sample_rate, text=SampleRate.Fast, variable=self.sample_rate_variable, value=SampleRate.Fast)
         fast_option.grid(column=0, row=5, padx=(16, 8), pady=(4, 12), sticky=tk.NSEW)
-        self.sample_rate_variable.set(SoilSwell.CommandName.Fast)
 
         return panel
 
@@ -531,6 +551,13 @@ class SoilSwell(guikit.AsyncWindow):
 
     def handle_change_sample_rate(self) -> None:
         """Handle the selection event for the sample rate Radiobuttons."""
+        new_rate = self.sample_rate_variable.get()
+        self.state.sample_rate = SampleRate(new_rate)
+
+    def on_sample_rate_changed(self, event_args: tk.Event) -> None:
+        """Handle the SampleRateChanged event."""
+        new_rate = self.state.sample_rate
+        self.sample_rate_variable.set(new_rate)
 
     def handle_acquire(self, sender: tk.Widget) -> None:
         """Handle the Acquire command."""
@@ -584,6 +611,10 @@ class SoilSwell(guikit.AsyncWindow):
 
     def handle_reset(self, sender: tk.Widget) -> None:
         """Handle the Acquire command."""
+        self.sensor_node_group_variable.set(datatypes.Default.MqttGroup)  # Need to add to state object
+        self.state.sample_rate = SampleRate.Fast
+        self.state.acquire_active = False
+        self.state.log_data_active = False
 
     def update_window_title(self, new_title: str) -> None:
         """Update the application's window title."""
