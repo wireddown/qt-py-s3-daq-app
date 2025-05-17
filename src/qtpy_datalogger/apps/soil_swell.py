@@ -105,6 +105,19 @@ class AppState:
         self._log_data_active = new_value
         self._tk_notifier.event_generate(AppState.Event.LogDataChanged)
 
+    @property
+    def battery_level(self) -> BatteryLevel:
+        """Return the battery level."""
+        return self._battery_level
+
+    @battery_level.setter
+    def battery_level(self, new_value: BatteryLevel) -> None:
+        """Set a new value for battery_level and notify BatteryLevelChanged event subscribers."""
+        if new_value == self._battery_level:
+            return
+        self._battery_level = new_value
+        self._tk_notifier.event_generate(AppState.Event.BatteryLevelChanged)
+
 
 class SoilSwell(guikit.AsyncWindow):
     """A GUI that acquires, plots, and logs data from a soil swell test."""
@@ -146,7 +159,13 @@ class SoilSwell(guikit.AsyncWindow):
             "darkly": "   Darkly",
             "vapor": "  Debug",
         }
-        self.menu_text_for_theme["vapor"] = "  Debug"
+        self.icon_name_for_battery_level = {
+            BatteryLevel.Unknown: "battery-empty",
+            BatteryLevel.Low: "battery-quarter",
+            BatteryLevel.Half: "battery-half",
+            BatteryLevel.High: "battery-three-quarters",
+            BatteryLevel.Full: "battery-full",
+        }
 
         # arrow-up-from-ground-water droplet
         app_icon = icon_to_image("arrow-up-from-ground-water", fill=app_icon_color, scale_to_height=256)
@@ -223,14 +242,9 @@ class SoilSwell(guikit.AsyncWindow):
         action_contents.grid(in_=action_panel, column=0, row=0, padx=2, pady=2, sticky=tk.NSEW)
 
         self.root_window.bind("<<ThemeChanged>>", self.on_theme_changed)
-        self.root_window.bind(
-            AppState.Event.AcquireDataChanged,
-            self.on_acquire_changed,
-        )
-        self.root_window.bind(
-            AppState.Event.LogDataChanged,
-            self.on_log_data_changed,
-        )
+        self.root_window.bind(AppState.Event.AcquireDataChanged, self.on_acquire_changed)
+        self.root_window.bind(AppState.Event.LogDataChanged, self.on_log_data_changed)
+        self.root_window.bind(AppState.Event.BatteryLevelChanged, self.on_battery_level_changed)
 
         self.update_window_title("Centrifuge Test")
         self.state.active_theme = "vapor"
@@ -343,20 +357,20 @@ class SoilSwell(guikit.AsyncWindow):
 
     def refresh_battery_icons(self) -> None:
         """Create the icon images for the battery level indicator."""
-        full_battery_icon = icon_to_image("battery-full", fill=guikit.hex_string_for_style(bootstyle.SUCCESS), scale_to_height=24)
-        self.svg_images["battery-full"] = full_battery_icon
+        full_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.Full], fill=guikit.hex_string_for_style(bootstyle.SUCCESS), scale_to_height=24)
+        self.svg_images[self.icon_name_for_battery_level[BatteryLevel.Full]] = full_battery_icon
 
-        high_battery_icon = icon_to_image("battery-three-quarters", fill=guikit.hex_string_for_style(bootstyle.SUCCESS), scale_to_height=24)
-        self.svg_images["battery-three-quarters"] = high_battery_icon
+        high_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.High], fill=guikit.hex_string_for_style(bootstyle.SUCCESS), scale_to_height=24)
+        self.svg_images[self.icon_name_for_battery_level[BatteryLevel.High]] = high_battery_icon
 
-        half_battery_icon = icon_to_image("battery-half", fill=guikit.hex_string_for_style(bootstyle.WARNING), scale_to_height=24)
-        self.svg_images["battery-half"] = half_battery_icon
+        half_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.Half], fill=guikit.hex_string_for_style(bootstyle.WARNING), scale_to_height=24)
+        self.svg_images[self.icon_name_for_battery_level[BatteryLevel.Half]] = half_battery_icon
 
-        low_battery_icon = icon_to_image("battery-quarter", fill=guikit.hex_string_for_style(bootstyle.DANGER), scale_to_height=24)
-        self.svg_images["battery-quarter"] = low_battery_icon
+        low_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.Low], fill=guikit.hex_string_for_style(bootstyle.DANGER), scale_to_height=24)
+        self.svg_images[self.icon_name_for_battery_level[BatteryLevel.Low]] = low_battery_icon
 
-        unknown_battery_icon = icon_to_image("battery-empty", fill=guikit.hex_string_for_style(bootstyle.SECONDARY), scale_to_height=24)
-        self.svg_images["battery-empty"] = unknown_battery_icon
+        unknown_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.Unknown], fill=guikit.hex_string_for_style(bootstyle.SECONDARY), scale_to_height=24)
+        self.svg_images[self.icon_name_for_battery_level[BatteryLevel.Unknown]] = unknown_battery_icon
 
         self.battery_level_indicator = ttk.Label(panel, image=high_battery_icon, font=font.Font(weight=font.BOLD), compound=tk.CENTER)
         self.battery_level_indicator.grid(column=0, row=0)
@@ -543,6 +557,22 @@ class SoilSwell(guikit.AsyncWindow):
         new_style = bootstyle.SUCCESS if log_data_active else bootstyle.DEFAULT
         self.log_data_button.configure(bootstyle=new_style)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         self.log_data_variable.set(log_data_active)
+
+    def on_battery_level_changed(self, event_args: tk.Event) -> None:
+        """Handle the BatteryLevelChanged event."""
+        battery_level = self.state.battery_level
+        battery_image = self.svg_images[self.icon_name_for_battery_level[battery_level]]
+        if battery_level == BatteryLevel.Unknown:
+            args = {
+                "image": battery_image,
+                "text": "?",
+            }
+        else:
+            args = {
+                "image": battery_image,
+                "text": "",
+            }
+        self.battery_level_indicator.configure(args)
 
     def on_mouse_enter(self, event_args: tk.Event) -> None:
         """Handle the mouse Enter event."""
