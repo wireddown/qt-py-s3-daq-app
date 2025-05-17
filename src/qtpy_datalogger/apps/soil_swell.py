@@ -121,14 +121,18 @@ class SoilSwell(guikit.AsyncWindow):
         tool_panel.grid(column=1, row=0, sticky=tk.NSEW)
         tool_panel.columnconfigure(0, weight=1)
         tool_panel.rowconfigure(0, weight=0, minsize=36)  # Filler
-        tool_panel.rowconfigure(1, weight=0, minsize=60)  # Status
+        tool_panel.rowconfigure(1, weight=0)  # Status
         tool_panel.rowconfigure(2, weight=0, minsize=24)  # Filler
         tool_panel.rowconfigure(3, weight=0)  # Settings
         tool_panel.rowconfigure(4, weight=0, minsize=24)  # Filler
         tool_panel.rowconfigure(5, weight=0)  # Action
 
         status_panel = ttk.Frame(tool_panel, name="status_panel", style=bootstyle.INFO)
+        status_panel.columnconfigure(0, weight=1)
+        status_panel.rowconfigure(0, weight=1)
         status_panel.grid(column=0, row=1, sticky=tk.NSEW, padx=(26, 24))
+        status_contents = self.create_status_panel()
+        status_contents.grid(in_=status_panel, column=0, row=0, padx=8, pady=8, sticky=tk.NSEW)
 
         settings_panel = ttk.Frame(tool_panel, name="settings_panel", style=bootstyle.WARNING)
         settings_panel.columnconfigure(0, weight=1)
@@ -241,6 +245,31 @@ class SoilSwell(guikit.AsyncWindow):
             accelerator="F1",
         )
         self.root_window.bind("<F1>", lambda e: self.show_about())
+
+    def create_status_panel(self) -> ttk.Frame:
+        """Create teh status panel region of the app."""
+        panel = ttk.Frame()
+        panel.columnconfigure(0, weight=1)
+        panel.rowconfigure(0, weight=1)
+
+        full_battery_icon = icon_to_image("battery-full", fill=guikit.hex_string_for_style(bootstyle.SUCCESS), scale_to_height=24)
+        self.svg_images["battery-full"] = full_battery_icon
+
+        high_battery_icon = icon_to_image("battery-three-quarters", fill=guikit.hex_string_for_style(bootstyle.SUCCESS), scale_to_height=24)
+        self.svg_images["battery-three-quarters"] = high_battery_icon
+
+        half_battery_icon = icon_to_image("battery-half", fill=guikit.hex_string_for_style(bootstyle.WARNING), scale_to_height=24)
+        self.svg_images["battery-half"] = half_battery_icon
+
+        low_battery_icon = icon_to_image("battery-quarter", fill=guikit.hex_string_for_style(bootstyle.DANGER), scale_to_height=24)
+        self.svg_images["battery-quarter"] = low_battery_icon
+
+        unknown_battery_icon = icon_to_image("battery-empty", fill=guikit.hex_string_for_style(bootstyle.SECONDARY), scale_to_height=24)
+        self.svg_images["battery-empty"] = unknown_battery_icon
+
+        self.battery_level_indicator = ttk.Label(panel, image=high_battery_icon)
+        self.battery_level_indicator.grid(column=0, row=0)
+        return panel
 
     def create_settings_panel(self) -> ttk.Frame:
         """Create the settings panel region of the app."""
