@@ -238,6 +238,15 @@ class SoilSwell(guikit.AsyncWindow):
             BatteryLevel.High: "battery-three-quarters",
             BatteryLevel.Full: "battery-full",
         }
+        self.tooltip_message_for_battery_level = {
+            BatteryLevel.Unset: "The battery doesn't have a level",
+            BatteryLevel.Unknown: "The battery's level is unknown",
+            BatteryLevel.Low: "The battery is critically low and cannot sustain DAQ functions",
+            BatteryLevel.Half: "The battery is low and requires recharging soon",
+            BatteryLevel.High: "The battery is discharging",
+            BatteryLevel.Full: "The battery is full",
+        }
+        self.battery_level_tooltip = None
         self.scanner_process = None
 
         # Supports app state
@@ -487,7 +496,7 @@ class SoilSwell(guikit.AsyncWindow):
         self.svg_images["telescope"] = telescope_image
         launch_scanner_button = ttk.Button(panel, image=telescope_image, command=self.handle_launch_scanner)
         launch_scanner_button.grid(column=1, row=1, padx=(4, 16), pady=(2, 8), sticky=tk.NSEW)
-        ttk_tooltip.ToolTip(launch_scanner_button, text="Launch the QT Py Sensor Node Scanner app")
+        ttk_tooltip.ToolTip(launch_scanner_button, text="Launch the QT Py Sensor Node Scanner app", bootstyle=bootstyle.DEFAULT)
 
         sample_rate_label = ttk.Label(panel, text="Sample rate")
         sample_rate_label.grid(column=0, row=2, padx=8, pady=(8, 2), sticky=tk.NSEW)
@@ -729,6 +738,9 @@ class SoilSwell(guikit.AsyncWindow):
                 "text": "",
             }
         self.battery_level_indicator.configure(args)
+        if self.battery_level_tooltip:
+            self.battery_level_tooltip.leave()
+        self.battery_level_tooltip = ttk_tooltip.ToolTip(self.battery_level_indicator, text=self.tooltip_message_for_battery_level[battery_level], bootstyle=bootstyle.DEFAULT)
 
     def on_mouse_enter(self, event_args: tk.Event) -> None:
         """Handle the mouse Enter event."""
