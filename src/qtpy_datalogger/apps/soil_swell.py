@@ -286,31 +286,31 @@ class SoilSwell(guikit.AsyncWindow):
         self.g_level_axes.set_ylabel("Acceleration (g)")
         self.g_level_axes.set_xlabel("Time (minutes)")
 
-        tool_frame = ttk.Frame(main, name="tool_panel", style=bootstyle.LIGHT)
-        tool_frame.grid(column=1, row=0, sticky=tk.NSEW)
-        tool_frame.columnconfigure(0, weight=1)
-        tool_frame.rowconfigure(0, weight=0, minsize=36)  # Filler
-        tool_frame.rowconfigure(1, weight=0)  # Status
-        tool_frame.rowconfigure(2, weight=0, minsize=24)  # Filler
-        tool_frame.rowconfigure(3, weight=0)  # Settings
-        tool_frame.rowconfigure(4, weight=0, minsize=24)  # Filler
-        tool_frame.rowconfigure(5, weight=0)  # Action
+        self.tool_frame = ttk.Frame(main, name="tool_panel")
+        self.tool_frame.grid(column=1, row=0, sticky=tk.NSEW)
+        self.tool_frame.columnconfigure(0, weight=1)
+        self.tool_frame.rowconfigure(0, weight=0, minsize=36)  # Filler
+        self.tool_frame.rowconfigure(1, weight=0)  # Status
+        self.tool_frame.rowconfigure(2, weight=0, minsize=24)  # Filler
+        self.tool_frame.rowconfigure(3, weight=0)  # Settings
+        self.tool_frame.rowconfigure(4, weight=0, minsize=24)  # Filler
+        self.tool_frame.rowconfigure(5, weight=0)  # Action
 
-        status_panel = ttk.Frame(tool_frame, name="status_panel", style=bootstyle.INFO)
+        status_panel = ttk.Frame(self.tool_frame, name="status_panel", style=bootstyle.SECONDARY)
         status_panel.columnconfigure(0, weight=1)
         status_panel.rowconfigure(0, weight=1)
         status_panel.grid(column=0, row=1, sticky=tk.NSEW, padx=(26, 24))
         status_contents = self.create_status_panel()
-        status_contents.grid(in_=status_panel, column=0, row=0, padx=8, pady=8, sticky=tk.NSEW)
+        status_contents.grid(in_=status_panel, column=0, row=0, padx=2, pady=2, sticky=tk.NSEW)
 
-        settings_panel = ttk.Frame(tool_frame, name="settings_panel", style=bootstyle.WARNING)
+        settings_panel = ttk.Frame(self.tool_frame, name="settings_panel", style=bootstyle.SECONDARY)
         settings_panel.columnconfigure(0, weight=1)
         settings_panel.rowconfigure(0, weight=1)
+        settings_panel.grid(column=0, row=3, sticky=tk.NSEW, padx=(26, 24))
         settings_contents = self.create_settings_panel()
         settings_contents.grid(in_=settings_panel, column=0, row=0, padx=2, pady=2, sticky=tk.NSEW)
-        settings_panel.grid(column=0, row=3, sticky=tk.NSEW, padx=(26, 24))
 
-        action_panel = ttk.Frame(tool_frame, name="action_panel", style=bootstyle.DANGER)
+        action_panel = ttk.Frame(self.tool_frame, name="action_panel", style=bootstyle.SECONDARY)
         action_panel.columnconfigure(0, weight=1)
         action_panel.rowconfigure(0, weight=1)
         action_panel.grid(column=0, row=5, sticky=tk.NSEW, padx=(26, 24))
@@ -591,6 +591,9 @@ class SoilSwell(guikit.AsyncWindow):
         """Handle the ThemeChanged event."""
         if event_args.widget is not self.root_window:
             return
+        theme_kind = ttk_themes.STANDARD_THEMES[self.state.active_theme]["type"]
+        new_toolframe_style = bootstyle.LIGHT if theme_kind == "light" else bootstyle.DARK
+        self.tool_frame.configure(bootstyle=new_toolframe_style)
 
         # Style the menus
         all_menus = [
@@ -608,7 +611,6 @@ class SoilSwell(guikit.AsyncWindow):
         # Update image colors -- these could be cached rather than recalculated
         self.svg_images["rotate-left"] = icon_to_image("rotate-left", guikit.hex_string_for_style(bootstyle.WARNING), scale_to_height=24)
         self.reset_button.configure(image=self.svg_images["rotate-left"])
-
         self.refresh_battery_icons()
 
     def style_menu(self, menu: tk.Menu) -> None:
