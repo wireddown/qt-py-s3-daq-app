@@ -20,6 +20,7 @@ import matplotlib.figure as mpl_figure
 import pandas as pd
 import ttkbootstrap as ttk
 import ttkbootstrap.themes.standard as ttk_themes
+import ttkbootstrap.tooltip as ttk_tooltip
 from tkfontawesome import icon_to_image, svg_to_image
 from ttkbootstrap import constants as bootstyle
 
@@ -485,6 +486,7 @@ class SoilSwell(guikit.AsyncWindow):
         self.svg_images["telescope"] = telescope_image
         launch_scanner_button = ttk.Button(panel, image=telescope_image, command=self.handle_launch_scanner)
         launch_scanner_button.grid(column=1, row=1, padx=(4, 16), pady=(2, 8), sticky=tk.NSEW)
+        ttk_tooltip.ToolTip(launch_scanner_button, text="Launch the QT Py Sensor Node Scanner app")
 
         sample_rate_label = ttk.Label(panel, text="Sample rate")
         sample_rate_label.grid(column=0, row=2, padx=8, pady=(8, 2), sticky=tk.NSEW)
