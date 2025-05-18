@@ -1,6 +1,7 @@
 """An app that scans for QT Py sensor_nodes."""
 
 import asyncio
+import importlib.resources
 import logging
 import pathlib
 import socket
@@ -13,8 +14,10 @@ from tkinter import font
 import ttkbootstrap as ttk
 import ttkbootstrap.icons as ttk_icons
 import ttkbootstrap.tableview as ttk_tableview
+from tkfontawesome import svg_to_image
 from ttkbootstrap import constants as bootstyle
 
+import qtpy_datalogger
 from qtpy_datalogger import discovery, guikit, network
 from qtpy_datalogger.datatypes import Default, Links
 
@@ -79,6 +82,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.scan_db = ScannerData()
         self.selected_node = Constants.NoneChoice
         self.background_tasks = set()
+        self.svg_images = {}
 
         # Theme
         style = ttk.Style()
@@ -86,9 +90,12 @@ class ScannerApp(guikit.AsyncWindow):
         colors = style.colors
 
         # Window title bar
+        package = importlib.resources.files(qtpy_datalogger)
+        assets = package.joinpath("assets")
+        telescope_data = assets.joinpath("telescope.svg").read_text()
+        icon = svg_to_image(telescope_data, fill="#07a000", scale_to_height=256)
         self.root_window.minsize(width=560, height=572)
         self.root_window.title(Constants.AppName)
-        icon = tk.PhotoImage(master=self.root_window, data=ttk_icons.Icon.question)
         self.root_window.iconphoto(True, icon)
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
@@ -108,11 +115,14 @@ class ScannerApp(guikit.AsyncWindow):
         main.rowconfigure(5, weight=0)
 
         # Title
-        icon_emoji = ttk_icons.Emoji.get("telescope")
+        telescope_image = svg_to_image(telescope_data, fill=guikit.hex_string_for_style("fg"), scale_to_height=25)
+        self.svg_images["telescope"] = telescope_image
         title_font = font.Font(weight="bold", size=24)
         title_label = ttk.Label(
             main,
-            text=f"{icon_emoji} {Constants.AppName}",
+            text=f" {Constants.AppName}",
+            image=telescope_image,
+            compound=tk.LEFT,
             font=title_font,
             padding=16,
             borderwidth=0,
