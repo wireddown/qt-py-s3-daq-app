@@ -228,6 +228,7 @@ class SoilSwell(guikit.AsyncWindow):
             "vapor": "  Debug",
         }
         self.icon_name_for_battery_level = {
+            BatteryLevel.Unset: "battery-empty",
             BatteryLevel.Unknown: "battery-empty",
             BatteryLevel.Low: "battery-quarter",
             BatteryLevel.Half: "battery-half",
@@ -425,10 +426,20 @@ class SoilSwell(guikit.AsyncWindow):
         """Create teh status panel region of the app."""
         panel = ttk.Frame()
         panel.columnconfigure(0, weight=1)
+        panel.columnconfigure(1, weight=1)
         panel.rowconfigure(0, weight=1)
 
+        font_family = "Consolas"
+        if font_family in font.families():
+            the_font = font.Font(family=font_family, name="custom_fixed")
+        else:
+            the_font = font.nametofont("fixed")
+        the_font.configure(weight=font.BOLD, size=12)
+        self.battery_voltage_indicator = ttk.Label(panel, font=the_font, text="3.742")
+        self.battery_voltage_indicator.grid(column=0, row=0)
+
         self.battery_level_indicator = ttk.Label(panel, font=font.Font(weight=font.BOLD), compound=tk.CENTER)
-        self.battery_level_indicator.grid(column=0, row=0)
+        self.battery_level_indicator.grid(column=1, row=0)
         return panel
 
     def refresh_battery_icons(self) -> None:
