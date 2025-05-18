@@ -39,6 +39,7 @@ class StyleKey(StrEnum):
 class BatteryLevel(StrEnum):
     """An ordered enumeration that represents the sensor node's battery level."""
 
+    Unset = "Unset"
     Unknown = "Unknown"
     Low = "Low"
     Half = "Half"
@@ -58,11 +59,21 @@ class SampleRate(StrEnum):
 class AppState:
     """A class that models and controls the app's settings and runtime state."""
 
+    class Tristate(StrEnum):
+        """An enumeration that models a tristate boolean."""
+
+        BoolUnset = "Unset"
+        BoolTrue = "True"
+        BoolFalse = "False"
+
     class Event(StrEnum):
         """Events emitted when properties change."""
 
         AcquireDataChanged = "<<AcquireDataChanged>>"
         BatteryLevelChanged = "<<BatteryLevelChanged>>"
+        CanAcquireDataChanged = "<<CanAcquireDataChanged>>"
+        CanLogDataChanged = "<<CanLogDataChanged>>"
+        CanSetGroupChanged = "<<CanSetGroupChanged>>"
         LogDataChanged = "<<LogDataChanged>>"
         SampleRateChanged = "<<SampleRateChanged>>"
         SensorGroupChanged = "<<SensorGroupChanged>>"
@@ -73,9 +84,9 @@ class AppState:
         self._theme_name = ""
         self._sensor_group = ""
         self._sample_rate = SampleRate.Unset
-        self._acquire_active = False
-        self._log_data_active = False
-        self._battery_level = BatteryLevel.Unknown
+        self._acquire_active = AppState.Tristate.BoolUnset
+        self._log_data_active = AppState.Tristate.BoolUnset
+        self._battery_level = BatteryLevel.Unset
 
     @property
     def active_theme(self) -> str:
@@ -102,6 +113,9 @@ class AppState:
             return
         self._sensor_group = new_value
         self._tk_notifier.event_generate(AppState.Event.SensorGroupChanged)
+        self._tk_notifier.event_generate(AppState.Event.CanAcquireDataChanged)
+        if not self.can_acquire_data:
+            self.acquire_active = False
 
     @property
     def sample_rate(self) -> SampleRate:
@@ -119,28 +133,45 @@ class AppState:
     @property
     def acquire_active(self) -> bool:
         """Return True when the app is acquiring data."""
-        return self._acquire_active
+        return self._acquire_active == AppState.Tristate.BoolTrue
 
     @acquire_active.setter
     def acquire_active(self, new_value: bool) -> None:
         """Set a new value for acquire_active and notify AcquireDataChanged event subscribers."""
-        if new_value == self._acquire_active:
+        as_tristate = AppState.Tristate.BoolTrue if new_value else AppState.Tristate.BoolFalse
+        if as_tristate == self.acquire_active:
             return
-        self._acquire_active = new_value
+        self._acquire_active = as_tristate
         self._tk_notifier.event_generate(AppState.Event.AcquireDataChanged)
+        if self.log_data_active:
+            self.log_data_active = False
+        self._tk_notifier.event_generate(AppState.Event.CanLogDataChanged)
+
+    @property
+    def can_acquire_data(self) -> bool:
+        """Return True when the app can acquire data."""
+        has_group_name = len(self.sensor_group) > 0
+        return has_group_name
 
     @property
     def log_data_active(self) -> bool:
         """Return True when the app is logging data."""
-        return self._log_data_active
+        return self._log_data_active == AppState.Tristate.BoolTrue
 
     @log_data_active.setter
     def log_data_active(self, new_value: bool) -> None:
         """Set a new value for log_data_active and notify LogDataChanged event subscribers."""
-        if new_value == self._log_data_active:
+        as_tristate = AppState.Tristate.BoolTrue if new_value else AppState.Tristate.BoolFalse
+        if as_tristate == self._log_data_active:
             return
-        self._log_data_active = new_value
+        self._log_data_active = as_tristate
         self._tk_notifier.event_generate(AppState.Event.LogDataChanged)
+
+    @property
+    def can_log_data(self) -> bool:
+        """Return True when the app can log data."""
+        acquire_is_active = self.acquire_active
+        return acquire_is_active
 
     @property
     def battery_level(self) -> BatteryLevel:
@@ -277,7 +308,9 @@ class SoilSwell(guikit.AsyncWindow):
 
         self.root_window.bind("<<ThemeChanged>>", self.on_theme_changed)
         self.root_window.bind(AppState.Event.AcquireDataChanged, self.on_acquire_changed)
+        self.root_window.bind(AppState.Event.CanAcquireDataChanged, self.on_can_acquire_changed)
         self.root_window.bind(AppState.Event.LogDataChanged, self.on_log_data_changed)
+        self.root_window.bind(AppState.Event.CanLogDataChanged, self.on_can_log_data_changed)
         self.root_window.bind(AppState.Event.BatteryLevelChanged, self.on_battery_level_changed)
         self.root_window.bind(AppState.Event.SampleRateChanged, self.on_sample_rate_changed)
         self.root_window.bind(AppState.Event.SensorGroupChanged, self.on_sensor_group_changed)
@@ -387,8 +420,7 @@ class SoilSwell(guikit.AsyncWindow):
         panel.columnconfigure(0, weight=1)
         panel.rowconfigure(0, weight=1)
 
-        self.refresh_battery_icons()
-        self.battery_level_indicator = ttk.Label(panel, image=self.svg_images["battery-full"], font=font.Font(weight=font.BOLD), compound=tk.CENTER)
+        self.battery_level_indicator = ttk.Label(panel, font=font.Font(weight=font.BOLD), compound=tk.CENTER)
         self.battery_level_indicator.grid(column=0, row=0)
         return panel
 
@@ -409,9 +441,7 @@ class SoilSwell(guikit.AsyncWindow):
         unknown_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.Unknown], fill=guikit.hex_string_for_style(bootstyle.SECONDARY), scale_to_height=24)
         self.svg_images[self.icon_name_for_battery_level[BatteryLevel.Unknown]] = unknown_battery_icon
 
-        self.battery_level_indicator = ttk.Label(panel, image=high_battery_icon, font=font.Font(weight=font.BOLD), compound=tk.CENTER)
-        self.battery_level_indicator.grid(column=0, row=0)
-        return panel
+        self.battery_level_indicator.configure(image=self.svg_images[self.icon_name_for_battery_level[self.state.battery_level]])
 
     def create_settings_panel(self) -> ttk.Frame:
         """Create the settings panel region of the app."""
@@ -515,6 +545,9 @@ class SoilSwell(guikit.AsyncWindow):
 
     def on_theme_changed(self, event_args: tk.Event) -> None:
         """Handle the ThemeChanged event."""
+        if event_args.widget is not self.root_window:
+            return
+
         # Style the menus
         all_menus = [
             self.file_menu,
@@ -528,7 +561,7 @@ class SoilSwell(guikit.AsyncWindow):
         # Select the active theme in the menu
         self.theme_variable.set(self.menu_text_for_theme[self.state.active_theme])
 
-        # Update image colors -- this adds a noticeable delay, should be cached rather than recalculated
+        # Update image colors -- these could be cached rather than recalculated
         self.svg_images["rotate-left"] = icon_to_image("rotate-left", guikit.hex_string_for_style(bootstyle.WARNING), scale_to_height=24)
         self.reset_button.configure(image=self.svg_images["rotate-left"])
 
@@ -591,12 +624,22 @@ class SoilSwell(guikit.AsyncWindow):
         new_acquire = not current_acquire
         self.state.acquire_active = new_acquire
 
+    def on_can_acquire_changed(self, event_args: tk.Event) -> None:
+        """Handle the CanAcquireDataChanged event."""
+        new_state = tk.NORMAL if self.state.can_acquire_data else tk.DISABLED
+        self.acquire_button.configure(state=new_state)
+
     def on_acquire_changed(self, event_args: tk.Event) -> None:
         """Handle the AcquireDataChanged event."""
         acquire_active = self.state.acquire_active
         new_style = bootstyle.SUCCESS if acquire_active else bootstyle.DEFAULT
         self.acquire_button.configure(bootstyle=new_style)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         self.acquire_variable.set(acquire_active)
+
+    def on_can_log_data_changed(self, event_args: tk.Event) -> None:
+        """Handle the CanLogDataChanged event."""
+        new_state = tk.NORMAL if self.state.can_log_data else tk.DISABLED
+        self.log_data_button.configure(state=new_state)
 
     def handle_log_data(self, sender: tk.Widget) -> None:
         """Handle the Acquire command."""
