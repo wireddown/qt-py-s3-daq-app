@@ -314,8 +314,8 @@ class SoilSwell(guikit.AsyncWindow):
         action_panel.columnconfigure(0, weight=1)
         action_panel.rowconfigure(0, weight=1)
         action_panel.grid(column=0, row=5, sticky=tk.NSEW, padx=(26, 24))
-        action_contents = self.create_action_panel()
-        action_contents.grid(in_=action_panel, column=0, row=0, padx=2, pady=2, sticky=tk.NSEW)
+        self.action_contents = self.create_action_panel()
+        self.action_contents.grid(in_=action_panel, column=0, row=0, sticky=tk.NSEW)
 
         self.root_window.bind("<<ThemeChanged>>", self.on_theme_changed)
         self.root_window.bind(AppState.Event.AcquireDataChanged, self.on_acquire_changed)
@@ -328,7 +328,8 @@ class SoilSwell(guikit.AsyncWindow):
         self.root_window.bind(AppState.Event.CanSetSensorGroupChanged, self.on_can_set_sensor_group_changed)
 
         self.update_window_title("Centrifuge Test")
-        self.state.active_theme = "vapor"
+        self.state.active_theme = "cosmo"
+
         self.handle_reset(sender=self.reset_button)
 
 
@@ -594,6 +595,7 @@ class SoilSwell(guikit.AsyncWindow):
         theme_kind = ttk_themes.STANDARD_THEMES[self.state.active_theme]["type"]
         new_toolframe_style = bootstyle.LIGHT if theme_kind == "light" else bootstyle.DARK
         self.tool_frame.configure(bootstyle=new_toolframe_style)
+        self.action_contents.configure(bootstyle=new_toolframe_style)
 
         # Style the menus
         all_menus = [
