@@ -512,6 +512,10 @@ class ScannerApp(guikit.AsyncWindow):
         self.message_log.mark_set("insert", index)
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Run the app."""
     logger.debug(f"Launching {__package__}")
     asyncio.run(guikit.AsyncApp.create_and_run(ScannerApp))
+
+if __name__ == "__main__":
+    main()
