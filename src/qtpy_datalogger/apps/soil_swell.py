@@ -593,9 +593,9 @@ class SoilSwell(guikit.AsyncWindow):
         if event_args.widget is not self.root_window:
             return
         theme_kind = ttk_themes.STANDARD_THEMES[self.state.active_theme]["type"]
-        new_toolframe_style = bootstyle.LIGHT if theme_kind == "light" else bootstyle.DARK
-        self.tool_frame.configure(bootstyle=new_toolframe_style)
-        self.action_contents.configure(bootstyle=new_toolframe_style)
+        new_tool_frame_style = bootstyle.LIGHT if theme_kind == "light" else bootstyle.DARK
+        self.tool_frame.configure(bootstyle=new_tool_frame_style)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+        self.action_contents.configure(bootstyle=new_tool_frame_style)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
 
         # Style the menus
         all_menus = [
