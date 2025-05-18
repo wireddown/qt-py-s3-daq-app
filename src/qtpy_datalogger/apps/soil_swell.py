@@ -73,7 +73,7 @@ class AppState:
         BatteryLevelChanged = "<<BatteryLevelChanged>>"
         CanAcquireDataChanged = "<<CanAcquireDataChanged>>"
         CanLogDataChanged = "<<CanLogDataChanged>>"
-        CanSetGroupChanged = "<<CanSetGroupChanged>>"
+        CanSetSensorGroupChanged = "<<CanSetSensorGroupChanged>>"
         LogDataChanged = "<<LogDataChanged>>"
         SampleRateChanged = "<<SampleRateChanged>>"
         SensorGroupChanged = "<<SensorGroupChanged>>"
@@ -114,8 +114,13 @@ class AppState:
         self._sensor_group = new_value
         self._tk_notifier.event_generate(AppState.Event.SensorGroupChanged)
         self._tk_notifier.event_generate(AppState.Event.CanAcquireDataChanged)
-        if not self.can_acquire_data:
+        if not self.can_acquire:
             self.acquire_active = False
+
+    @property
+    def can_change_group(self) -> bool:
+        """Return True when the app can change the sensor group name."""
+        return self._acquire_active != AppState.Tristate.BoolTrue
 
     @property
     def sample_rate(self) -> SampleRate:
@@ -146,9 +151,10 @@ class AppState:
         if self.log_data_active:
             self.log_data_active = False
         self._tk_notifier.event_generate(AppState.Event.CanLogDataChanged)
+        self._tk_notifier.event_generate(AppState.Event.CanSetSensorGroupChanged)
 
     @property
-    def can_acquire_data(self) -> bool:
+    def can_acquire(self) -> bool:
         """Return True when the app can acquire data."""
         has_group_name = len(self.sensor_group) > 0
         return has_group_name
@@ -214,9 +220,6 @@ class SoilSwell(guikit.AsyncWindow):
         self.acquire_variable = tk.BooleanVar()
         self.log_data_variable = tk.BooleanVar()
         self.svg_images: dict[str, tk.Image] = {}
-
-        # Supports app state
-        self.state = AppState(self.root_window)
         self.menu_text_for_theme = {
             "cosmo": "  Cosmo",
             "flatly": "  Flatly",
@@ -231,6 +234,9 @@ class SoilSwell(guikit.AsyncWindow):
             BatteryLevel.High: "battery-three-quarters",
             BatteryLevel.Full: "battery-full",
         }
+
+        # Supports app state
+        self.state = AppState(self.root_window)
 
         # arrow-up-from-ground-water droplet
         app_icon = icon_to_image("arrow-up-from-ground-water", fill=app_icon_color, scale_to_height=256)
@@ -314,6 +320,7 @@ class SoilSwell(guikit.AsyncWindow):
         self.root_window.bind(AppState.Event.BatteryLevelChanged, self.on_battery_level_changed)
         self.root_window.bind(AppState.Event.SampleRateChanged, self.on_sample_rate_changed)
         self.root_window.bind(AppState.Event.SensorGroupChanged, self.on_sensor_group_changed)
+        self.root_window.bind(AppState.Event.CanSetSensorGroupChanged, self.on_can_set_sensor_group_changed)
 
         self.update_window_title("Centrifuge Test")
         self.state.active_theme = "vapor"
@@ -452,8 +459,8 @@ class SoilSwell(guikit.AsyncWindow):
         sensor_node_group_label = ttk.Label(panel, text="Sensor node group")
         sensor_node_group_label.grid(column=0, row=0, padx=8, pady=(8, 2), sticky=tk.NSEW)
 
-        sensor_node_group = ttk.Entry(panel, textvariable=self.sensor_node_group_variable)
-        sensor_node_group.grid(column=0, row=1, padx=16, pady=(2, 8), sticky=tk.NSEW)
+        self.sensor_node_group = ttk.Entry(panel, textvariable=self.sensor_node_group_variable)
+        self.sensor_node_group.grid(column=0, row=1, padx=16, pady=(2, 8), sticky=tk.NSEW)
         self.sensor_node_group_variable.trace_add("write", self.handle_change_sensor_group)
 
         sample_rate_label = ttk.Label(panel, text="Sample rate")
@@ -603,6 +610,11 @@ class SoilSwell(guikit.AsyncWindow):
         """Handle the text change event for the sensor_group Entry."""
         self.state.sensor_group = self.sensor_node_group_variable.get()
 
+    def on_can_set_sensor_group_changed(self, event_args: tk.Event) -> None:
+        """Handle the CanSetSensorGroupChanged event."""
+        new_state = tk.NORMAL if self.state.can_change_group else tk.DISABLED
+        self.sensor_node_group.configure(state=new_state)
+
     def on_sensor_group_changed(self, event_args: tk.Event) -> None:
         """Handle the SensorGroupChanged event."""
         new_group = self.state.sensor_group
@@ -626,7 +638,7 @@ class SoilSwell(guikit.AsyncWindow):
 
     def on_can_acquire_changed(self, event_args: tk.Event) -> None:
         """Handle the CanAcquireDataChanged event."""
-        new_state = tk.NORMAL if self.state.can_acquire_data else tk.DISABLED
+        new_state = tk.NORMAL if self.state.can_acquire else tk.DISABLED
         self.acquire_button.configure(state=new_state)
 
     def on_acquire_changed(self, event_args: tk.Event) -> None:
