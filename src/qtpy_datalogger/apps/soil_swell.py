@@ -4,8 +4,9 @@ import asyncio
 import atexit
 import contextlib
 import functools
-import json
+import importlib.resources
 import logging
+import multiprocessing
 import pathlib
 import shutil
 import tempfile
@@ -19,9 +20,10 @@ import matplotlib.figure as mpl_figure
 import pandas as pd
 import ttkbootstrap as ttk
 import ttkbootstrap.themes.standard as ttk_themes
-from tkfontawesome import icon_to_image
+from tkfontawesome import icon_to_image, svg_to_image
 from ttkbootstrap import constants as bootstyle
 
+import qtpy_datalogger.apps.scanner
 from qtpy_datalogger import datatypes, guikit, ttkbootstrap_matplotlib
 
 logger = logging.getLogger(pathlib.Path(__file__).stem)
@@ -235,6 +237,7 @@ class SoilSwell(guikit.AsyncWindow):
             BatteryLevel.High: "battery-three-quarters",
             BatteryLevel.Full: "battery-full",
         }
+        self.scanner_process = None
 
         # Supports app state
         self.state = AppState(self.root_window)
@@ -343,11 +346,11 @@ class SoilSwell(guikit.AsyncWindow):
             underline=0,
         )
         self.file_menu.add_command(
-            command=self.exit,
+            command=functools.partial(self.safe_exit, tk.Event()),
             label=SoilSwell.CommandName.Exit,
             accelerator="Alt-F4",
         )
-        self.root_window.bind("<Alt-F4>", lambda e: self.exit())
+        self.root_window.bind("<Alt-F4>", self.safe_exit)
 
         # View menu
         self.view_menu = tk.Menu(self.menubar, name="view_menu")
@@ -465,14 +468,23 @@ class SoilSwell(guikit.AsyncWindow):
         """Create the settings panel region of the app."""
         panel = ttk.Frame()
         panel.columnconfigure(0, weight=1)
+        panel.columnconfigure(1, weight=1)
         panel.rowconfigure(0, weight=1)
 
         sensor_node_group_label = ttk.Label(panel, text="Sensor node group")
         sensor_node_group_label.grid(column=0, row=0, padx=8, pady=(8, 2), sticky=tk.NSEW)
 
-        self.sensor_node_group = ttk.Entry(panel, textvariable=self.sensor_node_group_variable)
-        self.sensor_node_group.grid(column=0, row=1, padx=16, pady=(2, 8), sticky=tk.NSEW)
+        self.sensor_node_group = ttk.Entry(panel, textvariable=self.sensor_node_group_variable, width=14, style=bootstyle.PRIMARY)
+        self.sensor_node_group.grid(column=0, row=1, padx=(16, 4), pady=(2, 8), sticky=tk.NSEW)
         self.sensor_node_group_variable.trace_add("write", self.handle_change_sensor_group)
+
+        package = importlib.resources.files(qtpy_datalogger)
+        assets = package.joinpath("assets")
+        telescope_data = assets.joinpath("telescope.svg").read_text()
+        telescope_image = svg_to_image(telescope_data, fill="#FFFFFF", scale_to_height=15)
+        self.svg_images["telescope"] = telescope_image
+        launch_scanner_button = ttk.Button(panel, image=telescope_image, command=self.handle_launch_scanner)
+        launch_scanner_button.grid(column=1, row=1, padx=(4, 16), pady=(2, 8), sticky=tk.NSEW)
 
         sample_rate_label = ttk.Label(panel, text="Sample rate")
         sample_rate_label.grid(column=0, row=2, padx=8, pady=(8, 2), sticky=tk.NSEW)
@@ -496,6 +508,7 @@ class SoilSwell(guikit.AsyncWindow):
             panel,
             text=SoilSwell.CommandName.Acquire,
             icon_name="satellite-dish",
+            spaces=3,
         )
         self.acquire_button.configure(command=functools.partial(self.handle_acquire, self.acquire_button))
         self.acquire_button.grid(column=0, row=0, padx=8, pady=8, sticky=tk.NSEW)
@@ -504,6 +517,7 @@ class SoilSwell(guikit.AsyncWindow):
             panel,
             text=SoilSwell.CommandName.LogData,
             icon_name="file-waveform",
+            spaces=3,
         )
         self.log_data_button.configure(command=functools.partial(self.handle_log_data, self.log_data_button))
         self.log_data_button.grid(column=0, row=1, padx=8, pady=8, sticky=tk.NSEW)
@@ -513,7 +527,7 @@ class SoilSwell(guikit.AsyncWindow):
             text=SoilSwell.CommandName.Reset,
             icon_name="rotate-left",
             icon_fill=guikit.hex_string_for_style(bootstyle.WARNING),
-            spaces=4,
+            spaces=5,
             bootstyle=(bootstyle.OUTLINE, bootstyle.WARNING),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         )
         self.svg_images["hover-rotate-left"] = icon_to_image("rotate-left", fill=guikit.hex_string_for_style(StyleKey.SelectFg), scale_to_height=24)
@@ -553,6 +567,16 @@ class SoilSwell(guikit.AsyncWindow):
     async def on_loop(self) -> None:
         """Update the UI with new information."""
         await asyncio.sleep(1e-6)
+
+    def safe_exit(self, event_args: tk.Event) -> None:
+        """Safely exit the app."""
+        self.on_closing()
+        self.exit()
+
+    def on_closing(self) -> None:
+        """Handle the app closing event."""
+        if self.scanner_process and self.scanner_process.is_alive():
+            self.scanner_process.terminate()
 
     def show_about(self) -> None:
         """Handle the Help::About menu command."""
@@ -630,6 +654,13 @@ class SoilSwell(guikit.AsyncWindow):
         """Handle the SensorGroupChanged event."""
         new_group = self.state.sensor_group
         self.sensor_node_group_variable.set(new_group)
+
+    def handle_launch_scanner(self) -> None:
+        """Handle the launch scanner command."""
+        if self.scanner_process and self.scanner_process.is_alive():
+            return
+        self.scanner_process = multiprocessing.Process(target=qtpy_datalogger.apps.scanner.main, name="QT Py Scanner")
+        self.scanner_process.start()
 
     def handle_change_sample_rate(self) -> None:
         """Handle the selection event for the sample rate Radiobuttons."""
