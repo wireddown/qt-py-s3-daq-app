@@ -16,7 +16,9 @@ from enum import StrEnum
 from tkinter import font
 
 import matplotlib.axes as mpl_axes
+import matplotlib.backend_bases as mpl_backend_bases
 import matplotlib.figure as mpl_figure
+import matplotlib.ticker as mpl_ticker
 import pandas as pd
 import ttkbootstrap as ttk
 import ttkbootstrap.themes.standard as ttk_themes
@@ -275,6 +277,8 @@ class SoilSwell(guikit.AsyncWindow):
         self.graph_frame.rowconfigure(0, weight=1)
         plot_figure = mpl_figure.Figure(figsize=(7, 5), dpi=figure_dpi)
         self.canvas_figure = ttkbootstrap_matplotlib.create_styled_plot_canvas(plot_figure, self.graph_frame)
+        self.canvas_figure.mpl_connect("button_press_event", self.on_graph_mouse_down)
+        self.canvas_figure.mpl_connect("pick_event", self.on_graph_pick)
         plot_figure.subplots_adjust(
             left=0.10,
             bottom=0.10,
@@ -290,10 +294,19 @@ class SoilSwell(guikit.AsyncWindow):
         self.position_axes: mpl_axes.Axes = all_subplots[0]
         self.displacement_axes: mpl_axes.Axes = all_subplots[1]
         self.g_level_axes: mpl_axes.Axes = all_subplots[2]
-        self.position_axes.set_ylabel("LVDT position (cm)")
-        self.displacement_axes.set_ylabel("Displacement (cm)")
-        self.g_level_axes.set_ylabel("Acceleration (g)")
-        self.g_level_axes.set_xlabel("Time (minutes)")
+        self.position_label = self.position_axes.set_ylabel("LVDT position (cm)", picker=True)
+        self.position_axes.set_ylim(ymin=-0.1, ymax=2.6)
+        self.position_axes.yaxis.set_major_locator(mpl_ticker.MultipleLocator(0.5))
+        self.position_axes.yaxis.set_major_formatter("{x:0.2f}")
+        self.displacement_label = self.displacement_axes.set_ylabel("Displacement (cm)", picker=True)
+        self.displacement_axes.set_ylim(ymin=-2.6, ymax=2.6)
+        self.displacement_axes.yaxis.set_major_locator(mpl_ticker.MultipleLocator(1.0))
+        self.displacement_axes.yaxis.set_major_formatter("{x:0.2f}")
+        self.g_level_label = self.g_level_axes.set_ylabel("Acceleration (g)", picker=True)
+        self.g_level_axes.set_ylim(ymin=-1, ymax=255)
+        self.g_level_axes.set_xlim(xmin=-1, xmax=200)
+        self.g_level_axes.yaxis.set_major_locator(mpl_ticker.MultipleLocator(50.0))
+        self.time_label = self.g_level_axes.set_xlabel("Time (minutes)", picker=True)
 
         self.tool_frame = ttk.Frame(main, name="tool_panel")
         self.tool_frame.grid(column=1, row=0, sticky=tk.NSEW)
@@ -655,6 +668,44 @@ class SoilSwell(guikit.AsyncWindow):
                 index,
                 activebackground="grey42",
             )
+
+    def is_left_double_click(self, mouse_args: mpl_backend_bases.MouseEvent) -> bool:
+        """Return True when the mouse_args represent a double-left-click."""
+        if mouse_args.button != mpl_backend_bases.MouseButton.LEFT:
+            return False
+        return mouse_args.dblclick
+
+    def on_graph_mouse_down(self, event_args: mpl_backend_bases.Event) -> None:
+        """Handle mouse-down events from the graph."""
+        if type(event_args) is not mpl_backend_bases.MouseEvent:
+            return
+        if not self.is_left_double_click(event_args):
+            return
+
+        clicked = event_args.inaxes
+        if clicked is self.position_axes:
+            print("position area")
+        elif clicked is self.displacement_axes:
+            print("displacement area")
+        elif clicked is self.g_level_axes:
+            print("g level area")
+
+    def on_graph_pick(self, event_args: mpl_backend_bases.Event) -> None:
+        """Handle pick events from the graph."""
+        if type(event_args) is not mpl_backend_bases.PickEvent:
+            return
+        if not self.is_left_double_click(event_args.mouseevent):
+            return
+        x = event_args
+        if x.artist is self.position_label:
+            print("position label")
+        elif x.artist is self.displacement_label:
+            print("displacement label")
+        elif x.artist is self.g_level_label:
+            print("g level label")
+        elif x.artist is self.time_label:
+            print("time label")
+        pass
 
     def handle_change_sensor_group(self, sender: str, empty: str, operation: str) -> None:
         """Handle the text change event for the sensor_group Entry."""
