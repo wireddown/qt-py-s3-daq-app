@@ -61,6 +61,33 @@ class SampleRate(StrEnum):
     Slow = "Slow"
 
 
+class ToolWindow(guikit.AsyncDialog):
+    """A class that shows a window with tools that apply to its origin."""
+
+    def __init__(self, parent: ttk.Toplevel | ttk.Window, title: str, origin: object) -> None:
+        """Initialize a new ToolWindow."""
+        self.origin = origin
+        super().__init__(parent=parent, title=title)
+
+    def create_user_interface(self) -> None:
+        """Create the layout and widget event handlers."""
+        main_frame = ttk.Frame(self.root_window, style=bootstyle.INFO)
+        main_frame.columnconfigure(0, weight=1)
+        main_frame.rowconfigure(0, weight=1)
+        main_frame.grid(column=0, row=0, sticky=tk.NSEW)
+
+        self.origin_label = ttk.Label(main_frame, text=f"clicked by {self.origin}")
+        self.origin_label.grid(column=0, row=0, sticky=tk.NSEW)
+
+    async def on_loop(self) -> None:
+        """Update UI elements."""
+        await asyncio.sleep(20e-3)
+
+    def update_message(self, message: str) -> None:
+        """Update the message string."""
+        self.origin_label.configure(text=message)
+
+
 class AppState:
     """A class that models and controls the app's settings and runtime state."""
 
@@ -249,10 +276,12 @@ class SoilSwell(guikit.AsyncWindow):
             BatteryLevel.Full: "The battery is full",
         }
         self.battery_level_tooltip = None
+        self.tool_window = None
         self.scanner_process = None
 
         # Supports app state
         self.state = AppState(self.root_window)
+        self.background_tasks: set[asyncio.Task] = set()
 
         # arrow-up-from-ground-water droplet
         app_icon = icon_to_image("arrow-up-from-ground-water", fill=app_icon_color, scale_to_height=256)
@@ -592,9 +621,19 @@ class SoilSwell(guikit.AsyncWindow):
     async def on_loop(self) -> None:
         """Update the UI with new information."""
         await asyncio.sleep(1e-6)
+        done_tasks = [task for task in self.background_tasks if task.done()]
+        for done_task in done_tasks:
+            did_error = done_task.exception()
+            if did_error:
+                print(did_error)
+            had_result = done_task.result()
+            if had_result:
+                print(had_result)
 
     def safe_exit(self, event_args: tk.Event) -> None:
         """Safely exit the app."""
+        if len(self.background_tasks):
+            print(f"warning! {len(self.background_tasks)} remain!")
         self.on_closing()
         self.exit()
 
@@ -675,6 +714,10 @@ class SoilSwell(guikit.AsyncWindow):
             return False
         return mouse_args.dblclick
 
+    def finalize_tool_window(self, task: asyncio.Task) -> None:
+        """Finalize the ToolWindow after the user closes it."""
+        self.tool_window = None
+
     def on_graph_mouse_down(self, event_args: mpl_backend_bases.Event) -> None:
         """Handle mouse-down events from the graph."""
         if type(event_args) is not mpl_backend_bases.MouseEvent:
@@ -683,12 +726,20 @@ class SoilSwell(guikit.AsyncWindow):
             return
 
         clicked = event_args.inaxes
+        message = "graph area"
         if clicked is self.position_axes:
-            print("position area")
+            message = "position area"
         elif clicked is self.displacement_axes:
-            print("displacement area")
+            message = "displacement area"
         elif clicked is self.g_level_axes:
-            print("g level area")
+            message = "g level area"
+        if event_args.inaxes:
+            if not self.tool_window:
+                self.tool_window = ToolWindow(parent=self.root_window, title="in work tool window", origin=message)
+                open_tool_window_task = asyncio.create_task(self.tool_window.show(guikit.DialogBehavior.Modeless))
+                self.background_tasks.add(open_tool_window_task)
+                open_tool_window_task.add_done_callback(self.finalize_tool_window)
+            self.tool_window.update_message(message)
 
     def on_graph_pick(self, event_args: mpl_backend_bases.Event) -> None:
         """Handle pick events from the graph."""
@@ -697,15 +748,21 @@ class SoilSwell(guikit.AsyncWindow):
         if not self.is_left_double_click(event_args.mouseevent):
             return
         x = event_args
+        message = "pick area"
         if x.artist is self.position_label:
-            print("position label")
+            message = "position label"
         elif x.artist is self.displacement_label:
-            print("displacement label")
+            message = "displacement label"
         elif x.artist is self.g_level_label:
-            print("g level label")
+            message = "g level label"
         elif x.artist is self.time_label:
-            print("time label")
-        pass
+            message = "time label"
+        if not self.tool_window:
+            self.tool_window = ToolWindow(parent=self.root_window, title="in work tool window", origin=message)
+            open_tool_window_task = asyncio.create_task(self.tool_window.show(guikit.DialogBehavior.Modeless))
+            self.background_tasks.add(open_tool_window_task)
+            open_tool_window_task.add_done_callback(self.finalize_tool_window)
+        self.tool_window.update_message(message)
 
     def handle_change_sensor_group(self, sender: str, empty: str, operation: str) -> None:
         """Handle the text change event for the sensor_group Entry."""
