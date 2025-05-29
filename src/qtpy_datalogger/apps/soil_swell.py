@@ -3,6 +3,7 @@
 import asyncio
 import atexit
 import contextlib
+import datetime
 import functools
 import importlib.resources
 import logging
@@ -320,6 +321,8 @@ class AppState:
         LogDataChanged = "<<LogDataChanged>>"
         SampleRateChanged = "<<SampleRateChanged>>"
         SensorGroupChanged = "<<SensorGroupChanged>>"
+        DemoModeChanged = "<<DemoModeChanged>>"
+        NewDataProcessed = "<<NewDataProcessed>>"
 
     def __init__(self, tk_root: tk.Tk) -> None:
         """Initialize a new AppState instance."""
@@ -330,6 +333,10 @@ class AppState:
         self._acquire_active = AppState.Tristate.BoolUnset
         self._log_data_active = AppState.Tristate.BoolUnset
         self._battery_level = BatteryLevel.Unset
+        self._most_recent_timestamp = datetime.datetime.min.replace(tzinfo=datetime.UTC)
+        self._acquired_data_columns = ["Timestamp", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8", "ch9"]
+        self._acquired_data = pd.DataFrame()
+        self._demo_active = False
 
     @property
     def active_theme(self) -> str:
@@ -435,6 +442,75 @@ class AppState:
         self._battery_level = new_value
         self._tk_notifier.event_generate(AppState.Event.BatteryLevelChanged)
 
+    @property
+    def demo_active(self) -> bool:
+        """Return True if the demo is active."""
+        return self._demo_active
+
+    @demo_active.setter
+    def demo_active(self, new_value: bool) -> None:
+        """Set a new value for demo_active and notify DemoModeChanged event subscribers."""
+        if new_value == self._demo_active:
+            return
+        self._demo_active = new_value
+        self._tk_notifier.event_generate(AppState.Event.DemoModeChanged)
+
+    @property
+    def most_recent_timestamp(self) -> datetime.datetime:
+        """Return the UTC time of the most recently acquired sensor scan."""
+        return self._most_recent_timestamp
+
+    @property
+    def data(self) -> pd.DataFrame:
+        """Return the data that the app has collected since acquisition started."""
+        return self._acquired_data
+
+    @data.setter
+    def data(self, new_value: pd.DataFrame) -> None:
+        """Set a new value for the acquired data and notify NewDataProcessed subscribers."""
+        # maybe use an 'is' test
+        if new_value.shape == self._acquired_data.shape:
+            return
+        self._acquired_data = new_value
+        self._tk_notifier.event_generate(AppState.Event.NewDataProcessed)
+
+    def reset(self) -> None:
+        """Reset the properties to default on-launch values."""
+        self.battery_level = BatteryLevel.Unknown
+        self.sensor_group = datatypes.Default.MqttGroup
+        self.sample_rate = SampleRate.Fast
+        self.acquire_active = False
+        self.log_data_active = False
+        self.demo_active = False
+        self.data = pd.DataFrame()
+        self._most_recent_timestamp = datetime.datetime.min.replace(tzinfo=datetime.UTC)
+
+    def toggle_demo(self) -> None:
+        """Start a demonstration session."""
+        if self.acquire_active and not self.demo_active:
+            # Do not interrupt a genuine session
+            return
+        if self.demo_active:
+            self.demo_active = False
+            self.acquire_active = False
+            return
+        self.sensor_group = "<< DEMO >>"
+        package = importlib.resources.files(qtpy_datalogger)
+        assets = package.joinpath("assets")
+        demo_file = assets.joinpath("soil_swell_demo.csv")
+        with importlib.resources.as_file(demo_file) as demo_data:
+            self._demo_data = pd.read_csv(demo_data)
+        self.demo_active = True
+        self.acquire_active = True
+
+    def process_new_data(self, new_data: list[float]) -> None:
+        """Take the new_data and process it for plotting and logging."""
+        self._most_recent_timestamp = datetime.datetime.now(tz=datetime.UTC)
+        as_lists = [[entry] for entry in [self.most_recent_timestamp, *new_data]]
+        as_dict = dict(zip(self._acquired_data_columns, as_lists))
+        new_entry = pd.DataFrame(as_dict)
+        self.data = pd.concat([self.data, new_entry], ignore_index=True)
+
 
 class SoilSwell(guikit.AsyncWindow):
     """A GUI that acquires, plots, and logs data from a soil swell test."""
@@ -449,6 +525,7 @@ class SoilSwell(guikit.AsyncWindow):
         View = "View"
         Theme = "Theme"
         Help = "Help"
+        Demo = "Demo"
         About = "About"
         Acquire = "Acquire"
         LogData = "Log Data"
@@ -458,6 +535,7 @@ class SoilSwell(guikit.AsyncWindow):
         """Create the main window and connect event handlers."""
         # Supports UI widget state
         self.theme_variable = tk.StringVar()
+        self.demo_variable = tk.BooleanVar()
         self.sensor_node_group_variable = tk.StringVar()
         self.sample_rate_variable = tk.StringVar()
         self.acquire_variable = tk.BooleanVar()
@@ -538,19 +616,7 @@ class SoilSwell(guikit.AsyncWindow):
         self.position_axes: mpl_axes.Axes = all_subplots[0]
         self.displacement_axes: mpl_axes.Axes = all_subplots[1]
         self.g_level_axes: mpl_axes.Axes = all_subplots[2]
-        self.position_label = self.position_axes.set_ylabel("LVDT position (cm)", picker=True)
-        self.position_axes.set_ylim(ymin=-0.1, ymax=2.6)
-        self.position_axes.yaxis.set_major_locator(mpl_ticker.MultipleLocator(0.5))
-        self.position_axes.yaxis.set_major_formatter("{x:0.2f}")
-        self.displacement_label = self.displacement_axes.set_ylabel("Displacement (cm)", picker=True)
-        self.displacement_axes.set_ylim(ymin=-2.6, ymax=2.6)
-        self.displacement_axes.yaxis.set_major_locator(mpl_ticker.MultipleLocator(1.0))
-        self.displacement_axes.yaxis.set_major_formatter("{x:0.2f}")
-        self.g_level_label = self.g_level_axes.set_ylabel("Acceleration (g)", picker=True)
-        self.g_level_axes.set_ylim(ymin=-1, ymax=255)
-        self.g_level_axes.set_xlim(xmin=-1, xmax=200)
-        self.g_level_axes.yaxis.set_major_locator(mpl_ticker.MultipleLocator(50.0))
-        self.time_label = self.g_level_axes.set_xlabel("Time (minutes)", picker=True)
+        self.configure_all_axes()
 
         self.tool_frame = ttk.Frame(main, name="tool_panel")
         self.tool_frame.grid(column=1, row=0, sticky=tk.NSEW)
@@ -592,6 +658,8 @@ class SoilSwell(guikit.AsyncWindow):
         self.root_window.bind(AppState.Event.SampleRateChanged, self.on_sample_rate_changed)
         self.root_window.bind(AppState.Event.SensorGroupChanged, self.on_sensor_group_changed)
         self.root_window.bind(AppState.Event.CanSetSensorGroupChanged, self.on_can_set_sensor_group_changed)
+        self.root_window.bind(AppState.Event.DemoModeChanged, self.on_demo_mode_changed)
+        self.root_window.bind(AppState.Event.NewDataProcessed, self.on_new_data_processed)
 
         self.update_window_title("Centrifuge Test")
         self.state.active_theme = "cosmo"
@@ -689,6 +757,12 @@ class SoilSwell(guikit.AsyncWindow):
             menu=self.help_menu,
             underline=0,
         )
+        self.help_menu.add_checkbutton(
+            command=self.toggle_demo,
+            label=SoilSwell.CommandName.Demo,
+            variable=self.demo_variable,
+        )
+        self.help_menu.add_separator()
         self.help_menu.add_command(
             command=self.show_about,
             label=SoilSwell.CommandName.About,
@@ -844,9 +918,31 @@ class SoilSwell(guikit.AsyncWindow):
         )
         return button
 
+    def configure_all_axes(self) -> None:
+        """Configure the labels and ticks for every axes plot."""
+        self.position_label = self.position_axes.set_ylabel("LVDT position (cm)", picker=True)
+        self.position_axes.set_ylim(ymin=-0.1, ymax=2.6)
+        self.position_axes.yaxis.set_major_locator(mpl_ticker.MultipleLocator(0.5))
+        self.position_axes.yaxis.set_major_formatter("{x:0.2f}")
+
+        self.displacement_label = self.displacement_axes.set_ylabel("Displacement (cm)", picker=True)
+        self.displacement_axes.set_ylim(ymin=-2.6, ymax=2.6)
+        self.displacement_axes.yaxis.set_major_locator(mpl_ticker.MultipleLocator(1.0))
+        self.displacement_axes.yaxis.set_major_formatter("{x:0.2f}")
+
+        self.g_level_label = self.g_level_axes.set_ylabel("Acceleration (g)", picker=True)
+        self.g_level_axes.set_ylim(ymin=-1, ymax=255)
+        self.g_level_axes.set_xlim(xmin=-1, xmax=200)
+        self.g_level_axes.yaxis.set_major_locator(mpl_ticker.MultipleLocator(50.0))
+
+        self.time_label = self.g_level_axes.set_xlabel("Time (minutes)", picker=True)
+
     async def on_loop(self) -> None:
         """Update the UI with new information."""
         await asyncio.sleep(1e-6)
+
+        await self.poll_acquire()
+
         done_tasks = [task for task in self.background_tasks if task.done()]
         for done_task in done_tasks:
             did_error = done_task.exception()
@@ -855,6 +951,7 @@ class SoilSwell(guikit.AsyncWindow):
             had_result = done_task.result()
             if had_result:
                 print(had_result)
+            self.background_tasks.remove(done_task)
 
     def safe_exit(self, event_args: tk.Event) -> None:
         """Safely exit the app."""
@@ -867,6 +964,15 @@ class SoilSwell(guikit.AsyncWindow):
         """Handle the app closing event."""
         if self.scanner_process and self.scanner_process.is_alive():
             self.scanner_process.terminate()
+
+    def toggle_demo(self) -> None:
+        """Start a demonstration session."""
+        self.state.toggle_demo()
+
+    def on_demo_mode_changed(self, event_args: tk.Event) -> None:
+        """Handle the DemoCodeChanged event."""
+        demo_mode_active = self.state.demo_active
+        self.demo_variable.set(demo_mode_active)
 
     def show_about(self) -> None:
         """Handle the Help::About menu command."""
@@ -1109,15 +1215,90 @@ class SoilSwell(guikit.AsyncWindow):
 
     def handle_reset(self, sender: tk.Widget) -> None:
         """Handle the Acquire command."""
-        self.state.battery_level = BatteryLevel.Unknown
-        self.state.sensor_group = datatypes.Default.MqttGroup
-        self.state.sample_rate = SampleRate.Fast
-        self.state.acquire_active = False
-        self.state.log_data_active = False
+        self.state.reset()
 
     def update_window_title(self, new_title: str) -> None:
         """Update the application's window title."""
         self.root_window.title(new_title)
+
+    async def poll_acquire(self) -> None:
+        """Check conditions for acquisition and take a new scan accordingly."""
+        if not self.state.acquire_active:
+            return
+        now = datetime.datetime.now(tz=datetime.UTC)
+        sample_intervals = {
+            SampleRate.Fast: datetime.timedelta(seconds=5),
+            SampleRate.Normal: datetime.timedelta(seconds=30),
+            SampleRate.Slow: datetime.timedelta(seconds=60)
+        }
+        if self.state.most_recent_timestamp + sample_intervals[self.state.sample_rate] < now:
+            await self.do_acquire()
+
+    async def do_acquire(self) -> None:
+        """Acquire data from the nodes in the group and return it."""
+        if self.state.demo_active:
+            demo_data = self.state._demo_data
+            relative_demo_time_series = self.state._demo_data["TimeStamp"]
+            time_zero = self.state.most_recent_timestamp
+            if len(self.state.data) > 0:
+                time_zero = self.state.data["Timestamp"][0]
+            now = self.state.most_recent_timestamp
+            relative_time = (now - time_zero) / datetime.timedelta(hours=1)
+            acquired_time = relative_demo_time_series < relative_time
+            acquired_demo_data = self.state._demo_data[acquired_time]
+            if len(acquired_demo_data) > 0:
+                new_data = acquired_demo_data[-1:].to_numpy()[0].tolist()[1:]  # Get last row, dropping first column
+                missing_channels = len(self.state._acquired_data_columns) - len(demo_data.columns)
+                new_data.extend([0.0 for x in range(missing_channels)])
+            else:
+                new_data = [0.0 for x in range(len(self.state._acquired_data_columns))]
+        else:
+            new_data = [1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]
+        self.state.process_new_data(new_data)
+
+    def on_new_data_processed(self, event_args: tk.Event) -> None:
+        """Handle new processed data."""
+        all_data = self.state.data
+        if len(all_data) == 0:
+            self.position_axes.clear()
+            self.displacement_axes.clear()
+            self.g_level_axes.clear()
+            self.configure_all_axes()
+            requested_theme = ttk_themes.STANDARD_THEMES[self.state.active_theme]
+            ttkbootstrap_matplotlib.apply_figure_style(self.canvas_figure.get_tk_widget(), requested_theme)
+            self.canvas_figure.draw_idle()
+            return
+
+        time_series = all_data["Timestamp"]
+        time_zero = time_series[0]
+        relative_times = time_series - time_zero
+        time_coordinates = relative_times.map(lambda td: td / datetime.timedelta(minutes=1))
+
+        def update_axes_plots(time_coordinates: pd.Series, data_series: pd.DataFrame, axes: mpl_axes.Axes) -> None:
+            plot_has_lines = len(axes.lines) > 0
+            for index, (name, series) in enumerate(data_series.items()):
+                times = time_coordinates.to_list()
+                measurements = series.to_list()
+                if plot_has_lines:
+                    plot = axes.lines[index]
+                    plot.set_xdata(times)
+                    plot.set_ydata(measurements)
+                else:
+                    axes.plot(
+                        times,
+                        measurements,
+                        label=name,
+                    )
+
+        position_series = all_data[["ch1", "ch2", "ch3", "ch4", "ch5", "ch6"]]
+        displacement_series = all_data[["ch1", "ch2", "ch3", "ch4", "ch5", "ch6"]]
+        g_level_series = all_data[["ch7"]]
+        temperature_series = all_data[["ch8"]]
+        battery_series = all_data[["ch9"]]
+
+        for (data_series, axes) in [(position_series, self.position_axes), (displacement_series, self.displacement_axes), (g_level_series, self.g_level_axes)]:
+            update_axes_plots(time_coordinates, data_series, axes)
+        self.canvas_figure.draw_idle()
 
 
 if __name__ == "__main__":
