@@ -73,6 +73,14 @@ class Range(NamedTuple):
     """The upper bound of the range."""
 
 
+class Tristate(StrEnum):
+    """An enumeration that models a tristate boolean."""
+
+    BoolUnset = "Unset"
+    BoolTrue = "True"
+    BoolFalse = "False"
+
+
 class TextInput:
     """A class that takes user input as text."""
 
@@ -303,13 +311,6 @@ class ToolWindow(guikit.AsyncDialog):
 class AppState:
     """A class that models and controls the app's settings and runtime state."""
 
-    class Tristate(StrEnum):
-        """An enumeration that models a tristate boolean."""
-
-        BoolUnset = "Unset"
-        BoolTrue = "True"
-        BoolFalse = "False"
-
     class Event(StrEnum):
         """Events emitted when properties change."""
 
@@ -330,8 +331,8 @@ class AppState:
         self._theme_name = ""
         self._sensor_group = ""
         self._sample_rate = SampleRate.Unset
-        self._acquire_active = AppState.Tristate.BoolUnset
-        self._log_data_active = AppState.Tristate.BoolUnset
+        self._acquire_active = Tristate.BoolUnset
+        self._log_data_active = Tristate.BoolUnset
         self._battery_level = BatteryLevel.Unset
         self._most_recent_timestamp = datetime.datetime.min.replace(tzinfo=datetime.UTC)
         self._acquired_data_columns = ["Timestamp", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8", "ch9"]
@@ -364,13 +365,11 @@ class AppState:
         self._sensor_group = new_value
         self._tk_notifier.event_generate(AppState.Event.SensorGroupChanged)
         self._tk_notifier.event_generate(AppState.Event.CanAcquireDataChanged)
-        if not self.can_acquire:
-            self.acquire_active = False
 
     @property
     def can_change_group(self) -> bool:
         """Return True when the app can change the sensor group name."""
-        return self._acquire_active != AppState.Tristate.BoolTrue
+        return self._acquire_active != Tristate.BoolTrue
 
     @property
     def sample_rate(self) -> SampleRate:
@@ -386,17 +385,16 @@ class AppState:
         self._tk_notifier.event_generate(AppState.Event.SampleRateChanged)
 
     @property
-    def acquire_active(self) -> bool:
+    def acquire_active(self) -> Tristate:
         """Return True when the app is acquiring data."""
-        return self._acquire_active == AppState.Tristate.BoolTrue
+        return self._acquire_active
 
     @acquire_active.setter
-    def acquire_active(self, new_value: bool) -> None:
+    def acquire_active(self, new_value: Tristate) -> None:
         """Set a new value for acquire_active and notify AcquireDataChanged event subscribers."""
-        as_tristate = AppState.Tristate.BoolTrue if new_value else AppState.Tristate.BoolFalse
-        if as_tristate == self.acquire_active:
+        if new_value == self.acquire_active:
             return
-        self._acquire_active = as_tristate
+        self._acquire_active = new_value
         self._tk_notifier.event_generate(AppState.Event.AcquireDataChanged)
         if self.log_data_active:
             self.log_data_active = False
@@ -412,12 +410,12 @@ class AppState:
     @property
     def log_data_active(self) -> bool:
         """Return True when the app is logging data."""
-        return self._log_data_active == AppState.Tristate.BoolTrue
+        return self._log_data_active == Tristate.BoolTrue
 
     @log_data_active.setter
     def log_data_active(self, new_value: bool) -> None:
         """Set a new value for log_data_active and notify LogDataChanged event subscribers."""
-        as_tristate = AppState.Tristate.BoolTrue if new_value else AppState.Tristate.BoolFalse
+        as_tristate = Tristate.BoolTrue if new_value else Tristate.BoolFalse
         if as_tristate == self._log_data_active:
             return
         self._log_data_active = as_tristate
@@ -427,7 +425,7 @@ class AppState:
     def can_log_data(self) -> bool:
         """Return True when the app can log data."""
         acquire_is_active = self.acquire_active
-        return acquire_is_active
+        return acquire_is_active == Tristate.BoolTrue
 
     @property
     def battery_level(self) -> BatteryLevel:
@@ -479,7 +477,7 @@ class AppState:
         self.battery_level = BatteryLevel.Unknown
         self.sensor_group = datatypes.Default.MqttGroup
         self.sample_rate = SampleRate.Fast
-        self.acquire_active = False
+        self.acquire_active = Tristate.BoolFalse
         self.log_data_active = False
         self.demo_active = False
         self.data = pd.DataFrame()
@@ -487,12 +485,12 @@ class AppState:
 
     def toggle_demo(self) -> None:
         """Start a demonstration session."""
-        if self.acquire_active and not self.demo_active:
+        if self.acquire_active == Tristate.BoolTrue and not self.demo_active:
             # Do not interrupt a genuine session
             return
         if self.demo_active:
             self.demo_active = False
-            self.acquire_active = False
+            self.acquire_active = Tristate.BoolFalse
             return
         self.sensor_group = "<< DEMO >>"
         package = importlib.resources.files(qtpy_datalogger)
@@ -501,7 +499,7 @@ class AppState:
         with importlib.resources.as_file(demo_file) as demo_data:
             self._demo_data = pd.read_csv(demo_data)
         self.demo_active = True
-        self.acquire_active = True
+        self.acquire_active = Tristate.BoolTrue
 
     def process_new_data(self, new_data: list[float]) -> None:
         """Take the new_data and process it for plotting and logging."""
@@ -538,7 +536,6 @@ class SoilSwell(guikit.AsyncWindow):
         self.demo_variable = tk.BooleanVar()
         self.sensor_node_group_variable = tk.StringVar()
         self.sample_rate_variable = tk.StringVar()
-        self.acquire_variable = tk.BooleanVar()
         self.log_data_variable = tk.BooleanVar()
         self.svg_images: dict[str, tk.Image] = {}
         self.menu_text_for_theme = {
@@ -1153,7 +1150,7 @@ class SoilSwell(guikit.AsyncWindow):
     def handle_acquire(self, sender: tk.Widget) -> None:
         """Handle the Acquire command."""
         current_acquire = self.state.acquire_active
-        new_acquire = not current_acquire
+        new_acquire = Tristate.BoolTrue if current_acquire == Tristate.BoolFalse else Tristate.BoolFalse
         self.state.acquire_active = new_acquire
 
     def on_can_acquire_changed(self, event_args: tk.Event) -> None:
@@ -1164,9 +1161,8 @@ class SoilSwell(guikit.AsyncWindow):
     def on_acquire_changed(self, event_args: tk.Event) -> None:
         """Handle the AcquireDataChanged event."""
         acquire_active = self.state.acquire_active
-        new_style = bootstyle.SUCCESS if acquire_active else bootstyle.DEFAULT
+        new_style = bootstyle.SUCCESS if acquire_active == Tristate.BoolTrue else bootstyle.DEFAULT
         self.acquire_button.configure(bootstyle=new_style)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
-        self.acquire_variable.set(acquire_active)
 
     def on_can_log_data_changed(self, event_args: tk.Event) -> None:
         """Handle the CanLogDataChanged event."""
@@ -1223,7 +1219,7 @@ class SoilSwell(guikit.AsyncWindow):
 
     async def poll_acquire(self) -> None:
         """Check conditions for acquisition and take a new scan accordingly."""
-        if not self.state.acquire_active:
+        if self.state.acquire_active != Tristate.BoolTrue:
             return
         now = datetime.datetime.now(tz=datetime.UTC)
         sample_intervals = {
