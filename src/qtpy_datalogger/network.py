@@ -61,6 +61,20 @@ class NamedCounter:
 class QTPyController:
     """Class for controlling QT Py nodes."""
 
+    @staticmethod
+    def for_localhost_server(group_id: str) -> "QTPyController":
+        """Create a new QTPyController for the specified group_id that uses localhost for its MQTT server."""
+        broker_host = "localhost"
+        mac_address = hex(uuid.getnode())[2:]
+        ip_address = socket.gethostbyname(socket.gethostname())
+        controller = QTPyController(
+            broker_host=broker_host,
+            group_id=group_id,
+            mac_address=mac_address,
+            ip_address=ip_address,
+        )
+        return controller
+
     def __init__(self, broker_host: str, group_id: str, mac_address: str, ip_address: str) -> None:
         """Return a QTPyController."""
         self.broker_host = broker_host
