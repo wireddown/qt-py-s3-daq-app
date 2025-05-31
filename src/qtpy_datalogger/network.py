@@ -61,6 +61,20 @@ class NamedCounter:
 class QTPyController:
     """Class for controlling QT Py nodes."""
 
+    @staticmethod
+    def for_localhost_server(group_id: str) -> "QTPyController":
+        """Create a new QTPyController for the specified group_id that uses localhost for its MQTT server."""
+        broker_host = "localhost"
+        mac_address = f"{uuid.getnode():x}"
+        ip_address = socket.gethostbyname(socket.gethostname())
+        controller = QTPyController(
+            broker_host=broker_host,
+            group_id=group_id,
+            mac_address=mac_address,
+            ip_address=ip_address,
+        )
+        return controller
+
     def __init__(self, broker_host: str, group_id: str, mac_address: str, ip_address: str) -> None:
         """Return a QTPyController."""
         self.broker_host = broker_host
@@ -360,40 +374,21 @@ def open_session_on_node(group_id: str, node_id: str) -> None:
 
 async def query_nodes_from_mqtt_async(group_id: str) -> dict[str, dict[DetailKey, str]]:
     """Use a new QTPyController to scan the network for sensor_nodes."""
-    broker_host = "localhost"
-    mac_address = f"{uuid.getnode():x}"
-    ip_address = socket.gethostbyname(socket.gethostname())
-    controller = QTPyController(
-        broker_host=broker_host,
-        group_id=group_id,
-        mac_address=mac_address,
-        ip_address=ip_address,
-    )
-
+    controller = QTPyController.for_localhost_server(group_id)
     await controller.connect_and_subscribe()
     node_information = await controller.scan_for_nodes()
     await controller.disconnect()
-
     return node_information
 
 
 async def _open_session_on_node(group_id: str, node_id: str) -> None:
     """Use a new QTPyController to open a terminal session on the specified node_id."""
-    broker_host = "localhost"
-    mac_address = f"{uuid.getnode():x}"
-    ip_address = socket.gethostbyname(socket.gethostname())
-    controller = QTPyController(
-        broker_host=broker_host,
-        group_id=group_id,
-        mac_address=mac_address,
-        ip_address=ip_address,
-    )
-
     exit_commands = ["exit", "quit"]
     exit_options = "' or '".join(exit_commands)
     exit_help = f"Use any of '{exit_options}' to exit."
     print(exit_help)  # noqa: T201 -- use direct IO for user REPL
 
+    controller = QTPyController.for_localhost_server(group_id)
     await controller.connect_and_subscribe()
     while True:
         user_input = await asyncio.to_thread(input, f"{node_id} > ")

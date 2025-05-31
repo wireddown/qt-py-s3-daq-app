@@ -4,9 +4,7 @@ import asyncio
 import importlib.resources
 import logging
 import pathlib
-import socket
 import tkinter as tk
-import uuid
 import webbrowser
 from enum import StrEnum
 from tkinter import font
@@ -444,12 +442,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.message_input.delete(0, "end")
 
         async def send_message_and_get_response() -> tuple[str, str]:
-            controller = network.QTPyController(
-                broker_host="localhost",
-                group_id=qtpy_device.mqtt_group_id,
-                mac_address=f"{uuid.getnode():x}",
-                ip_address=socket.gethostbyname(socket.gethostname()),
-            )
+            controller = network.QTPyController.for_localhost_server(qtpy_device.mqtt_group_id)
             await controller.connect_and_subscribe()
             command_name = "custom"
             custom_parameters = {
