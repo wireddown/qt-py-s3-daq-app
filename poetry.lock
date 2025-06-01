@@ -1618,14 +1618,14 @@ files = [
 
 [[package]]
 name = "ttkbootstrap"
-version = "1.13.1"
+version = "1.13.8"
 description = "A supercharged theme extension for tkinter that enables on-demand modern flat style themes inspired by Bootstrap."
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "ttkbootstrap-1.13.1-py3-none-any.whl", hash = "sha256:5b6f3c8adf645d079a087c3eb5738c91a4297df23992c3aef82144867d38283d"},
-    {file = "ttkbootstrap-1.13.1.tar.gz", hash = "sha256:fc6f34649fd1fdafadb68f4d85ea45d49b910573cf2a6ef54abf0f614db1f2c0"},
+    {file = "ttkbootstrap-1.13.8-py3-none-any.whl", hash = "sha256:e6ca6b4ddac7ad6042439187192caf2a722ffb1e4a54cbc50fa1e14ef3ecd81f"},
+    {file = "ttkbootstrap-1.13.8.tar.gz", hash = "sha256:5352f12d529459cbd891aa07c31dc85288a1086fc379b9f663b628bd8eff6b3d"},
 ]
 
 [package.dependencies]
@@ -1733,4 +1733,4 @@ tests = ["pytest"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "f6990ccd0b918241e9568ec418779677cc63e48234364f880f39e31ab424be3a"
+content-hash = "70e156778764db09fadbbf5545f89cee33b15f15054c19f6d67849ce93cdb905"
