@@ -13,7 +13,7 @@ qtpy-datalogger = "qtpy_datalogger.__main__:main"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-click = "^8.1.8"
+click = "^8.2.1"
 pyserial = "^3.5"
 wmi = "^1.5.1"
 circup = "^2.2.2"
