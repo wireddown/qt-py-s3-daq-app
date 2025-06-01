@@ -103,14 +103,14 @@ adafruit-circuitpython-ticks = "*"
 
 [[package]]
 name = "adafruit-circuitpython-neopixel"
-version = "6.3.15"
+version = "6.3.16"
 description = "CircuitPython library for NeoPixel LEDs."
 optional = false
 python-versions = "*"
 groups = ["circup"]
 files = [
-    {file = "adafruit_circuitpython_neopixel-6.3.15-py3-none-any.whl", hash = "sha256:c34c40bf602aead9987d22be50e056dec350e04b158750e3130801510d113b81"},
-    {file = "adafruit_circuitpython_neopixel-6.3.15.tar.gz", hash = "sha256:290495e8059cc641be9ad00c2808fb40e5494d50d0016def64b8cc6642b07283"},
+    {file = "adafruit_circuitpython_neopixel-6.3.16-py3-none-any.whl", hash = "sha256:04fc474f121e13099190450ce8b2ec2b5bdbb8b3c36445dae5d981ca25604565"},
+    {file = "adafruit_circuitpython_neopixel-6.3.16.tar.gz", hash = "sha256:c37cdcb976e693e742b34b49482bf035cd5e07552ce22e7b3e4073f416ad11c4"},
 ]
 
 [package.dependencies]
@@ -1733,4 +1733,4 @@ tests = ["pytest"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "4f51ab52047b520aa5b534795f85dcabbcfc50f8e33c8368de6d03cf2e91224c"
+content-hash = "6756351d4b8818ccd4bb4e38a7298d489cf8d5938ae1a313a5ef66f94a6db895"
