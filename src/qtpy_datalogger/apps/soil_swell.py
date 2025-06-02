@@ -586,6 +586,7 @@ class SoilSwell(guikit.AsyncWindow):
 
         # The MQTT connection
         self.qtpy_controller: network.QTPyController | None = None
+        self.nodes_in_group : dict[str, dict[datatypes.DetailKey, str]] = {}
 
         # arrow-up-from-ground-water droplet
         app_icon = icon_to_image("arrow-up-from-ground-water", fill=app_icon_color, scale_to_height=256)
@@ -1205,6 +1206,12 @@ class SoilSwell(guikit.AsyncWindow):
                     if not nodes_in_group:
                         await self.on_no_nodes_in_group()
                         return
+                    self.nodes_in_group.clear()
+                    self.nodes_in_group.update(nodes_in_group)
+                    nodes_support_app = await self.select_app()
+                    if not nodes_support_app:
+                        await self.on_app_unsupported()
+                        return
                     self.state.acquire_active = Tristate.BoolTrue
 
                 try_start_task = asyncio.create_task(try_start_acquire(), name="try start new acquisition")
@@ -1226,6 +1233,7 @@ class SoilSwell(guikit.AsyncWindow):
                             raise RuntimeError()
                         await self.qtpy_controller.disconnect()
                         self.qtpy_controller = None
+                        self.nodes_in_group.clear()
 
                     disconnect_task = asyncio.create_task(disconnect_mqtt(), name="disconnect MQTT")
                     self.background_tasks.add(disconnect_task)
@@ -1294,11 +1302,45 @@ class SoilSwell(guikit.AsyncWindow):
         """Update the application's window title."""
         self.root_window.title(new_title)
 
+    async def select_app(self) -> bool:
+        """Select the soil swell app as the node's active app and return True. Return False when the node does not support the app."""
+        if not self.qtpy_controller:
+            raise RuntimeError()
+        node = next(iter(self.nodes_in_group.values()))
+        query_apps_command = await self.qtpy_controller.send_action(
+            node_id=node[datatypes.DetailKey.node_id],
+            command_name="custom",
+            parameters={
+                "input": "qtpycmd query_apps",
+            }
+        )
+        query_apps_result, _ = await self.qtpy_controller.get_matching_result(
+            node_id=node[datatypes.DetailKey.node_id],
+            action=query_apps_command,
+        )
+        supported_apps = query_apps_result["output"]
+        if self.__class__.__name__ not in supported_apps:
+            return False
+        activate_app_command = await self.qtpy_controller.send_action(
+            node_id=node[datatypes.DetailKey.node_id],
+            command_name="custom",
+            parameters={
+                "input": f"qtpycmd select {self.__class__.__name__}",
+            },
+        )
+        activate_app_result, _ = await self.qtpy_controller.get_matching_result(
+            node_id=node[datatypes.DetailKey.node_id],
+            action=activate_app_command,
+        )
+        return activate_app_result["output"] == f"{self.__class__.__name__} active"
+
+
     async def on_server_offline(self) -> None:
         """Handle the outcome when the MQTT server is offline."""
         if not self.qtpy_controller:
             raise RuntimeError()
         self.qtpy_controller = None
+        self.nodes_in_group.clear()
         self.state.acquire_active = Tristate.BoolFalse
         self.acquire_button.configure(bootstyle=bootstyle.DANGER)
         self.no_nodes_tooltip.leave()
@@ -1314,12 +1356,29 @@ class SoilSwell(guikit.AsyncWindow):
             raise RuntimeError()
         await self.qtpy_controller.disconnect()
         self.qtpy_controller = None
+        self.nodes_in_group.clear()
         self.state.acquire_active = Tristate.BoolFalse
         self.acquire_button.configure(bootstyle=bootstyle.DANGER)
         self.no_nodes_tooltip.leave()
         self.no_nodes_tooltip = ttk_tooltip.ToolTip(
             self.acquire_button,
             text="No nodes in group. Check group name and node configuration.",
+            bootstyle=bootstyle.DANGER,
+        )
+
+    async def on_app_unsupported(self) -> None:
+        """Handle the outcome when no nodes support this app."""
+        if not self.qtpy_controller:
+            raise RuntimeError()
+        await self.qtpy_controller.disconnect()
+        self.qtpy_controller = None
+        self.nodes_in_group.clear()
+        self.state.acquire_active = Tristate.BoolFalse
+        self.acquire_button.configure(bootstyle=bootstyle.DANGER)
+        self.no_nodes_tooltip.leave()
+        self.no_nodes_tooltip = ttk_tooltip.ToolTip(
+            self.acquire_button,
+            text="No nodes in the the group support this app. Update them with 'qtpy-datalogger equip'",
             bootstyle=bootstyle.DANGER,
         )
 
