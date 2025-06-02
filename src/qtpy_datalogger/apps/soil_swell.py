@@ -29,7 +29,7 @@ from tkfontawesome import icon_to_image, svg_to_image
 from ttkbootstrap import constants as bootstyle
 
 import qtpy_datalogger.apps.scanner
-from qtpy_datalogger import datatypes, guikit, ttkbootstrap_matplotlib
+from qtpy_datalogger import datatypes, guikit, network, ttkbootstrap_matplotlib
 
 logger = logging.getLogger(pathlib.Path(__file__).stem)
 
@@ -397,6 +397,7 @@ class AppState:
         self._acquire_active = new_value
         self._tk_notifier.event_generate(AppState.Event.AcquireDataChanged)
         if self.log_data_active:
+            # Disable logging on stop (start is noop)
             self.log_data_active = False
         self._tk_notifier.event_generate(AppState.Event.CanLogDataChanged)
         self._tk_notifier.event_generate(AppState.Event.CanSetSensorGroupChanged)
@@ -474,14 +475,24 @@ class AppState:
 
     def reset(self) -> None:
         """Reset the properties to default on-launch values."""
-        self.battery_level = BatteryLevel.Unknown
-        self.sensor_group = datatypes.Default.MqttGroup
-        self.sample_rate = SampleRate.Fast
-        self.acquire_active = Tristate.BoolFalse
-        self.log_data_active = False
-        self.demo_active = False
-        self.data = pd.DataFrame()
+        self._battery_level = BatteryLevel.Unknown
+        self._sensor_group = datatypes.Default.MqttGroup
+        self._sample_rate = SampleRate.Fast
+        self._acquire_active = Tristate.BoolFalse
+        self._log_data_active = False
+        self._demo_active = False
+        self._acquired_data = pd.DataFrame()
         self._most_recent_timestamp = datetime.datetime.min.replace(tzinfo=datetime.UTC)
+        self._tk_notifier.event_generate(AppState.Event.BatteryLevelChanged)
+        self._tk_notifier.event_generate(AppState.Event.SensorGroupChanged)
+        self._tk_notifier.event_generate(AppState.Event.CanSetSensorGroupChanged)
+        self._tk_notifier.event_generate(AppState.Event.SampleRateChanged)
+        self._tk_notifier.event_generate(AppState.Event.AcquireDataChanged)
+        self._tk_notifier.event_generate(AppState.Event.CanAcquireDataChanged)
+        self._tk_notifier.event_generate(AppState.Event.DemoModeChanged)
+        self._tk_notifier.event_generate(AppState.Event.LogDataChanged)
+        self._tk_notifier.event_generate(AppState.Event.CanLogDataChanged)
+        self._tk_notifier.event_generate(AppState.Event.NewDataProcessed)
 
     def toggle_demo(self) -> None:
         """Start a demonstration session."""
@@ -572,6 +583,9 @@ class SoilSwell(guikit.AsyncWindow):
         # Supports app state
         self.state = AppState(self.root_window)
         self.background_tasks: set[asyncio.Task] = set()
+
+        # The MQTT connection
+        self.qtpy_controller: network.QTPyController | None = None
 
         # arrow-up-from-ground-water droplet
         app_icon = icon_to_image("arrow-up-from-ground-water", fill=app_icon_color, scale_to_height=256)
@@ -863,6 +877,11 @@ class SoilSwell(guikit.AsyncWindow):
         )
         self.acquire_button.configure(command=functools.partial(self.handle_acquire, self.acquire_button))
         self.acquire_button.grid(column=0, row=0, padx=8, pady=8, sticky=tk.NSEW)
+        self.no_nodes_tooltip = ttk_tooltip.ToolTip(
+            self.acquire_button,
+            text="Connect to the sensor group and start taking measurements.",
+            bootstyle=bootstyle.DEFAULT
+        )
 
         self.log_data_button = self.create_icon_button(
             panel,
@@ -961,6 +980,7 @@ class SoilSwell(guikit.AsyncWindow):
         """Handle the app closing event."""
         if self.scanner_process and self.scanner_process.is_alive():
             self.scanner_process.terminate()
+        self.state.acquire_active = Tristate.BoolFalse
 
     def toggle_demo(self) -> None:
         """Start a demonstration session."""
@@ -1150,7 +1170,15 @@ class SoilSwell(guikit.AsyncWindow):
     def handle_acquire(self, sender: tk.Widget) -> None:
         """Handle the Acquire command."""
         current_acquire = self.state.acquire_active
-        new_acquire = Tristate.BoolTrue if current_acquire == Tristate.BoolFalse else Tristate.BoolFalse
+
+        match current_acquire:
+            case Tristate.BoolUnset:
+                # Still attempting to connect, take no action on mouse button click
+                return
+            case Tristate.BoolFalse:
+                new_acquire = Tristate.BoolUnset  # We'll learn more if we connect and find nodes
+            case Tristate.BoolTrue:
+                new_acquire = Tristate.BoolFalse
         self.state.acquire_active = new_acquire
 
     def on_can_acquire_changed(self, event_args: tk.Event) -> None:
@@ -1160,8 +1188,57 @@ class SoilSwell(guikit.AsyncWindow):
 
     def on_acquire_changed(self, event_args: tk.Event) -> None:
         """Handle the AcquireDataChanged event."""
-        acquire_active = self.state.acquire_active
-        new_style = bootstyle.SUCCESS if acquire_active == Tristate.BoolTrue else bootstyle.DEFAULT
+        match self.state.acquire_active:
+
+            case Tristate.BoolUnset:
+                new_style = bootstyle.SECONDARY
+
+                async def try_start_acquire() -> None:
+                    """Try to connect to the sensor group."""
+                    self.qtpy_controller = network.QTPyController.for_localhost_server(self.state.sensor_group)
+                    try:
+                        await self.qtpy_controller.connect_and_subscribe()
+                    except ConnectionRefusedError as e:
+                        await self.on_server_offline()
+                        return
+                    nodes_in_group = await self.qtpy_controller.scan_for_nodes()
+                    if not nodes_in_group:
+                        await self.on_no_nodes_in_group()
+                        return
+                    self.state.acquire_active = Tristate.BoolTrue
+
+                try_start_task = asyncio.create_task(try_start_acquire(), name="try start new acquisition")
+                self.background_tasks.add(try_start_task)
+                try_start_task.add_done_callback(self.background_tasks.discard)
+
+            case Tristate.BoolFalse:
+                new_style = bootstyle.DEFAULT
+                self.no_nodes_tooltip.leave()
+                self.no_nodes_tooltip = ttk_tooltip.ToolTip(
+                    self.acquire_button,
+                    text="Connect to the sensor group and start taking measurements.",
+                    bootstyle=bootstyle.DEFAULT
+                )
+                if self.qtpy_controller:
+                    async def disconnect_mqtt() -> None:
+                        """Disconnect from the MQTT server."""
+                        if not self.qtpy_controller:
+                            raise RuntimeError()
+                        await self.qtpy_controller.disconnect()
+                        self.qtpy_controller = None
+
+                    disconnect_task = asyncio.create_task(disconnect_mqtt(), name="disconnect MQTT")
+                    self.background_tasks.add(disconnect_task)
+                    disconnect_task.add_done_callback(self.background_tasks.discard)
+
+            case Tristate.BoolTrue:
+                new_style = bootstyle.SUCCESS
+                self.no_nodes_tooltip.leave()
+                self.no_nodes_tooltip = ttk_tooltip.ToolTip(
+                    self.acquire_button,
+                    text="Disconnect from the sensor group and stop taking measurements.",
+                    bootstyle=bootstyle.DEFAULT
+                )
         self.acquire_button.configure(bootstyle=new_style)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
     def on_can_log_data_changed(self, event_args: tk.Event) -> None:
@@ -1216,6 +1293,35 @@ class SoilSwell(guikit.AsyncWindow):
     def update_window_title(self, new_title: str) -> None:
         """Update the application's window title."""
         self.root_window.title(new_title)
+
+    async def on_server_offline(self) -> None:
+        """Handle the outcome when the MQTT server is offline."""
+        if not self.qtpy_controller:
+            raise RuntimeError()
+        self.qtpy_controller = None
+        self.state.acquire_active = Tristate.BoolFalse
+        self.acquire_button.configure(bootstyle=bootstyle.DANGER)
+        self.no_nodes_tooltip.leave()
+        self.no_nodes_tooltip = ttk_tooltip.ToolTip(
+            self.acquire_button,
+            text="MQTT server did not respond. Check if it's running with 'qtpy-datalogger server'",
+            bootstyle=bootstyle.DANGER,
+        )
+
+    async def on_no_nodes_in_group(self) -> None:
+        """Handle the outcome when no nodes are connected to the sensor group."""
+        if not self.qtpy_controller:
+            raise RuntimeError()
+        await self.qtpy_controller.disconnect()
+        self.qtpy_controller = None
+        self.state.acquire_active = Tristate.BoolFalse
+        self.acquire_button.configure(bootstyle=bootstyle.DANGER)
+        self.no_nodes_tooltip.leave()
+        self.no_nodes_tooltip = ttk_tooltip.ToolTip(
+            self.acquire_button,
+            text="No nodes in group. Check group name and node configuration.",
+            bootstyle=bootstyle.DANGER,
+        )
 
     async def poll_acquire(self) -> None:
         """Check conditions for acquisition and take a new scan accordingly."""
