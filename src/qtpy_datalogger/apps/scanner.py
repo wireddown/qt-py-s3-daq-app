@@ -4,9 +4,7 @@ import asyncio
 import importlib.resources
 import logging
 import pathlib
-import socket
 import tkinter as tk
-import uuid
 import webbrowser
 from enum import StrEnum
 from tkinter import font
