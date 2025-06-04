@@ -29,7 +29,7 @@ from tkfontawesome import icon_to_image, svg_to_image
 from ttkbootstrap import constants as bootstyle
 
 import qtpy_datalogger.apps.scanner
-from qtpy_datalogger import datatypes, guikit, network, ttkbootstrap_matplotlib
+from qtpy_datalogger import datatypes, discovery, guikit, network, ttkbootstrap_matplotlib
 
 logger = logging.getLogger(pathlib.Path(__file__).stem)
 
@@ -586,7 +586,7 @@ class SoilSwell(guikit.AsyncWindow):
 
         # The MQTT connection
         self.qtpy_controller: network.QTPyController | None = None
-        self.nodes_in_group : dict[str, dict[datatypes.DetailKey, str]] = {}
+        self.nodes_in_group : list[discovery.QTPyDevice] = []
 
         # arrow-up-from-ground-water droplet
         app_icon = icon_to_image("arrow-up-from-ground-water", fill=app_icon_color, scale_to_height=256)
@@ -1207,7 +1207,22 @@ class SoilSwell(guikit.AsyncWindow):
                         await self.on_no_nodes_in_group()
                         return
                     self.nodes_in_group.clear()
-                    self.nodes_in_group.update(nodes_in_group)
+                    self.nodes_in_group = [
+                        discovery.QTPyDevice(
+                            com_id="",
+                            com_port="",
+                            device_description=sensor_node[datatypes.DetailKey.device_description],
+                            drive_label="",
+                            drive_root="",
+                            ip_address=sensor_node[datatypes.DetailKey.ip_address],
+                            mqtt_group_id=sensor_node[datatypes.DetailKey.mqtt_group_id],
+                            node_id=sensor_node[datatypes.DetailKey.node_id],
+                            python_implementation=sensor_node[datatypes.DetailKey.python_implementation],
+                            serial_number=sensor_node[datatypes.DetailKey.serial_number],
+                            snsr_version=sensor_node[datatypes.DetailKey.snsr_version],
+                        )
+                        for sensor_node in nodes_in_group.values()
+                    ]
                     nodes_support_app = await self.select_app()
                     if not nodes_support_app:
                         await self.on_app_unsupported()
@@ -1306,30 +1321,31 @@ class SoilSwell(guikit.AsyncWindow):
         """Select the soil swell app as the node's active app and return True. Return False when the node does not support the app."""
         if not self.qtpy_controller:
             raise RuntimeError()
-        node = next(iter(self.nodes_in_group.values()))
+        node = self.nodes_in_group[0]
+        node_id = node.node_id
         query_apps_command = await self.qtpy_controller.send_action(
-            node_id=node[datatypes.DetailKey.node_id],
+            node_id=node_id,
             command_name="custom",
             parameters={
                 "input": "qtpycmd query_apps",
             }
         )
         query_apps_result, _ = await self.qtpy_controller.get_matching_result(
-            node_id=node[datatypes.DetailKey.node_id],
+            node_id=node_id,
             action=query_apps_command,
         )
         supported_apps = query_apps_result["output"]
         if self.__class__.__name__ not in supported_apps:
             return False
         activate_app_command = await self.qtpy_controller.send_action(
-            node_id=node[datatypes.DetailKey.node_id],
+            node_id=node_id,
             command_name="custom",
             parameters={
                 "input": f"qtpycmd select {self.__class__.__name__}",
             },
         )
         activate_app_result, _ = await self.qtpy_controller.get_matching_result(
-            node_id=node[datatypes.DetailKey.node_id],
+            node_id=node_id,
             action=activate_app_command,
         )
         return activate_app_result["output"] == f"{self.__class__.__name__} active"
