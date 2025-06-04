@@ -119,6 +119,8 @@ def handle_server(behavior: Behavior, publish: tuple[str, str]) -> None:
             "$SYS/#",
             "--topic",
             f"{node_mqtt.get_domain()}/#",
+            "--topic",
+            "$SYS/broker/log/#",
             "-F",
             "%j",
         ]
