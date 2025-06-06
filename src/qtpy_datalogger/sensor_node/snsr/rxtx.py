@@ -4,14 +4,13 @@ import adafruit_minimqtt.adafruit_minimqtt as minimqtt
 import wifi
 
 from snsr.handlers import handle_broadcast_message, handle_command_message
+from snsr.settings import settings
 
 
 def connect_to_wifi() -> wifi.Radio:
     """Connect to the SSID from settings.toml and return the radio instance."""
-    from os import getenv
-
     wifi.radio.enabled = True
-    wifi.radio.connect(getenv("CIRCUITPY_WIFI_SSID"), getenv("CIRCUITPY_WIFI_PASSWORD"))
+    wifi.radio.connect(settings.wifi_ssid, settings.wifi_password)
     return wifi.radio
 
 
@@ -73,14 +72,12 @@ def on_message(client: minimqtt.MQTT, topic: str, message: str) -> None:
 
 def create_mqtt_client(radio: wifi.Radio, node_group: str, node_identifier: str) -> minimqtt.MQTT:
     """Create an MQTT client and set its callback functions."""
-    from os import getenv
-
     from adafruit_connection_manager import get_radio_socketpool
 
     # Set up a MiniMQTT Client
     pool = get_radio_socketpool(radio)
     mqtt_client = minimqtt.MQTT(
-        broker=getenv("QTPY_BROKER_IP_ADDRESS", ""),
+        broker=settings.mqtt_broker,
         socket_pool=pool,
         user_data={
             "node_group": node_group,

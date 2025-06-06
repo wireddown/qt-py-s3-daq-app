@@ -48,17 +48,15 @@ def handle_command_message(client: minimqtt.MQTT, message: str) -> None:
 def get_descriptor_payload(role: str, serial_number: str, ip_address: str) -> str:
     """Return a serialized string representation of the DescriptorPayload."""
     from json import dumps
-    from os import getenv
 
     from snsr.node.classes import DescriptorPayload
     from snsr.node.mqtt import format_mqtt_client_id, get_descriptor_topic
+    from snsr.settings import settings
 
     pid = 0
-    group_id = getenv("QTPY_NODE_GROUP", "zone1")  # See https://github.com/wireddown/qt-py-s3-daq-app/issues/60
-
     descriptor = build_descriptor_information(role, serial_number, ip_address)
     client_id = format_mqtt_client_id(role, serial_number, pid)
-    descriptor_topic = get_descriptor_topic(group_id, client_id)
+    descriptor_topic = get_descriptor_topic(settings.node_group, client_id)
     sender = build_sender_information(descriptor_topic)
     response = DescriptorPayload(descriptor=descriptor, sender=sender)
     return dumps(response.as_dict())
