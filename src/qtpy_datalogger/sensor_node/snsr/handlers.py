@@ -3,12 +3,28 @@
 import adafruit_minimqtt.adafruit_minimqtt as minimqtt
 
 from snsr.core import get_new_descriptor, get_notice_info
-from snsr.node.classes import DescriptorInformation, NoticeInformation, SenderInformation
+from snsr.node.classes import (
+    ActionInformation,
+    ActionPayload,
+    DescriptorInformation,
+    NoticeInformation,
+    SenderInformation,
+)
 from snsr.node.mqtt import get_descriptor_topic, get_result_topic
 
 
 def handle_broadcast_message(client: minimqtt.MQTT, message: str) -> None:
     """Respond to a message sent to the broadcast topic for the node's group."""
+    from json import loads
+
+    action_payload_information = loads(message)
+    action_payload = ActionPayload.from_dict(action_payload_information)
+    action = action_payload.action
+    if action.command == "identify":
+        handle_identify(client, action)
+
+def handle_identify(client: minimqtt.MQTT, action: ActionInformation) -> None:
+    """Respond to the the identify command."""
     from microcontroller import cpu
     from wifi import radio
 
