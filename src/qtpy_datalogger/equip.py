@@ -314,7 +314,7 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
             full_path = this_bundle.device_files[0].joinpath(path)
             if not full_path.is_file():
                 continue
-            if freshness == "newer":
+            if freshness == "newer" and all(pattern not in str(path) for pattern in ignore_patterns):
                 logger.info(f"  Newer: {path}")
                 newer_files.add(path.name)
                 continue
@@ -422,6 +422,8 @@ def _compare_file_trees(tree1: list[pathlib.Path], tree2: list[pathlib.Path]) ->
         if modification_time1 < modification_time2:
             age = "older"
         tree1_file_ages[path] = age
+    for path in set1 - set2:
+        tree1_file_ages[path] = "newer"
     return tree1_file_ages
 
 
