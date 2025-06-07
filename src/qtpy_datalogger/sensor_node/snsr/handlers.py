@@ -11,6 +11,7 @@ from snsr.node.classes import (
     SenderInformation,
 )
 from snsr.node.mqtt import get_descriptor_topic, get_result_topic
+from snsr.settings import settings
 
 
 def handle_broadcast_message(client: minimqtt.MQTT, message: str) -> None:
@@ -22,6 +23,7 @@ def handle_broadcast_message(client: minimqtt.MQTT, message: str) -> None:
     action = action_payload.action
     if action.command == "identify":
         handle_identify(client, action)
+
 
 def handle_identify(client: minimqtt.MQTT, action: ActionInformation) -> None:
     """Respond to the the identify command."""
@@ -38,25 +40,19 @@ def handle_command_message(client: minimqtt.MQTT, message: str) -> None:
     """Respond to a message sent to the command topic for the node."""
     from json import dumps, loads
 
-    from .node.classes import ActionInformation, ActionPayload
+    from snsr import apps
 
     context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
     action_payload_information = loads(message)
     action_payload = ActionPayload.from_dict(action_payload_information)
-    action = action_payload.action
+    action_information = action_payload.action
+
+    handle_message = apps.get_handler(settings.selected_app)
+    result_information = handle_message(action_information)
+
     descriptor_topic = get_descriptor_topic(context["node_group"], context["node_identifier"])
     sender = build_sender_information(descriptor_topic)
-    result_payload = ActionPayload(
-        action=ActionInformation(
-            command=action.command,
-            parameters={
-                "output": f"received: {action.parameters['input']}",
-                "complete": True,
-            },
-            message_id=action.message_id,
-        ),
-        sender=sender,
-    )
+    result_payload = ActionPayload(action=result_information, sender=sender)
     result_topic = get_result_topic(context["node_group"], context["node_identifier"])
     client.publish(result_topic, dumps(result_payload.as_dict()))
 
@@ -67,7 +63,6 @@ def get_descriptor_payload(role: str, serial_number: str, ip_address: str) -> st
 
     from snsr.node.classes import DescriptorPayload
     from snsr.node.mqtt import format_mqtt_client_id, get_descriptor_topic
-    from snsr.settings import settings
 
     pid = 0
     descriptor = build_descriptor_information(role, serial_number, ip_address)

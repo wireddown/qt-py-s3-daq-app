@@ -1341,7 +1341,7 @@ class SoilSwell(guikit.AsyncWindow):
             node_id=node_id,
             command_name="custom",
             parameters={
-                "input": f"qtpycmd select {self.__class__.__name__}",
+                "input": f"qtpycmd select_app {self.__class__.__name__}",
             },
         )
         activate_app_result, _ = await self.qtpy_controller.get_matching_result(
