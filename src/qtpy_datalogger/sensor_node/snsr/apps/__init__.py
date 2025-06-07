@@ -16,4 +16,8 @@ def get_handler(selected_app: str) -> object:
         from .echo import handle_message
 
         return handle_message
+    if selected_app == "soil_swell":
+        from .soil_swell import handle_message
+
+        return handle_message
     raise NotImplementedError(selected_app)
