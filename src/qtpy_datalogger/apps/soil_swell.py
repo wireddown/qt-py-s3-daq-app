@@ -1431,7 +1431,30 @@ class SoilSwell(guikit.AsyncWindow):
             else:
                 new_data = [0.0 for x in range(len(self.state._acquired_data_columns))]
         else:
-            new_data = [1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9]
+            if not self.qtpy_controller:
+                raise RuntimeError()
+            node = self.nodes_in_group[0]
+            node_id = node.node_id
+            get_adc_input = await self.qtpy_controller.send_action(
+                node_id=node_id,
+                command_name="scan",
+                parameters={
+                    "input": {
+                        "channels": [],
+                        "samples_to_average": 20,
+                    },
+                }
+            )
+            get_adc_result, _ = await self.qtpy_controller.get_matching_result(
+                node_id=node_id,
+                action=get_adc_input,
+            )
+            adc_codes = get_adc_result["output"]
+            volts_per_LSB = 3.3 / 2**16
+            new_data = [code * volts_per_LSB for code in adc_codes]
+            # patch until adxl
+            missing_channels = len(self.state._acquired_data_columns) - len(adc_codes) - 1
+            new_data.extend([0.0 for x in range(missing_channels)])
         self.state.process_new_data(new_data)
 
     def on_new_data_processed(self, event_args: tk.Event) -> None:
