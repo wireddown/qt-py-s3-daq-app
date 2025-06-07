@@ -47,14 +47,61 @@ def handle_command_message(client: minimqtt.MQTT, message: str) -> None:
     action_payload = ActionPayload.from_dict(action_payload_information)
     action_information = action_payload.action
 
-    handle_message = apps.get_handler(settings.selected_app)
-    result_information = handle_message(action_information)
+    result_information = try_handle_qtpycmd_message(action_information)
+    if not result_information:
+        handle_message = apps.get_handler(settings.selected_app)
+        result_information = handle_message(action_information)
 
     descriptor_topic = get_descriptor_topic(context["node_group"], context["node_identifier"])
     sender = build_sender_information(descriptor_topic)
     result_payload = ActionPayload(action=result_information, sender=sender)
     result_topic = get_result_topic(context["node_group"], context["node_identifier"])
     client.publish(result_topic, dumps(result_payload.as_dict()))
+
+
+def try_handle_qtpycmd_message(action_information: ActionInformation) -> ActionInformation | None:
+    """Handle the action if it is a 'qtpycmd' system action. Return None otherwise."""
+    if action_information.command == "custom" and action_information.parameters["input"].startswith("qtpycmd "):
+        system_command = action_information.parameters["input"]
+        parts = system_command.split(" ")
+        verb = parts[1]
+        if verb == "query_apps":
+            return handle_query_apps(action_information)
+        if verb == "select_app":
+            new_app = parts[2]
+            return handle_select_app(action_information, new_app)
+    return None
+
+
+def handle_query_apps(received_action: ActionInformation) -> ActionInformation:
+    """Handle the 'qtpycmd query_apps' action."""
+    # Get app index....
+    response_action = ActionInformation(
+        command=received_action.parameters["input"],
+        parameters={
+            "output": [
+                "echo",
+                "SoilSwell",
+            ],
+            "complete": True,
+        },
+        message_id=received_action.message_id
+    )
+    return response_action
+
+
+def handle_select_app(received_action: ActionInformation, selected_app: str) -> ActionInformation:
+    """Handle the 'qtpycmd select_app {app_name}' action."""
+    # if selected_app in app_index....
+    response_action = ActionInformation(
+        command=received_action.parameters["input"],
+        parameters={
+            "output": f"{selected_app} active",
+            "complete": True,
+        },
+        message_id=received_action.message_id
+    )
+    return response_action
 
 
 def get_descriptor_payload(role: str, serial_number: str, ip_address: str) -> str:
