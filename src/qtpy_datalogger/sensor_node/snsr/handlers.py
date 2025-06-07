@@ -64,23 +64,25 @@ def try_handle_qtpycmd_message(action_information: ActionInformation) -> ActionI
         system_command = action_information.parameters["input"]
         parts = system_command.split(" ")
         verb = parts[1]
-        if verb == "query_apps":
-            return handle_query_apps(action_information)
+        if verb == "get_apps":
+            return handle_get_apps(action_information)
         if verb == "select_app":
             new_app = parts[2]
             return handle_select_app(action_information, new_app)
+        if verb == "get_selected_app":
+            return handle_get_selected_app(action_information)
     return None
 
 
-def handle_query_apps(received_action: ActionInformation) -> ActionInformation:
-    """Handle the 'qtpycmd query_apps' action."""
+def handle_get_apps(received_action: ActionInformation) -> ActionInformation:
+    """Handle the 'qtpycmd get_apps' action."""
     response_action = ActionInformation(
         command=received_action.parameters["input"],
         parameters={
             "output": apps.get_catalog(),
             "complete": True,
         },
-        message_id=received_action.message_id
+        message_id=received_action.message_id,
     )
     return response_action
 
@@ -97,7 +99,20 @@ def handle_select_app(received_action: ActionInformation, selected_app: str) -> 
             "output": f"{selected_app} active",
             "complete": True,
         },
-        message_id=received_action.message_id
+        message_id=received_action.message_id,
+    )
+    return response_action
+
+
+def handle_get_selected_app(received_action: ActionInformation) -> ActionInformation:
+    """Handle the 'qtpycmd get_selected_app' action."""
+    response_action = ActionInformation(
+        command=received_action.parameters["input"],
+        parameters={
+            "output": settings.selected_app,
+            "complete": True,
+        },
+        message_id=received_action.message_id,
     )
     return response_action
 

@@ -1323,18 +1323,18 @@ class SoilSwell(guikit.AsyncWindow):
             raise RuntimeError()
         node = self.nodes_in_group[0]
         node_id = node.node_id
-        query_apps_command = await self.qtpy_controller.send_action(
+        get_apps_command = await self.qtpy_controller.send_action(
             node_id=node_id,
             command_name="custom",
             parameters={
-                "input": "qtpycmd query_apps",
+                "input": "qtpycmd get_apps",
             }
         )
-        query_apps_result, _ = await self.qtpy_controller.get_matching_result(
+        get_apps_result, _ = await self.qtpy_controller.get_matching_result(
             node_id=node_id,
-            action=query_apps_command,
+            action=get_apps_command,
         )
-        supported_apps = query_apps_result["output"]
+        supported_apps = get_apps_result["output"]
         app_name = pathlib.Path(__file__).stem
         if app_name not in supported_apps:
             return False
