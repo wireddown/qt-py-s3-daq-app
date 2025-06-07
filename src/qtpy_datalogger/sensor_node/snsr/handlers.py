@@ -2,6 +2,7 @@
 
 import adafruit_minimqtt.adafruit_minimqtt as minimqtt
 
+from snsr import apps
 from snsr.core import get_new_descriptor, get_notice_info
 from snsr.node.classes import (
     ActionInformation,
@@ -40,8 +41,6 @@ def handle_command_message(client: minimqtt.MQTT, message: str) -> None:
     """Respond to a message sent to the command topic for the node."""
     from json import dumps, loads
 
-    from snsr import apps
-
     context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
     action_payload_information = loads(message)
     action_payload = ActionPayload.from_dict(action_payload_information)
@@ -75,14 +74,10 @@ def try_handle_qtpycmd_message(action_information: ActionInformation) -> ActionI
 
 def handle_query_apps(received_action: ActionInformation) -> ActionInformation:
     """Handle the 'qtpycmd query_apps' action."""
-    # Get app index....
     response_action = ActionInformation(
         command=received_action.parameters["input"],
         parameters={
-            "output": [
-                "echo",
-                "SoilSwell",
-            ],
+            "output": apps.get_catalog(),
             "complete": True,
         },
         message_id=received_action.message_id
@@ -90,9 +85,12 @@ def handle_query_apps(received_action: ActionInformation) -> ActionInformation:
     return response_action
 
 
-def handle_select_app(received_action: ActionInformation, selected_app: str) -> ActionInformation:
-    """Handle the 'qtpycmd select_app {app_name}' action."""
-    # if selected_app in app_index....
+def handle_select_app(received_action: ActionInformation, selected_app: str) -> ActionInformation | None:
+    """Handle the 'qtpycmd select_app {app_name}' action. Return None if the app is not in the catalog."""
+    if selected_app.lower() not in apps.get_catalog():
+        return None
+
+    settings.selected_app = selected_app
     response_action = ActionInformation(
         command=received_action.parameters["input"],
         parameters={
