@@ -87,7 +87,7 @@ def handle_query_apps(received_action: ActionInformation) -> ActionInformation:
 
 def handle_select_app(received_action: ActionInformation, selected_app: str) -> ActionInformation | None:
     """Handle the 'qtpycmd select_app {app_name}' action. Return None if the app is not in the catalog."""
-    if selected_app.lower() not in apps.get_catalog():
+    if selected_app not in apps.get_catalog():
         return None
 
     settings.selected_app = selected_app

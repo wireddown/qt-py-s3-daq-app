@@ -1335,20 +1335,21 @@ class SoilSwell(guikit.AsyncWindow):
             action=query_apps_command,
         )
         supported_apps = query_apps_result["output"]
-        if self.__class__.__name__ not in supported_apps:
+        app_name = pathlib.Path(__file__).stem
+        if app_name not in supported_apps:
             return False
         activate_app_command = await self.qtpy_controller.send_action(
             node_id=node_id,
             command_name="custom",
             parameters={
-                "input": f"qtpycmd select_app {self.__class__.__name__}",
+                "input": f"qtpycmd select_app {app_name}",
             },
         )
         activate_app_result, _ = await self.qtpy_controller.get_matching_result(
             node_id=node_id,
             action=activate_app_command,
         )
-        return activate_app_result["output"] == f"{self.__class__.__name__} active"
+        return activate_app_result["output"] == f"{app_name} active"
 
 
     async def on_server_offline(self) -> None:
