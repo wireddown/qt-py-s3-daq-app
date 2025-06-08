@@ -841,13 +841,6 @@ class SoilSwell(guikit.AsyncWindow):
 
         self.battery_level_indicator.configure(image=self.svg_images[self.icon_name_for_battery_level[self.state.battery_level]])
 
-    def cycle_battery_icon(self) -> None:
-        """Rotate through the battery icons."""
-        battery_levels = list(reversed(BatteryLevel))
-        next_index = (self.icon_index + 1) % len(battery_levels)
-        self.icon_index = next_index
-        self.state.battery_level = battery_levels[next_index]
-        self.battery_level_indicator.after(1500, self.cycle_battery_icon)
 
     def create_settings_panel(self) -> ttk.Frame:
         """Create the settings panel region of the app."""
