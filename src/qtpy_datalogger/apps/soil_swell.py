@@ -972,7 +972,7 @@ class SoilSwell(guikit.AsyncWindow):
         """Update the UI with new information."""
         await asyncio.sleep(1e-6)
 
-        await self.poll_acquire()
+        self.poll_acquire()
 
         done_tasks = [task for task in self.background_tasks if task.done()]
         for done_task in done_tasks:
@@ -1237,7 +1237,7 @@ class SoilSwell(guikit.AsyncWindow):
                         )
                         for sensor_node in nodes_in_group.values()
                     ]
-                    nodes_support_app = await self.select_app()
+                    nodes_support_app = await self.confirm_app_support()
                     if not nodes_support_app:
                         await self.on_app_unsupported()
                         return
@@ -1336,7 +1336,7 @@ class SoilSwell(guikit.AsyncWindow):
         """Update the application's window title."""
         self.root_window.title(new_title)
 
-    async def select_app(self) -> bool:
+    async def confirm_app_support(self) -> bool:
         """Select the soil swell app as the node's active app and return True. Return False when the node does not support the app."""
         if not self.qtpy_controller:
             raise RuntimeError()
@@ -1404,7 +1404,7 @@ class SoilSwell(guikit.AsyncWindow):
             bootstyle=bootstyle.DANGER,
         )
 
-    async def poll_acquire(self) -> None:
+    def poll_acquire(self) -> None:
         """Check conditions for acquisition and take a new scan accordingly."""
         if self.state.acquire_active != Tristate.BoolTrue:
             return
@@ -1414,8 +1414,13 @@ class SoilSwell(guikit.AsyncWindow):
             SampleRate.Normal: datetime.timedelta(seconds=30),
             SampleRate.Slow: datetime.timedelta(seconds=60)
         }
-        if self.state.most_recent_timestamp + sample_intervals[self.state.sample_rate] < now:
-            await self.do_acquire()
+        sample_interval_elapsed = self.state.most_recent_timestamp + sample_intervals[self.state.sample_rate] < now
+        do_acquire_task_name = "do acquire"
+        node_handling_command = do_acquire_task_name in [task.get_name() for task in self.background_tasks]
+        if sample_interval_elapsed and not node_handling_command:
+            do_acquire_task = asyncio.create_task(self.do_acquire(), name=do_acquire_task_name)
+            self.background_tasks.add(do_acquire_task)
+            do_acquire_task.add_done_callback(self.background_tasks.discard)
 
     async def do_acquire(self) -> None:
         """Acquire data from the nodes in the group and return it."""
