@@ -1433,6 +1433,16 @@ class SoilSwell(guikit.AsyncWindow):
         else:
             if not self.qtpy_controller:
                 raise RuntimeError()
+            # 0 g output for XOUT, YOUT, ZOUT: ±400 mg
+            # X/Y/Z sensitivity: 18.4..22.6 (20.5 LSB/g typ)
+            # Scale factor: 0.044..0.054 g/LSB (49 mg/LSB typ)
+            XL3D_SCALE_G_PER_LSB = 49e-3  # 44e-3 # 49e-3 # 54e-3  # How to measure?
+            XL3D_OFFSET_G_PER_LSB = 196e-3  # From spec
+            XL3D_Z_SENSITIVITY_LSB_PER_G = 1 / XL3D_SCALE_G_PER_LSB
+            XL3D_LSB_PER_OFFSET_REGISTER_LSB = XL3D_OFFSET_G_PER_LSB / XL3D_SCALE_G_PER_LSB
+            XL3D_HARDWARE_OFFSET = (-3, 0, 1)
+            XL3D_SOFTWARE_TRIM_OFFSET = (0, 0, 0)
+
             node = self.nodes_in_group[0]
             node_id = node.node_id
             get_adc_input = await self.qtpy_controller.send_action(
@@ -1442,6 +1452,7 @@ class SoilSwell(guikit.AsyncWindow):
                     "input": {
                         "channels": [],
                         "samples_to_average": 50,
+                        "xl3d_offset": XL3D_HARDWARE_OFFSET,
                     },
                 }
             )
@@ -1453,15 +1464,6 @@ class SoilSwell(guikit.AsyncWindow):
             volts_per_LSB = 3.3 / 2**16
             new_data = [code * volts_per_LSB for code in adc_codes[:-1]]
             raw_z_acceleration = adc_codes[-1]
-            # 0 g output for XOUT, YOUT, ZOUT: ±400 mg
-            # X/Y/Z sensitivity: 18.4..22.6 (20.5 LSB/g typ)
-            # Scale factor: 0.044..0.054 g/LSB (49 mg/LSB typ)
-            XL3D_SCALE_G_PER_LSB = 49e-3  # 44e-3 # 49e-3 # 54e-3  # How to measure?
-            XL3D_OFFSET_G_PER_LSB = 196e-3  # From spec
-            XL3D_Z_SENSITIVITY_LSB_PER_G = 1 / XL3D_SCALE_G_PER_LSB
-            XL3D_LSB_PER_OFFSET_REGISTER_LSB = XL3D_OFFSET_G_PER_LSB / XL3D_SCALE_G_PER_LSB
-            XL3D_HARDWARE_OFFSET = [-3, 0, 1]
-            XL3D_SOFTWARE_TRIM_OFFSET = [0, 0, 0]
 
             trimmed_z = raw_z_acceleration + XL3D_SOFTWARE_TRIM_OFFSET[-1]
             scaled_g = trimmed_z * XL3D_SCALE_G_PER_LSB
