@@ -14,10 +14,11 @@ from snsr.node.classes import ActionInformation
 def handle_message(received_action: ActionInformation) -> ActionInformation:
     """Handle a received action from the controlling host."""
     parameters = received_action.parameters["input"]
-    samples_to_average = parameters["samples_to_average"]
+    samples_to_average = parameters.get("samples_to_average", 50)
+    xl3d_offset = parameters.get("xl3d_offset", (0, 0, 0))
 
     adc_codes = do_analog_scan(channels=[], count=samples_to_average)
-    xyz_codes = do_accelerometer_read(hardware_offset=(0, 0, 0), count=samples_to_average)
+    xyz_codes = do_accelerometer_read(hardware_offset=xl3d_offset, count=samples_to_average // 2)
     sensor_readings = adc_codes
     sensor_readings.append(xyz_codes[-1])
 
