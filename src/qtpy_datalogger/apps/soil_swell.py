@@ -58,6 +58,7 @@ class SampleRate(StrEnum):
     """Supported settings for the app's sample rate."""
 
     Unset = "Unset"
+    Live = "Live"
     Fast = "Fast"
     Normal = "Normal"
     Slow = "Slow"
@@ -486,7 +487,7 @@ class AppState:
         self._battery_level = BatteryLevel.Unknown
         self._battery_voltage = 0.0
         self._sensor_group = datatypes.Default.MqttGroup
-        self._sample_rate = SampleRate.Fast
+        self._sample_rate = SampleRate.Live
         self._acquire_active = Tristate.BoolFalse
         self._log_data_active = False
         self._demo_active = False
@@ -874,7 +875,9 @@ class SoilSwell(guikit.AsyncWindow):
         normal_option = ttk.Radiobutton(panel, command=self.handle_change_sample_rate, text=SampleRate.Normal, variable=self.sample_rate_variable, value=SampleRate.Normal)
         normal_option.grid(column=0, row=4, padx=(16, 8), pady=4, sticky=tk.NSEW)
         fast_option = ttk.Radiobutton(panel, command=self.handle_change_sample_rate, text=SampleRate.Fast, variable=self.sample_rate_variable, value=SampleRate.Fast)
-        fast_option.grid(column=0, row=5, padx=(16, 8), pady=(4, 12), sticky=tk.NSEW)
+        fast_option.grid(column=0, row=5, padx=(16, 8), pady=4, sticky=tk.NSEW)
+        live_option = ttk.Radiobutton(panel, command=self.handle_change_sample_rate, text=SampleRate.Live, variable=self.sample_rate_variable, value=SampleRate.Live)
+        live_option.grid(column=0, row=6, padx=(16, 8), pady=(4, 12), sticky=tk.NSEW)
 
         return panel
 
@@ -1410,9 +1413,10 @@ class SoilSwell(guikit.AsyncWindow):
             return
         now = datetime.datetime.now(tz=datetime.UTC)
         sample_intervals = {
-            SampleRate.Fast: datetime.timedelta(seconds=5),
-            SampleRate.Normal: datetime.timedelta(seconds=30),
-            SampleRate.Slow: datetime.timedelta(seconds=60)
+            SampleRate.Live: datetime.timedelta(seconds=0.1),
+            SampleRate.Fast: datetime.timedelta(seconds=15),
+            SampleRate.Normal: datetime.timedelta(seconds=60),
+            SampleRate.Slow: datetime.timedelta(minutes=3),
         }
         sample_interval_elapsed = self.state.most_recent_timestamp + sample_intervals[self.state.sample_rate] < now
         do_acquire_task_name = "do acquire"
