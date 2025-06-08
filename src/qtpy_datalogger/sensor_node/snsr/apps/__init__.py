@@ -10,14 +10,14 @@ def get_catalog() -> list[str]:
     return apps
 
 
-def get_handler(selected_app: str) -> object:
-    """Return the handler that matches the selected_app."""
-    if selected_app == "echo":
-        from .echo import handle_message
-
-        return handle_message
-    if selected_app == "soil_swell":
+def get_handler(snsr_app_name: str) -> object:
+    """Return the handler that matches snsr_app_name."""
+    if snsr_app_name == "soil_swell":
         from .soil_swell import handle_message
 
         return handle_message
-    raise NotImplementedError(selected_app)
+
+    # Fallback to echo app handler
+    from . import echo
+
+    return echo.handle_message

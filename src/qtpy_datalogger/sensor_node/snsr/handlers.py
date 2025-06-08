@@ -48,7 +48,8 @@ def handle_command_message(client: minimqtt.MQTT, message: str) -> None:
 
     result_information = try_handle_qtpycmd_message(action_information)
     if not result_information:
-        handle_message = apps.get_handler(settings.selected_app)
+        snsr_app_name = action_information.command.split(" ")[0]
+        handle_message = apps.get_handler(snsr_app_name)
         result_information = handle_message(action_information)
 
     descriptor_topic = get_descriptor_topic(context["node_group"], context["node_identifier"])
@@ -66,11 +67,6 @@ def try_handle_qtpycmd_message(action_information: ActionInformation) -> ActionI
         verb = parts[1]
         if verb == "get_apps":
             return handle_get_apps(action_information)
-        if verb == "select_app":
-            new_app = parts[2]
-            return handle_select_app(action_information, new_app)
-        if verb == "get_selected_app":
-            return handle_get_selected_app(action_information)
     return None
 
 
@@ -80,36 +76,6 @@ def handle_get_apps(received_action: ActionInformation) -> ActionInformation:
         command=received_action.parameters["input"],
         parameters={
             "output": apps.get_catalog(),
-            "complete": True,
-        },
-        message_id=received_action.message_id,
-    )
-    return response_action
-
-
-def handle_select_app(received_action: ActionInformation, selected_app: str) -> ActionInformation | None:
-    """Handle the 'qtpycmd select_app {app_name}' action. Return None if the app is not in the catalog."""
-    if selected_app not in apps.get_catalog():
-        return None
-
-    settings.selected_app = selected_app
-    response_action = ActionInformation(
-        command=received_action.parameters["input"],
-        parameters={
-            "output": f"{selected_app} active",
-            "complete": True,
-        },
-        message_id=received_action.message_id,
-    )
-    return response_action
-
-
-def handle_get_selected_app(received_action: ActionInformation) -> ActionInformation:
-    """Handle the 'qtpycmd get_selected_app' action."""
-    response_action = ActionInformation(
-        command=received_action.parameters["input"],
-        parameters={
-            "output": settings.selected_app,
             "complete": True,
         },
         message_id=received_action.message_id,

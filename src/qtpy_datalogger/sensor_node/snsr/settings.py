@@ -54,16 +54,6 @@ class Settings:
         return self._node_name
 
     @property
-    def selected_app(self) -> str:
-        """Return the name of the node's selected app."""
-        return self._selected_app
-
-    @selected_app.setter
-    def selected_app(self, new_selection: str) -> None:
-        """Set a new value for the node's selected app."""
-        self._selected_app = new_selection
-
-    @property
     def boot_time(self) -> float:
         """Return the node's time since boot in milliseconds."""
         return self._boot_time

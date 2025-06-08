@@ -606,6 +606,7 @@ class SoilSwell(guikit.AsyncWindow):
         # The MQTT connection
         self.qtpy_controller: network.QTPyController | None = None
         self.nodes_in_group : list[discovery.QTPyDevice] = []
+        self.snsr_app_name = pathlib.Path(__file__).stem
 
         # arrow-up-from-ground-water droplet
         app_icon = icon_to_image("arrow-up-from-ground-water", fill=app_icon_color, scale_to_height=256)
@@ -1346,28 +1347,14 @@ class SoilSwell(guikit.AsyncWindow):
             command_name="custom",
             parameters={
                 "input": "qtpycmd get_apps",
-            }
+            },
         )
         get_apps_result, _ = await self.qtpy_controller.get_matching_result(
             node_id=node_id,
             action=get_apps_command,
         )
         supported_apps = get_apps_result["output"]
-        app_name = pathlib.Path(__file__).stem
-        if app_name not in supported_apps:
-            return False
-        activate_app_command = await self.qtpy_controller.send_action(
-            node_id=node_id,
-            command_name="custom",
-            parameters={
-                "input": f"qtpycmd select_app {app_name}",
-            },
-        )
-        activate_app_result, _ = await self.qtpy_controller.get_matching_result(
-            node_id=node_id,
-            action=activate_app_command,
-        )
-        return activate_app_result["output"] == f"{app_name} active"
+        return self.snsr_app_name in supported_apps
 
 
     async def on_server_offline(self) -> None:
@@ -1465,14 +1452,12 @@ class SoilSwell(guikit.AsyncWindow):
             node_id = node.node_id
             get_adc_input = await self.qtpy_controller.send_action(
                 node_id=node_id,
-                command_name="scan",
+                command_name=f"{self.snsr_app_name} scan",
                 parameters={
-                    "input": {
-                        "channels": [],
-                        "samples_to_average": 50,
-                        "xl3d_offset": XL3D_HARDWARE_OFFSET,
-                    },
-                }
+                    "channels": ["A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7"],
+                    "samples_to_average": 50,
+                    "xl3d_offset": XL3D_HARDWARE_OFFSET,
+                },
             )
             get_adc_result, _ = await self.qtpy_controller.get_matching_result(
                 node_id=node_id,
