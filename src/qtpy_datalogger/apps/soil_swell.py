@@ -144,14 +144,14 @@ class TextInput:
             10: 1,
             1: 2,
         }
-        decimal_places = self._get_first_in_range(limits.upper, decimal_places_for_max)
+        decimal_places = get_first_in_range(limits.upper, decimal_places_for_max)
 
         increment_for_max = {
             100: 10.0,
             20: 1.0,
             2: 0.1,
         }
-        increment = self._get_first_in_range(limits.upper, increment_for_max)
+        increment = get_first_in_range(limits.upper, increment_for_max)
 
         self._input_variable = tk.StringVar(value=f"{default_value:.{decimal_places}f}")
         self._input_control = ttk.Spinbox(master=parent, from_=limits.lower, to=limits.upper, increment=increment, format=f"%.{decimal_places}f", width=5, justify=tk.RIGHT, textvariable=self._input_variable)
@@ -179,13 +179,6 @@ class TextInput:
             return
         self._value = new_value
         self._input_control.event_generate(TextInput.Event.ValueChanged)
-
-    def _get_first_in_range(self, upper_bound: float, selection: dict) -> Any:
-        """Get the first value in the selection that is lower than the upper_bound."""
-        descending = sorted(selection.keys(), reverse=True)
-        first_in_range_index = [upper_bound > entry for entry in descending].index(True)
-        first_value_in_range = selection[descending[first_in_range_index]]
-        return first_value_in_range
 
 
 class ToolWindow(guikit.AsyncDialog):
@@ -1462,7 +1455,7 @@ class SoilSwell(guikit.AsyncWindow):
             )
             adc_codes = get_adc_result["output"]
             volts_per_LSB = 3.3 / 2**16
-            new_data = [code * volts_per_LSB for code in adc_codes[:-1]]
+            new_data = [code * volts_per_LSB for code in adc_codes[:-1]]  # Still need sensor units scaling
             raw_z_acceleration = adc_codes[-1]
 
             trimmed_z = raw_z_acceleration + XL3D_SOFTWARE_TRIM_OFFSET[-1]
@@ -1510,9 +1503,32 @@ class SoilSwell(guikit.AsyncWindow):
         battery_series = all_data[["ch8"]]
         g_level_series = all_data[["ch9"]]
 
+        BATTERY_COUNT = 1
+        # https://www.powerstream.com/AA-tests.htm for 100 mA
+        level_for_voltage = {
+            1.40 * BATTERY_COUNT: BatteryLevel.Full,
+            1.30 * BATTERY_COUNT: BatteryLevel.High,
+            1.22 * BATTERY_COUNT: BatteryLevel.Half,
+            1.00 * BATTERY_COUNT: BatteryLevel.Low,
+            0: BatteryLevel.Unset,
+        }
+        battery_voltage = battery_series.to_numpy()[-1][0]  # battery_series[-1].to_numpy()[0].tolist()[1:]  # Get last row, dropping first column
+        # acquired_demo_data[-1:].to_numpy()[0].tolist()[1:]  # Get last row, dropping first column
+        new_battery_level = get_first_in_range(battery_voltage, level_for_voltage)
+        self.state.battery_level = new_battery_level
+        self.battery_voltage_indicator.configure(text=f"{battery_voltage:.3f} V")  # Need a proper event
+
         for (data_series, axes) in [(position_series, self.position_axes), (displacement_series, self.displacement_axes), (g_level_series, self.g_level_axes)]:
             update_axes_plots(time_coordinates, data_series, axes)
         self.canvas_figure.draw_idle()
+
+
+def get_first_in_range(upper_bound: float, selection: dict) -> Any:
+    """Get the first value in the selection that is lower than the upper_bound."""
+    descending = sorted(selection.keys(), reverse=True)
+    first_in_range_index = [upper_bound > entry for entry in descending].index(True)
+    first_value_in_range = selection[descending[first_in_range_index]]
+    return first_value_in_range
 
 
 if __name__ == "__main__":
