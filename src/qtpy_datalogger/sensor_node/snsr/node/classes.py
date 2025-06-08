@@ -286,7 +286,7 @@ class ActionInformation:
         return self.information["command"]
 
     @property
-    def parameters(self) -> dict[str, str]:
+    def parameters(self) -> dict:
         """The dictionary of parameters specified for the command."""
         return self.information["parameters"]
 

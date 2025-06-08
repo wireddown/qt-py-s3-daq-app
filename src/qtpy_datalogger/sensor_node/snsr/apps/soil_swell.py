@@ -6,6 +6,7 @@ import time
 import adafruit_adxl37x
 import analogio
 import board
+import busio
 
 from snsr.node.classes import ActionInformation
 
@@ -43,11 +44,13 @@ def do_analog_scan(channels: list[str], count: int) -> list[float]:
 
 def do_accelerometer_read(hardware_offset: tuple[int, int, int], count: int) -> tuple[float, float, float]:
     """Read the acceleration from the I2C g_level sensor 'count' times and return a tuple of averaged codes."""
-    accelerometer = try_initialize_accelerometer(hardware_offset)
-    if not accelerometer:
-        return (-1000.0, -1000.0, -1000.0)
-    adxl375_raw = xl3d_take_n(accelerometer, count)
-    return adxl375_raw
+    results = (-1000.0, -1000.0, -1000.0)
+    with ReserveStemma() as i2c:
+        if not i2c:
+            return results
+        accelerometer = initialize_accelerometer(i2c, hardware_offset)
+        results = xl3d_take_n(accelerometer, count)
+    return results
 
 
 class ReserveAnalogChannels:
@@ -89,12 +92,25 @@ def adc_take_n(ai_pin: analogio.AnalogIn, count: int) -> float:
     return average
 
 
-def try_initialize_accelerometer(hardware_xyz_offset: tuple[int, int, int] | None = None) -> adafruit_adxl37x.ADXL375 | None:
+class ReserveStemma:
+    """A context manager that reserves and releases the Stemma I2C bus."""
+
+    def __enter__(self) -> busio.I2C | None:
+        """Reserve AI channels on context enter."""
+        try:
+            self.stemma = board.STEMMA_I2C()  # Singleton, lock-free atomic facade
+        except RuntimeError:
+            self.stemma = None
+        return self.stemma
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        """Release AI channels on context exit."""
+        if self.stemma:
+            self.stemma.deinit()
+
+
+def initialize_accelerometer(i2c: busio.I2c, hardware_xyz_offset: tuple[int, int, int] | None = None) -> adafruit_adxl37x.ADXL375:
     """Initialize a 200 g measurement session with the ADXL375 connected via Stemma QT. Return None if the bus cannot initialize."""
-    try:
-        i2c = board.STEMMA_I2C()  # Singleton, lock-free atomic facade
-    except RuntimeError:
-        return None
     accelerometer = adafruit_adxl37x.ADXL375(i2c)
     accelerometer.range = adafruit_adxl37x.Range.RANGE_200_G
     accelerometer.offset = hardware_xyz_offset if hardware_xyz_offset else (0, 0, 0)
