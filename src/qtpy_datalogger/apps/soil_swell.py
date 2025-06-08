@@ -309,6 +309,7 @@ class AppState:
 
         AcquireDataChanged = "<<AcquireDataChanged>>"
         BatteryLevelChanged = "<<BatteryLevelChanged>>"
+        BatteryVoltageChanged = "<<BatteryVoltageChanged>>"
         CanAcquireDataChanged = "<<CanAcquireDataChanged>>"
         CanLogDataChanged = "<<CanLogDataChanged>>"
         CanSetSensorGroupChanged = "<<CanSetSensorGroupChanged>>"
@@ -326,6 +327,7 @@ class AppState:
         self._sample_rate = SampleRate.Unset
         self._acquire_active = Tristate.BoolUnset
         self._log_data_active = Tristate.BoolUnset
+        self._battery_voltage = 0.0
         self._battery_level = BatteryLevel.Unset
         self._most_recent_timestamp = datetime.datetime.min.replace(tzinfo=datetime.UTC)
         self._acquired_data_columns = ["Timestamp", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8", "ch9"]
@@ -435,6 +437,19 @@ class AppState:
         self._tk_notifier.event_generate(AppState.Event.BatteryLevelChanged)
 
     @property
+    def battery_voltage(self) -> float:
+        """Return the most recently measured voltage for the sensor_node's battery."""
+        return self._battery_voltage
+
+    @battery_voltage.setter
+    def battery_voltage(self, new_value: float) -> None:
+        """Set a new value for battery_voltage and notify BatteryVoltageChanged event subscribers."""
+        if new_value == self._battery_voltage:
+            return
+        self._battery_voltage = new_value
+        self._tk_notifier.event_generate(AppState.Event.BatteryVoltageChanged)
+
+    @property
     def demo_active(self) -> bool:
         """Return True if the demo is active."""
         return self._demo_active
@@ -469,6 +484,7 @@ class AppState:
     def reset(self) -> None:
         """Reset the properties to default on-launch values."""
         self._battery_level = BatteryLevel.Unknown
+        self._battery_voltage = 0.0
         self._sensor_group = datatypes.Default.MqttGroup
         self._sample_rate = SampleRate.Fast
         self._acquire_active = Tristate.BoolFalse
@@ -477,6 +493,7 @@ class AppState:
         self._acquired_data = pd.DataFrame()
         self._most_recent_timestamp = datetime.datetime.min.replace(tzinfo=datetime.UTC)
         self._tk_notifier.event_generate(AppState.Event.BatteryLevelChanged)
+        self._tk_notifier.event_generate(AppState.Event.BatteryVoltageChanged)
         self._tk_notifier.event_generate(AppState.Event.SensorGroupChanged)
         self._tk_notifier.event_generate(AppState.Event.CanSetSensorGroupChanged)
         self._tk_notifier.event_generate(AppState.Event.SampleRateChanged)
@@ -556,6 +573,15 @@ class SoilSwell(guikit.AsyncWindow):
             BatteryLevel.Half: "battery-half",
             BatteryLevel.High: "battery-three-quarters",
             BatteryLevel.Full: "battery-full",
+        }
+        BATTERY_COUNT = 1
+        # https://www.powerstream.com/AA-tests.htm for 100 mA
+        self.battery_level_for_voltage = {
+            1.40 * BATTERY_COUNT: BatteryLevel.Full,
+            1.30 * BATTERY_COUNT: BatteryLevel.High,
+            1.22 * BATTERY_COUNT: BatteryLevel.Half,
+            1.00 * BATTERY_COUNT: BatteryLevel.Low,
+            0: BatteryLevel.Unset,
         }
         self.tooltip_message_for_battery_level = {
             BatteryLevel.Unset: "The battery doesn't have a level",
@@ -660,6 +686,7 @@ class SoilSwell(guikit.AsyncWindow):
         self.root_window.bind(AppState.Event.LogDataChanged, self.on_log_data_changed)
         self.root_window.bind(AppState.Event.CanLogDataChanged, self.on_can_log_data_changed)
         self.root_window.bind(AppState.Event.BatteryLevelChanged, self.on_battery_level_changed)
+        self.root_window.bind(AppState.Event.BatteryVoltageChanged, self.on_battery_voltage_changed)
         self.root_window.bind(AppState.Event.SampleRateChanged, self.on_sample_rate_changed)
         self.root_window.bind(AppState.Event.SensorGroupChanged, self.on_sensor_group_changed)
         self.root_window.bind(AppState.Event.CanSetSensorGroupChanged, self.on_can_set_sensor_group_changed)
@@ -788,7 +815,7 @@ class SoilSwell(guikit.AsyncWindow):
         else:
             the_font = font.nametofont("fixed")
         the_font.configure(weight=font.BOLD, size=12)
-        self.battery_voltage_indicator = ttk.Label(panel, font=the_font, text="3.742")
+        self.battery_voltage_indicator = ttk.Label(panel, font=the_font)
         self.battery_voltage_indicator.grid(column=0, row=0)
 
         self.battery_level_indicator = ttk.Label(panel, font=font.Font(weight=font.BOLD), compound=tk.CENTER)
@@ -1192,7 +1219,7 @@ class SoilSwell(guikit.AsyncWindow):
                     self.qtpy_controller = network.QTPyController.for_localhost_server(self.state.sensor_group)
                     try:
                         await self.qtpy_controller.connect_and_subscribe()
-                    except ConnectionRefusedError as e:
+                    except ConnectionRefusedError:
                         await self.on_server_offline()
                         return
                     nodes_in_group = await self.qtpy_controller.scan_for_nodes()
@@ -1293,6 +1320,11 @@ class SoilSwell(guikit.AsyncWindow):
         if self.battery_level_tooltip:
             self.battery_level_tooltip.leave()
         self.battery_level_tooltip = ttk_tooltip.ToolTip(self.battery_level_indicator, text=self.tooltip_message_for_battery_level[battery_level], bootstyle=bootstyle.DEFAULT)
+
+    def on_battery_voltage_changed(self, event_args: tk.Event) -> None:
+        """Handle the BatteryVoltageChanged event."""
+        new_voltage = f"{self.state.battery_voltage:.3f}" if self.state.battery_voltage > 0 else "-.---"
+        self.battery_voltage_indicator.configure(text=f"{new_voltage} V")
 
     def on_mouse_enter(self, event_args: tk.Event) -> None:
         """Handle the mouse Enter event."""
@@ -1503,20 +1535,11 @@ class SoilSwell(guikit.AsyncWindow):
         battery_series = all_data[["ch8"]]
         g_level_series = all_data[["ch9"]]
 
-        BATTERY_COUNT = 1
-        # https://www.powerstream.com/AA-tests.htm for 100 mA
-        level_for_voltage = {
-            1.40 * BATTERY_COUNT: BatteryLevel.Full,
-            1.30 * BATTERY_COUNT: BatteryLevel.High,
-            1.22 * BATTERY_COUNT: BatteryLevel.Half,
-            1.00 * BATTERY_COUNT: BatteryLevel.Low,
-            0: BatteryLevel.Unset,
-        }
-        battery_voltage = battery_series.to_numpy()[-1][0]  # battery_series[-1].to_numpy()[0].tolist()[1:]  # Get last row, dropping first column
-        # acquired_demo_data[-1:].to_numpy()[0].tolist()[1:]  # Get last row, dropping first column
-        new_battery_level = get_first_in_range(battery_voltage, level_for_voltage)
+        # Consider using a running average of N samples to mimic hysteresis
+        battery_voltage = battery_series.to_numpy()[-1][0]
+        new_battery_level = get_first_in_range(battery_voltage, self.battery_level_for_voltage)
+        self.state.battery_voltage = battery_voltage
         self.state.battery_level = new_battery_level
-        self.battery_voltage_indicator.configure(text=f"{battery_voltage:.3f} V")  # Need a proper event
 
         for (data_series, axes) in [(position_series, self.position_axes), (displacement_series, self.displacement_axes), (g_level_series, self.g_level_axes)]:
             update_axes_plots(time_coordinates, data_series, axes)
