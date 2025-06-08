@@ -8,8 +8,8 @@ from snsr.node.classes import ActionInformation
 
 def handle_message(received_action: ActionInformation) -> ActionInformation:
     """Handle a received action from the controlling host."""
-    parameters = received_action.parameters
-    adc_codes = do_analog_scan(channels=[], samples_to_average=20)
+    parameters = received_action.parameters["input"]
+    adc_codes = do_analog_scan(channels=[], samples_to_average=parameters["samples_to_average"])
     response_action = ActionInformation(
         command=received_action.command,
         parameters={

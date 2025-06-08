@@ -1441,7 +1441,7 @@ class SoilSwell(guikit.AsyncWindow):
                 parameters={
                     "input": {
                         "channels": [],
-                        "samples_to_average": 20,
+                        "samples_to_average": 50,
                     },
                 }
             )
