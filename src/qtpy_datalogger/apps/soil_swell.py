@@ -1451,10 +1451,9 @@ class SoilSwell(guikit.AsyncWindow):
             )
             adc_codes = get_adc_result["output"]
             volts_per_LSB = 3.3 / 2**16
-            new_data = [code * volts_per_LSB for code in adc_codes]
-            # patch until adxl
-            missing_channels = len(self.state._acquired_data_columns) - len(adc_codes) - 1
-            new_data.extend([0.0 for x in range(missing_channels)])
+            new_data = [code * volts_per_LSB for code in adc_codes[:-1]]
+            raw_z_acceleration = adc_codes[-1]
+            new_data.append(raw_z_acceleration)
         self.state.process_new_data(new_data)
 
     def on_new_data_processed(self, event_args: tk.Event) -> None:
@@ -1493,9 +1492,9 @@ class SoilSwell(guikit.AsyncWindow):
 
         position_series = all_data[["ch1", "ch2", "ch3", "ch4", "ch5", "ch6"]]
         displacement_series = all_data[["ch1", "ch2", "ch3", "ch4", "ch5", "ch6"]]
-        g_level_series = all_data[["ch7"]]
-        temperature_series = all_data[["ch8"]]
-        battery_series = all_data[["ch9"]]
+        temperature_series = all_data[["ch7"]]
+        battery_series = all_data[["ch8"]]
+        g_level_series = all_data[["ch9"]]
 
         for (data_series, axes) in [(position_series, self.position_axes), (displacement_series, self.displacement_axes), (g_level_series, self.g_level_axes)]:
             update_axes_plots(time_coordinates, data_series, axes)
