@@ -302,6 +302,61 @@ class ToolWindow(guikit.AsyncDialog):
         self.origin_label.configure(text=message)
 
 
+class RawDataProcessor:
+    """A class that calculates derived data from raw sensor samples."""
+
+    def __init__(self) -> None:
+        """Initialize a new RawDataProcessor instance."""
+        # Create lookup for scaling
+        # naninani_node_id: {
+        #   A0: { gain: 1.0, offset: 0.0, sensor_id: lvdt_id_1 }
+        #   A1: { gain: 1.0, offset: 0.0, sensor_id: thrm_id_1 }
+        #   ...
+        #   A7: { gain: 1.0, offset: 0.0, sensor_id: battery_sense_1 }
+        # }
+        # lvdt_id_1: { gain: 1.0, offset: 0.0, units: cm }
+        # thrm_id_1: { gain: 1.0, offset: 0.0, units: c }
+        # xl3d_id_1: { gain: 1.0, offset: 0.0, units: g }
+        # battery_sense: { gain: 1.0, offset: 0.0, units: volts}
+
+        # Also define fallback defaults for missing / incomplete configuration
+
+        # Generate from sensor configuration
+        # timestamp, relative_time_minutes
+        # node_id, node_name
+        # loop on ai channels
+        #  - a{N}_average_code
+        #  - a(N)_volts
+        # loop on connected sensor
+        #  - match lvdt
+        #    - {sensor_id}_position_{sensor_units}
+        #    - {sensor_id}_displacement_{sensor_units}
+        #  - match thrm
+        #    - temperature_{sensor_id}_{sensor_units}
+        #  - match battery_sense
+        #    - {sensor_id}_{sensor_units}
+        # z_accel_average_code, z_accel_g
+        self._frame_columns = ["Timestamp", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8", "ch9"]
+
+        # Helper for
+        # - getting plot X / Y columns, legend titles
+        # - getting battery voltage columns, last sample
+        # - getting log file columns
+
+
+    @property
+    def frame_columns(self) -> list:
+        """Return a list of the column names returned by 'process_new_data'."""
+        return self._frame_columns
+
+    def process_raw_data(self, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.DataFrame:
+        """Scale the raw data to Volts and physical units and return a one-row DataFrame."""
+        as_lists = [[entry] for entry in [data_timestamp, *raw_data]]
+        as_dict = dict(zip(self.frame_columns, as_lists))
+        dataframe_row = pd.DataFrame(as_dict)
+        return dataframe_row
+
+
 class AppState:
     """A class that models and controls the app's settings and runtime state."""
 
@@ -320,9 +375,10 @@ class AppState:
         DemoModeChanged = "<<DemoModeChanged>>"
         NewDataProcessed = "<<NewDataProcessed>>"
 
-    def __init__(self, tk_root: tk.Tk) -> None:
+    def __init__(self, tk_root: tk.Tk, post_processor: RawDataProcessor) -> None:
         """Initialize a new AppState instance."""
         self._tk_notifier = tk_root
+        self._post_processor = post_processor
         self._theme_name = ""
         self._sensor_group = ""
         self._sample_rate = SampleRate.Unset
@@ -523,13 +579,15 @@ class AppState:
         self.demo_active = True
         self.acquire_active = Tristate.BoolTrue
 
-    def process_new_data(self, new_data: list[float]) -> None:
+    def process_new_data(self, node_id: str, new_data: list[float]) -> None:
         """Take the new_data and process it for plotting and logging."""
         self._most_recent_timestamp = datetime.datetime.now(tz=datetime.UTC)
-        as_lists = [[entry] for entry in [self.most_recent_timestamp, *new_data]]
-        as_dict = dict(zip(self._acquired_data_columns, as_lists))
-        new_entry = pd.DataFrame(as_dict)
-        self.data = pd.concat([self.data, new_entry], ignore_index=True)
+        new_frame_row = self._post_processor.process_raw_data(
+            self.most_recent_timestamp,
+            node_id,
+            new_data,
+        )
+        self.data = pd.concat([self.data, new_frame_row], ignore_index=True)
 
 
 class SoilSwell(guikit.AsyncWindow):
@@ -601,7 +659,7 @@ class SoilSwell(guikit.AsyncWindow):
         self.time_axis_limits = (-1, 60000)
 
         # Supports app state
-        self.state = AppState(self.root_window)
+        self.state = AppState(self.root_window, RawDataProcessor())
         self.background_tasks: set[asyncio.Task] = set()
 
         # The MQTT connection
@@ -1359,7 +1417,6 @@ class SoilSwell(guikit.AsyncWindow):
         supported_apps = get_apps_result["output"]
         return self.snsr_app_name in supported_apps
 
-
     async def on_server_offline(self) -> None:
         """Handle the outcome when the MQTT server is offline."""
         if not self.qtpy_controller:
@@ -1429,6 +1486,7 @@ class SoilSwell(guikit.AsyncWindow):
     async def do_acquire(self) -> None:
         """Acquire data from the nodes in the group and return it."""
         if self.state.demo_active:
+            node_id = "<< DEMO >>"
             demo_data = self.state._demo_data
             relative_demo_time_series = self.state._demo_data["TimeStamp"]
             time_zero = self.state.most_recent_timestamp
@@ -1480,7 +1538,7 @@ class SoilSwell(guikit.AsyncWindow):
             trimmed_z = raw_z_acceleration + XL3D_SOFTWARE_TRIM_OFFSET[-1]
             scaled_g = trimmed_z * XL3D_SCALE_G_PER_LSB
             new_data.append(scaled_g)
-        self.state.process_new_data(new_data)
+        self.state.process_new_data(node_id, new_data)
 
     def on_new_data_processed(self, event_args: tk.Event) -> None:
         """Handle new processed data."""
