@@ -307,35 +307,86 @@ class RawDataProcessor:
 
     def __init__(self) -> None:
         """Initialize a new RawDataProcessor instance."""
-        # Create lookup for scaling
-        # naninani_node_id: {
-        #   A0: { gain: 1.0, offset: 0.0, sensor_id: lvdt_id_1 }
-        #   A1: { gain: 1.0, offset: 0.0, sensor_id: thrm_id_1 }
-        #   ...
-        #   A7: { gain: 1.0, offset: 0.0, sensor_id: battery_sense_1 }
-        # }
-        # lvdt_id_1: { gain: 1.0, offset: 0.0, units: cm }
-        # thrm_id_1: { gain: 1.0, offset: 0.0, units: c }
-        # xl3d_id_1: { gain: 1.0, offset: 0.0, units: g }
-        # battery_sense: { gain: 1.0, offset: 0.0, units: volts}
+        self._default_lvdt_parameters = { "gain": 1.0, "offset": 0.0, "units": "cm" }
+        self._default_thrm_parameters = { "gain": 1.0, "offset": 0.0, "units": "degC"}
+        self._default_battery_parameters = { "gain": 1.0, "offset": 0.0, "units": "V"}
+        self._default_xl3d_parameters = { "gain": 49e-3, "offset": 0, "units": "g" }
+        self._default_node_parameters = {
+            "A0": { "gain": 1.0, "offset": 0.0, "sensor_id": "lvdt" },
+            "A1": { "gain": 1.0, "offset": 0.0, "sensor_id": "lvdt" },
+            "A2": { "gain": 1.0, "offset": 0.0, "sensor_id": "lvdt" },
+            "A3": { "gain": 1.0, "offset": 0.0, "sensor_id": "lvdt" },
+            "A4": { "gain": 1.0, "offset": 0.0, "sensor_id": "lvdt" },
+            "A5": { "gain": 1.0, "offset": 0.0, "sensor_id": "lvdt" },
+            "A6": { "gain": 1.0, "offset": 0.0, "sensor_id": "thrm" },
+            "A7": { "gain": 1.0, "offset": 0.0, "sensor_id": "battery_sense" },
+            "xl3d": { "gain": 1.0, "offset": 0.0, "sensor_id": "xl3d_default"},
+        }
 
-        # Also define fallback defaults for missing / incomplete configuration
+        self._sensor_parameters = {
+            # Load from file when the app needs matched scaling or uses more than one node
+        }
+        self._sensor_node_configuration = {
+            # Load from file when the app needs matched scaling or uses more than one node
+        }
 
-        # Generate from sensor configuration
-        # timestamp, relative_time_minutes
-        # node_id, node_name
-        # loop on ai channels
-        #  - a{N}_average_code
-        #  - a(N)_volts
-        # loop on connected sensor
-        #  - match lvdt
-        #    - {sensor_id}_position_{sensor_units}
-        #    - {sensor_id}_displacement_{sensor_units}
-        #  - match thrm
-        #    - temperature_{sensor_id}_{sensor_units}
-        #  - match battery_sense
-        #    - {sensor_id}_{sensor_units}
-        # z_accel_average_code, z_accel_g
+        self._frame_columns = []
+        self._lvdt_position_columns = []
+        self._lvdt_displacement_columns = []
+        self._relative_time_column = "relative_time_minutes"
+        self._frame_columns.extend(["timestamp", self._relative_time_column])
+        self._frame_columns.extend(["node_id", "node_name"])
+        for index, (channel_name, channel_parameters) in enumerate(self._default_node_parameters.items()):
+            sensor_id = channel_parameters["sensor_id"]
+            match sensor_id:
+                case "lvdt":
+                    sensor_parameters = self._default_lvdt_parameters
+                    sensor_units = sensor_parameters["units"]
+                    lvdt_position_column = f"{sensor_id}{index+1}_position_{sensor_units}"  # 6 LVDTs, index them starting at 1
+                    lvdt_displacement_column = f"{sensor_id}{index+1}_displacement_{sensor_units}"
+                    self._lvdt_position_columns.append(lvdt_position_column)
+                    self._lvdt_displacement_columns.append(lvdt_displacement_column)
+                    self._frame_columns.extend(
+                        [
+                            f"{channel_name}_average_code",
+                            f"{channel_name}_volts",
+                            lvdt_position_column,
+                            lvdt_displacement_column,
+                        ]
+                    )
+                case "thrm":
+                    sensor_parameters = self._default_thrm_parameters
+                    sensor_units = sensor_parameters["units"]
+                    self._temperature_column = f"temperature_{sensor_units}"  # No index, only one temp sensor
+                    self._frame_columns.extend(
+                        [
+                            f"{channel_name}_average_code",
+                            f"{channel_name}_volts",
+                            self._temperature_column,
+                        ]
+                    )
+                case "battery_sense":
+                    sensor_parameters = self._default_battery_parameters
+                    sensor_units = sensor_parameters["units"]
+                    self._battery_column = f"{sensor_id}_{sensor_units}"  # No index, only one battery sense channel
+                    self._frame_columns.extend(
+                        [
+                            f"{channel_name}_average_code",
+                            f"{channel_name}_volts",
+                            self._battery_column,
+                        ]
+                    )
+                case "xl3d_default":
+                    sensor_parameters = self._default_xl3d_parameters
+                    sensor_units = sensor_parameters["units"]
+                    self._g_level_column = f"z_accel_{sensor_units}"
+                    self._frame_columns.extend(
+                        [
+                            "z_accel_average_code",
+                            self._g_level_column,
+                        ]
+                    )
+
         self._frame_columns = ["Timestamp", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8", "ch9"]
 
         # Helper for
@@ -349,9 +400,46 @@ class RawDataProcessor:
         """Return a list of the column names returned by 'process_new_data'."""
         return self._frame_columns
 
+    @property
+    def relative_time_column(self) -> str:
+        """Return the name of the column that holds relative timestamps."""
+        return self._relative_time_column
+
+    @property
+    def lvdt_position_columns(self) -> list[str]:
+        """Return the names of the columns that hold the absolute LVDT positions."""
+        return self._lvdt_position_columns
+
+    @property
+    def lvdt_displacement_columns(self) -> list[str]:
+        """Return the names of the columns that hold the relative LVDT movements."""
+        return self._lvdt_displacement_columns
+
+    @property
+    def temperature_column(self) -> str:
+        """Return the name of the column that holds the temperature."""
+        return self._temperature_column
+
+    @property
+    def battery_column(self) -> str:
+        """Return the name of the column that holds the battery voltage."""
+        return self._battery_column
+
+    @property
+    def g_level_column(self) -> str:
+        """Return the name of the column that holds the acceleration."""
+        return self._g_level_column
+
     def process_raw_data(self, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.DataFrame:
         """Scale the raw data to Volts and physical units and return a one-row DataFrame."""
-        as_lists = [[entry] for entry in [data_timestamp, *raw_data]]
+        volts_per_lsb = 3.3 / 2**16
+        processed_data = [adc_code * volts_per_lsb for adc_code in raw_data[:-1]]  # In volts, still need sensor's physical units scaling
+        raw_z_acceleration = raw_data[-1]
+        trimmed_z = raw_z_acceleration + 0  # offset
+        scaled_g = trimmed_z * 49e-3  # gain
+        processed_data.append(scaled_g)
+
+        as_lists = [[entry] for entry in [data_timestamp, *processed_data]]
         as_dict = dict(zip(self.frame_columns, as_lists))
         dataframe_row = pd.DataFrame(as_dict)
         return dataframe_row
@@ -1496,6 +1584,7 @@ class SoilSwell(guikit.AsyncWindow):
             relative_time = (now - time_zero) / datetime.timedelta(hours=1)
             acquired_time = relative_demo_time_series < relative_time
             acquired_demo_data = self.state._demo_data[acquired_time]
+            # Demo mode is broken until the app can bypass post-processing
             if len(acquired_demo_data) > 0:
                 new_data = acquired_demo_data[-1:].to_numpy()[0].tolist()[1:]  # Get last row, dropping first column
                 missing_channels = len(self.state._acquired_data_columns) - len(demo_data.columns)
@@ -1517,7 +1606,7 @@ class SoilSwell(guikit.AsyncWindow):
 
             node = self.nodes_in_group[0]
             node_id = node.node_id
-            get_adc_input = await self.qtpy_controller.send_action(
+            do_read_input = await self.qtpy_controller.send_action(
                 node_id=node_id,
                 command_name=f"{self.snsr_app_name} scan",
                 parameters={
@@ -1526,18 +1615,13 @@ class SoilSwell(guikit.AsyncWindow):
                     "xl3d_offset": XL3D_HARDWARE_OFFSET,
                 },
             )
-            get_adc_result, _ = await self.qtpy_controller.get_matching_result(
+            read_input_result, _ = await self.qtpy_controller.get_matching_result(
                 node_id=node_id,
-                action=get_adc_input,
+                action=do_read_input,
             )
-            adc_codes = get_adc_result["output"]
-            volts_per_LSB = 3.3 / 2**16
-            new_data = [code * volts_per_LSB for code in adc_codes[:-1]]  # Still need sensor units scaling
-            raw_z_acceleration = adc_codes[-1]
 
-            trimmed_z = raw_z_acceleration + XL3D_SOFTWARE_TRIM_OFFSET[-1]
-            scaled_g = trimmed_z * XL3D_SCALE_G_PER_LSB
-            new_data.append(scaled_g)
+            sensor_codes = read_input_result["output"]
+            new_data = sensor_codes
         self.state.process_new_data(node_id, new_data)
 
     def on_new_data_processed(self, event_args: tk.Event) -> None:
