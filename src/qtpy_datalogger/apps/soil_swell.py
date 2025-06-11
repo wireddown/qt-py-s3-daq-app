@@ -311,15 +311,17 @@ class RawDataProcessor:
         self._default_thrm_parameters = { "gain": 1.0, "offset": 0.0, "units": "degC"}
         self._default_battery_parameters = { "gain": 1.0, "offset": 0.0, "units": "V"}
         self._default_xl3d_parameters = { "gain": 49e-3, "offset": 0, "units": "g" }
+
+        simple_linear_adc_gain = 3.3 / 2**16
         self._default_node_parameters = {
-            "A0": { "gain": 1.0, "offset": 0.0, "sensor_id": "lvdt" },
-            "A1": { "gain": 1.0, "offset": 0.0, "sensor_id": "lvdt" },
-            "A2": { "gain": 1.0, "offset": 0.0, "sensor_id": "lvdt" },
-            "A3": { "gain": 1.0, "offset": 0.0, "sensor_id": "lvdt" },
-            "A4": { "gain": 1.0, "offset": 0.0, "sensor_id": "lvdt" },
-            "A5": { "gain": 1.0, "offset": 0.0, "sensor_id": "lvdt" },
-            "A6": { "gain": 1.0, "offset": 0.0, "sensor_id": "thrm" },
-            "A7": { "gain": 1.0, "offset": 0.0, "sensor_id": "battery_sense" },
+            "A0": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
+            "A1": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
+            "A2": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
+            "A3": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
+            "A4": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
+            "A5": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
+            "A6": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "thrm" },
+            "A7": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "battery_sense" },
             "xl3d": { "gain": 1.0, "offset": 0.0, "sensor_id": "xl3d_default"},
         }
 
@@ -386,8 +388,6 @@ class RawDataProcessor:
                             self._g_level_column,
                         ]
                     )
-
-        # self._frame_columns = ["timestamp", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8", "ch9"]
 
         # Helper for
         # - getting plot X / Y columns, legend titles
