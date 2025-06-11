@@ -430,8 +430,83 @@ class RawDataProcessor:
         """Return the name of the column that holds the acceleration."""
         return self._g_level_column
 
+    def _preview(self, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.DataFrame:
+        node_parameters = self._sensor_node_configuration.get(node_id, self._default_node_parameters)
+        first_row = []
+        new_row = []
+        relative_timestamp = (data_timestamp - data_timestamp).seconds / 60  # make relative to first_row
+        new_row.extend([data_timestamp, relative_timestamp])
+        new_row.extend([node_id, node_id])
+        for index, channel_name in enumerate(node_parameters.keys()):
+            channel_parameters = node_parameters[channel_name]
+            sensor_id = channel_parameters["sensor_id"]
+            raw_sample = raw_data[index]
+            match index:
+                case i if 0 <= i <= 5:
+                    default_sensor_parameters = self._default_lvdt_parameters
+                    sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
+                    scaled_sample = raw_sample * channel_parameters["gain"] + channel_parameters["offset"]
+                    physical_measurement = scaled_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
+                    new_row.extend(
+                        [
+                            raw_sample,
+                            scaled_sample,
+                            physical_measurement,
+                            physical_measurement - physical_measurement,  # make relative to first_row
+                        ]
+                    )
+                case 6:
+                    default_sensor_parameters = self._default_thrm_parameters
+                    sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
+                    scaled_sample = raw_sample * channel_parameters["gain"] + channel_parameters["offset"]
+                    physical_measurement = scaled_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
+                    new_row.extend(
+                        [
+                            raw_sample,
+                            scaled_sample,
+                            physical_measurement,
+                        ]
+                    )
+                case 7:
+                    default_sensor_parameters = self._default_battery_parameters
+                    sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
+                    scaled_sample = raw_sample * channel_parameters["gain"] + channel_parameters["offset"]
+                    physical_measurement = scaled_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
+                    new_row.extend(
+                        [
+                            raw_sample,
+                            scaled_sample,
+                            physical_measurement,
+                        ]
+                    )
+                case 8:
+                    default_sensor_parameters = self._default_xl3d_parameters
+                    sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
+                    physical_measurement = raw_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
+                    new_row.extend(
+                        [
+                            raw_sample,
+                            physical_measurement,
+                        ]
+                    )
+                case _:
+                    # If a sensor reaches this code path, then the column headers likely won't match
+                    unknown_sensor_parameters = { "gain": 1.0, "offset": 0.0, "units": "unknown_units" }
+                    sensor_parameters = self._sensor_parameters.get(sensor_id, unknown_sensor_parameters)
+                    scaled_sample = raw_sample * channel_parameters["gain"] * channel_parameters["offset"]
+                    physical_measurement = scaled_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
+                    new_row.extend(
+                        [
+                            raw_sample,
+                            scaled_sample,
+                            physical_measurement,
+                        ]
+                    )
+
     def process_raw_data(self, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.DataFrame:
         """Scale the raw data to Volts and physical units and return a one-row DataFrame."""
+        self._preview(data_timestamp, node_id, raw_data)
+
         volts_per_lsb = 3.3 / 2**16
         processed_data = [adc_code * volts_per_lsb for adc_code in raw_data[:-1]]  # In volts, still need sensor's physical units scaling
         raw_z_acceleration = raw_data[-1]
