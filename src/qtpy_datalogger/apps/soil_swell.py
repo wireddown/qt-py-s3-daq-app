@@ -387,7 +387,7 @@ class RawDataProcessor:
                         ]
                     )
 
-        self._frame_columns = ["Timestamp", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8", "ch9"]
+        # self._frame_columns = ["timestamp", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8", "ch9"]
 
         # Helper for
         # - getting plot X / Y columns, legend titles
@@ -430,13 +430,14 @@ class RawDataProcessor:
         """Return the name of the column that holds the acceleration."""
         return self._g_level_column
 
-    def _preview(self, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.DataFrame:
-        node_parameters = self._sensor_node_configuration.get(node_id, self._default_node_parameters)
-        first_row = []
+    def _preview(self, first_row: pd.Series| None, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.DataFrame:
+        first_timestamp = first_row.loc["timestamp"] if first_row is not None else data_timestamp
+        relative_timestamp = (data_timestamp - first_timestamp).seconds / 60
+
         new_row = []
-        relative_timestamp = (data_timestamp - data_timestamp).seconds / 60  # make relative to first_row
         new_row.extend([data_timestamp, relative_timestamp])
         new_row.extend([node_id, node_id])
+        node_parameters = self._sensor_node_configuration.get(node_id, self._default_node_parameters)
         for index, channel_name in enumerate(node_parameters.keys()):
             channel_parameters = node_parameters[channel_name]
             sensor_id = channel_parameters["sensor_id"]
@@ -502,21 +503,13 @@ class RawDataProcessor:
                             physical_measurement,
                         ]
                     )
+        as_lists = [[entry] for entry in new_row]
+        new_row_frame = pd.DataFrame.from_dict(dict(zip(self.frame_columns, as_lists)))
+        return new_row_frame
 
-    def process_raw_data(self, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.DataFrame:
+    def process_raw_data(self, first_row_frame: pd.Series | None, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.DataFrame:
         """Scale the raw data to Volts and physical units and return a one-row DataFrame."""
-        self._preview(data_timestamp, node_id, raw_data)
-
-        volts_per_lsb = 3.3 / 2**16
-        processed_data = [adc_code * volts_per_lsb for adc_code in raw_data[:-1]]  # In volts, still need sensor's physical units scaling
-        raw_z_acceleration = raw_data[-1]
-        trimmed_z = raw_z_acceleration + 0  # offset
-        scaled_g = trimmed_z * 49e-3  # gain
-        processed_data.append(scaled_g)
-
-        as_lists = [[entry] for entry in [data_timestamp, *processed_data]]
-        as_dict = dict(zip(self.frame_columns, as_lists))
-        dataframe_row = pd.DataFrame(as_dict)
+        dataframe_row = self._preview(first_row_frame, data_timestamp, node_id, raw_data)
         return dataframe_row
 
 
@@ -550,7 +543,6 @@ class AppState:
         self._battery_voltage = 0.0
         self._battery_level = BatteryLevel.Unset
         self._most_recent_timestamp = datetime.datetime.min.replace(tzinfo=datetime.UTC)
-        self._acquired_data_columns = ["Timestamp", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7", "ch8", "ch9"]
         self._acquired_data = pd.DataFrame()
         self._demo_active = False
 
@@ -744,8 +736,10 @@ class AppState:
 
     def process_new_data(self, node_id: str, new_data: list[float]) -> None:
         """Take the new_data and process it for plotting and logging."""
+        first_row_series = self.data.iloc[0] if self.data.size > 0 else None
         self._most_recent_timestamp = datetime.datetime.now(tz=datetime.UTC)
         new_frame_row = self._post_processor.process_raw_data(
+            first_row_series,
             self.most_recent_timestamp,
             node_id,
             new_data,
@@ -822,7 +816,8 @@ class SoilSwell(guikit.AsyncWindow):
         self.time_axis_limits = (-1, 60000)
 
         # Supports app state
-        self.state = AppState(self.root_window, RawDataProcessor())
+        self.data_processor = RawDataProcessor()
+        self.state = AppState(self.root_window, self.data_processor)
         self.background_tasks: set[asyncio.Task] = set()
 
         # The MQTT connection
@@ -1662,22 +1657,22 @@ class SoilSwell(guikit.AsyncWindow):
             # Demo mode is broken until the app can bypass post-processing
             if len(acquired_demo_data) > 0:
                 new_data = acquired_demo_data[-1:].to_numpy()[0].tolist()[1:]  # Get last row, dropping first column
-                missing_channels = len(self.state._acquired_data_columns) - len(demo_data.columns)
+                missing_channels = len(self.data_processor.lvdt_position_columns) + 3 - len(demo_data.columns)
                 new_data.extend([0.0 for x in range(missing_channels)])
             else:
-                new_data = [0.0 for x in range(len(self.state._acquired_data_columns))]
+                new_data = [0.0 for x in range(len(self.data_processor.lvdt_position_columns) + 3)]
         else:
             if not self.qtpy_controller:
                 raise RuntimeError()
             # 0 g output for XOUT, YOUT, ZOUT: ±400 mg
             # X/Y/Z sensitivity: 18.4..22.6 (20.5 LSB/g typ)
             # Scale factor: 0.044..0.054 g/LSB (49 mg/LSB typ)
-            XL3D_SCALE_G_PER_LSB = 49e-3  # 44e-3 # 49e-3 # 54e-3  # How to measure?
-            XL3D_OFFSET_G_PER_LSB = 196e-3  # From spec
-            XL3D_Z_SENSITIVITY_LSB_PER_G = 1 / XL3D_SCALE_G_PER_LSB
-            XL3D_LSB_PER_OFFSET_REGISTER_LSB = XL3D_OFFSET_G_PER_LSB / XL3D_SCALE_G_PER_LSB
+            # XL3D_SCALE_G_PER_LSB = 49e-3  # 44e-3 # 49e-3 # 54e-3  # How to measure?
+            # XL3D_OFFSET_G_PER_LSB = 196e-3  # From spec
+            # XL3D_Z_SENSITIVITY_LSB_PER_G = 1 / XL3D_SCALE_G_PER_LSB
+            # XL3D_LSB_PER_OFFSET_REGISTER_LSB = XL3D_OFFSET_G_PER_LSB / XL3D_SCALE_G_PER_LSB
+            # XL3D_SOFTWARE_TRIM_OFFSET = (0, 0, 0)
             XL3D_HARDWARE_OFFSET = (-3, 0, 1)
-            XL3D_SOFTWARE_TRIM_OFFSET = (0, 0, 0)
 
             node = self.nodes_in_group[0]
             node_id = node.node_id
@@ -1712,11 +1707,6 @@ class SoilSwell(guikit.AsyncWindow):
             self.canvas_figure.draw_idle()
             return
 
-        time_series = all_data["Timestamp"]
-        time_zero = time_series[0]
-        relative_times = time_series - time_zero
-        time_coordinates = relative_times.map(lambda td: td / datetime.timedelta(minutes=1))
-
         def update_axes_plots(time_coordinates: pd.Series, data_series: pd.DataFrame, axes: mpl_axes.Axes) -> None:
             plot_has_lines = len(axes.lines) > 0
             for index, (name, series) in enumerate(data_series.items()):
@@ -1733,20 +1723,22 @@ class SoilSwell(guikit.AsyncWindow):
                         label=name,
                     )
 
-        position_series = all_data[["ch1", "ch2", "ch3", "ch4", "ch5", "ch6"]]
-        displacement_series = all_data[["ch1", "ch2", "ch3", "ch4", "ch5", "ch6"]]
-        temperature_series = all_data[["ch7"]]
-        battery_series = all_data[["ch8"]]
-        g_level_series = all_data[["ch9"]]
+        time_coordinates = all_data[self.data_processor.relative_time_column]
+
+        position_frame = all_data[self.data_processor.lvdt_position_columns]
+        displacement_frame = all_data[self.data_processor.lvdt_displacement_columns]
+        temperature_frame = all_data[[self.data_processor.temperature_column]]
+        battery_frame = all_data[[self.data_processor.battery_column]]
+        g_level_frame = all_data[[self.data_processor.g_level_column]]
 
         # Consider using a running average of N samples to mimic hysteresis
-        battery_voltage = battery_series.to_numpy()[-1][0]
+        battery_voltage = battery_frame.to_numpy()[-1][0]
         new_battery_level = get_first_in_range(battery_voltage, self.battery_level_for_voltage)
         self.state.battery_voltage = battery_voltage
         self.state.battery_level = new_battery_level
 
-        for (data_series, axes) in [(position_series, self.position_axes), (displacement_series, self.displacement_axes), (g_level_series, self.g_level_axes)]:
-            update_axes_plots(time_coordinates, data_series, axes)
+        for (data_frame, axes) in [(position_frame, self.position_axes), (displacement_frame, self.displacement_axes), (g_level_frame, self.g_level_axes)]:
+            update_axes_plots(time_coordinates, data_frame, axes)
         self.canvas_figure.draw_idle()
 
 
