@@ -430,7 +430,7 @@ class RawDataProcessor:
         """Return the name of the column that holds the acceleration."""
         return self._g_level_column
 
-    def _preview(self, first_row: pd.Series| None, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.DataFrame:
+    def _preview(self, first_row: pd.Series| None, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.Series:
         first_timestamp = first_row.loc["timestamp"] if first_row is not None else data_timestamp
         relative_timestamp = (data_timestamp - first_timestamp).seconds / 60
 
@@ -503,12 +503,11 @@ class RawDataProcessor:
                             physical_measurement,
                         ]
                     )
-        as_lists = [[entry] for entry in new_row]
-        new_row_frame = pd.DataFrame.from_dict(dict(zip(self.frame_columns, as_lists)))
-        return new_row_frame
+        new_row_series = pd.Series(new_row, index=self.frame_columns)
+        return new_row_series
 
-    def process_raw_data(self, first_row_frame: pd.Series | None, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.DataFrame:
-        """Scale the raw data to Volts and physical units and return a one-row DataFrame."""
+    def process_raw_data(self, first_row_frame: pd.Series | None, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.Series:
+        """Scale the raw data to Volts and physical units and return a Series of the new row."""
         dataframe_row = self._preview(first_row_frame, data_timestamp, node_id, raw_data)
         return dataframe_row
 
@@ -744,7 +743,7 @@ class AppState:
             node_id,
             new_data,
         )
-        self.data = pd.concat([self.data, new_frame_row], ignore_index=True)
+        self.data = pd.concat([self.data, new_frame_row.to_frame().T], ignore_index=True)
 
 
 class SoilSwell(guikit.AsyncWindow):
