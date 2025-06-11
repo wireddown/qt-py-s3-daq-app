@@ -448,12 +448,13 @@ class RawDataProcessor:
                     sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
                     scaled_sample = raw_sample * channel_parameters["gain"] + channel_parameters["offset"]
                     physical_measurement = scaled_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
+                    first_measurement = first_row.loc[self.lvdt_position_columns[index]] if first_row is not None else physical_measurement
                     new_row.extend(
                         [
                             raw_sample,
                             scaled_sample,
                             physical_measurement,
-                            physical_measurement - physical_measurement,  # make relative to first_row
+                            physical_measurement - first_measurement,
                         ]
                     )
                 case 6:
