@@ -830,7 +830,7 @@ class SoilSwell(guikit.AsyncWindow):
             1.30 * BATTERY_COUNT: BatteryLevel.High,
             1.22 * BATTERY_COUNT: BatteryLevel.Half,
             1.00 * BATTERY_COUNT: BatteryLevel.Low,
-            0: BatteryLevel.Unset,
+            -1.0: BatteryLevel.Unset,
         }
         self.tooltip_message_for_battery_level = {
             BatteryLevel.Unset: "The battery doesn't have a level",
@@ -1691,20 +1691,16 @@ class SoilSwell(guikit.AsyncWindow):
         """Acquire data from the nodes in the group and return it."""
         if self.state.demo_active:
             node_id = "<< DEMO >>"
-            demo_data = self.state._demo_data
-            relative_demo_time_series = self.state._demo_data["TimeStamp"]
+            relative_demo_time_series = self.state._demo_data["minutes"]
             time_zero = self.state.most_recent_timestamp
             if len(self.state.data) > 0:
-                time_zero = self.state.data["Timestamp"][0]
+                time_zero = self.state.data["timestamp"][0]
             now = self.state.most_recent_timestamp
-            relative_time = (now - time_zero) / datetime.timedelta(hours=1)
+            relative_time = (now - time_zero) / datetime.timedelta(minutes=1)
             acquired_time = relative_demo_time_series < relative_time
             acquired_demo_data = self.state._demo_data[acquired_time]
-            # Demo mode is broken until the app can bypass post-processing
             if len(acquired_demo_data) > 0:
                 new_data = acquired_demo_data[-1:].to_numpy()[0].tolist()[1:]  # Get last row, dropping first column
-                missing_channels = len(self.data_processor.lvdt_position_columns) + 3 - len(demo_data.columns)
-                new_data.extend([0.0 for x in range(missing_channels)])
             else:
                 new_data = [0.0 for x in range(len(self.data_processor.lvdt_position_columns) + 3)]
         else:
