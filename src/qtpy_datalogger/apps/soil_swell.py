@@ -430,6 +430,15 @@ class RawDataProcessor:
         """Return the name of the column that holds the acceleration."""
         return self._g_level_column
 
+    @property
+    def logged_columns(self) -> list[str]:
+        """Return the names of the columns written to the data log file."""
+        return [
+            self.relative_time_column,
+            *self.lvdt_position_columns,
+            self.g_level_column,
+        ]
+
     def _preview(self, first_row: pd.Series| None, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.Series:
         first_timestamp = first_row.loc["timestamp"] if first_row is not None else data_timestamp
         relative_timestamp = (data_timestamp - first_timestamp).seconds / 60
@@ -545,6 +554,8 @@ class AppState:
         self._most_recent_timestamp = datetime.datetime.min.replace(tzinfo=datetime.UTC)
         self._acquired_data = pd.DataFrame()
         self._demo_active = False
+        self._log_file_path = None
+        self._index_when_log_enabled = -1
 
     @property
     def active_theme(self) -> str:
@@ -627,7 +638,27 @@ class AppState:
         if as_tristate == self._log_data_active:
             return
         self._log_data_active = as_tristate
+        self._index_when_log_enabled = len(self.data.index) if self.log_data_active else -1
         self._tk_notifier.event_generate(AppState.Event.LogDataChanged)
+
+    @property
+    def log_file_path(self) -> pathlib.Path:
+        """Return the path to the log file."""
+        if not self._log_file_path:
+            raise RuntimeError
+        return self._log_file_path
+
+    @log_file_path.setter
+    def log_file_path(self, new_value: pathlib.Path | None) -> None:
+        """Set a new value for the log file path."""
+        if str(new_value) == str(self._log_file_path):
+            return
+        self._log_file_path = new_value
+
+    @property
+    def index_when_log_enabled(self) -> int:
+        """Return the index of the row when the user enabled logging."""
+        return self._index_when_log_enabled
 
     @property
     def can_log_data(self) -> bool:
@@ -704,6 +735,8 @@ class AppState:
         self._demo_active = False
         self._acquired_data = pd.DataFrame()
         self._most_recent_timestamp = datetime.datetime.min.replace(tzinfo=datetime.UTC)
+        self._log_file_path = None
+        self._index_when_log_enabled = -1
         self._tk_notifier.event_generate(AppState.Event.BatteryLevelChanged)
         self._tk_notifier.event_generate(AppState.Event.BatteryVoltageChanged)
         self._tk_notifier.event_generate(AppState.Event.SensorGroupChanged)
@@ -1511,7 +1544,20 @@ class SoilSwell(guikit.AsyncWindow):
     def on_log_data_changed(self, event_args: tk.Event) -> None:
         """Handle the LogDataChanged event."""
         log_data_active = self.state.log_data_active
-        new_style = bootstyle.SUCCESS if log_data_active else bootstyle.DEFAULT
+        if log_data_active:
+            new_style = bootstyle.SUCCESS
+            new_log_file_timestamp = self.state.most_recent_timestamp.astimezone().strftime("%Y.%m.%d_%H.%M.%S")
+            new_log_file_name = f"Centrifuge test_{new_log_file_timestamp}"
+            home_path = pathlib.Path.home()
+            new_log_file_path = home_path.joinpath(f"Documents\\qtpy-datalogger\\{new_log_file_name}.csv")
+            new_log_file_path.parent.mkdir(parents=True, exist_ok=True)
+            new_log_file_path.touch()
+            self.state.log_file_path = new_log_file_path
+            self.append_row_to_log(self.data_processor.logged_columns)
+        else:
+            new_style = bootstyle.DEFAULT
+            self.state.log_file_path = None
+
         self.log_data_button.configure(bootstyle=new_style)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         self.log_data_variable.set(log_data_active)
 
@@ -1741,6 +1787,19 @@ class SoilSwell(guikit.AsyncWindow):
             update_axes_plots(time_coordinates, data_frame, axes)
         self.canvas_figure.draw_idle()
 
+        if self.state.log_data_active:
+            new_row = all_data.loc[all_data.index[-1], self.data_processor.logged_columns].to_list()
+            first_log_sample_timestamp = all_data.loc[all_data.index[self.state.index_when_log_enabled], self.data_processor.relative_time_column]
+            adjusted_relative_timestamp = new_row[0] - first_log_sample_timestamp
+            new_row[0] = adjusted_relative_timestamp
+            formatted_row = [f"{entry:.3f}" for entry in new_row]
+            self.append_row_to_log(formatted_row)
+
+    def append_row_to_log(self, row: list[str]) -> None:
+        """Add the row to the end of log file."""
+        csv_row = ",".join(row)
+        with self.state.log_file_path.open("a") as log_file:
+            log_file.write(f"{csv_row}\n")
 
 def get_first_in_range(upper_bound: float, selection: dict) -> Any:
     """Get the first value in the selection that is lower than the upper_bound."""
