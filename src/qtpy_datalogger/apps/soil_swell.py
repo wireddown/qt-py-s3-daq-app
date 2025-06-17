@@ -886,7 +886,7 @@ class SoilSwell(guikit.AsyncWindow):
         self.canvas_figure.mpl_connect("button_press_event", self.on_graph_mouse_down)
         self.canvas_figure.mpl_connect("pick_event", self.on_graph_pick)
         plot_figure.subplots_adjust(
-            left=0.10,
+            left=0.12,
             bottom=0.10,
             right=0.95,
             top=0.97,
@@ -1207,18 +1207,15 @@ class SoilSwell(guikit.AsyncWindow):
         """Configure the labels and ticks for every axes plot."""
         self.position_label = self.position_axes.set_ylabel("LVDT position (cm)", picker=True)
         self.position_axes.set_ylim(ymin=-0.1, ymax=2.6)
-        self.position_axes.yaxis.set_major_locator(mpl_ticker.MultipleLocator(0.5))
         self.position_axes.yaxis.set_major_formatter("{x:0.2f}")
 
         self.displacement_label = self.displacement_axes.set_ylabel("Displacement (cm)", picker=True)
         self.displacement_axes.set_ylim(ymin=-2.6, ymax=2.6)
-        self.displacement_axes.yaxis.set_major_locator(mpl_ticker.MultipleLocator(1.0))
         self.displacement_axes.yaxis.set_major_formatter("{x:0.2f}")
 
         self.g_level_label = self.g_level_axes.set_ylabel("Acceleration (g)", picker=True)
         self.g_level_axes.set_ylim(ymin=-1, ymax=255)
         self.g_level_axes.set_xlim(xmin=-1, xmax=200)
-        self.g_level_axes.yaxis.set_major_locator(mpl_ticker.MultipleLocator(50.0))
 
         self.time_label = self.g_level_axes.set_xlabel("Time (minutes)", picker=True)
 
