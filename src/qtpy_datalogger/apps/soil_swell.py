@@ -162,6 +162,8 @@ class TextInput:
         input_validator = parent.register(functools.partial(check_float_in_range, self._input_control, limits))
         self._input_variable.trace_add("write", functools.partial(handle_new_value, self._input_control))
         self._input_control.configure(validate=tk.ALL, validatecommand=(input_validator, "%P", "%V"))
+        self._input_control.bind("<<Increment>>", functools.partial(handle_entry_complete, default_value, decimal_places))
+        self._input_control.bind("<<Decrement>>", functools.partial(handle_entry_complete, default_value, decimal_places))
         self._input_control.bind("<KeyPress-Return>", functools.partial(handle_entry_complete, default_value, decimal_places))
         self._input_control.bind("<MouseWheel>", functools.partial(handle_entry_complete, default_value, decimal_places))
         self._input_control.bind("<FocusOut>", functools.partial(handle_entry_complete, default_value, decimal_places))
