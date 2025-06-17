@@ -135,10 +135,12 @@ class TextInput:
             sender = event_args.widget
             try:
                 sender.set(f"{float(sender.get()):.{decimal_places}f}")
+                self._input_control.event_generate(TextInput.Event.ValueChanged)
             except ValueError:
                 sender.set(f"{fallback_value:.{decimal_places}f}")
-            sender.icursor(tk.END)
-            sender.selection_clear()
+            finally:
+                sender.icursor(tk.END)
+                sender.after(0, sender.selection_clear)
 
         decimal_places_for_max = {
             100: 0,
@@ -161,6 +163,7 @@ class TextInput:
         self._input_variable.trace_add("write", functools.partial(handle_new_value, self._input_control))
         self._input_control.configure(validate=tk.ALL, validatecommand=(input_validator, "%P", "%V"))
         self._input_control.bind("<KeyPress-Return>", functools.partial(handle_entry_complete, default_value, decimal_places))
+        self._input_control.bind("<MouseWheel>", functools.partial(handle_entry_complete, default_value, decimal_places))
         self._input_control.bind("<FocusOut>", functools.partial(handle_entry_complete, default_value, decimal_places))
 
     @property
@@ -179,7 +182,6 @@ class TextInput:
         if new_value == self._value:
             return
         self._value = new_value
-        self._input_control.event_generate(TextInput.Event.ValueChanged)
 
 
 class ToolWindow(guikit.AsyncDialog):
