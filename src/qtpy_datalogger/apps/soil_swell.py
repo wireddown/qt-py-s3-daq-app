@@ -290,9 +290,17 @@ class ToolWindow(guikit.AsyncDialog):
             sender = event_args.widget
             sender.selection_clear()
             selected_value = sender.get()
-            if selected_value != axis_scale:
-                set_axis_scale(selected_value.lower())
-                refresh_graph()
+            if selected_value == axis_scale:
+                return
+            if selected_value == "Log":
+                safe_minimum = max(0.01, axis_view_limits[0])
+                set_axis_limits(safe_minimum, axis_max_input.value)
+                axis_min_input.value = safe_minimum
+                axis_min_input.widget.configure(state=tk.DISABLED)
+            else:
+                axis_min_input.widget.configure(state=tk.NORMAL)
+            set_axis_scale(selected_value.lower())
+            refresh_graph()
 
         scale_input.bind("<<ComboboxSelected>>", handle_scale_selection)
         scale_input.selection_clear()
