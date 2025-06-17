@@ -14,7 +14,7 @@ import tempfile
 import tkinter as tk
 import webbrowser
 from enum import StrEnum
-from tkinter import font
+from tkinter import filedialog, font
 from typing import Any, Callable, NamedTuple
 
 import matplotlib.axes as mpl_axes
@@ -537,6 +537,8 @@ class RawDataProcessor:
 class AppState:
     """A class that models and controls the app's settings and runtime state."""
 
+    canceled_file: pathlib.Path = pathlib.Path()
+
     class Event(StrEnum):
         """Events emitted when properties change."""
 
@@ -566,7 +568,7 @@ class AppState:
         self._most_recent_timestamp = datetime.datetime.min.replace(tzinfo=datetime.UTC)
         self._acquired_data = pd.DataFrame()
         self._demo_active = False
-        self._log_file_path = None
+        self._log_file_path = AppState.canceled_file
         self._index_when_log_enabled = -1
 
     @property
@@ -656,12 +658,10 @@ class AppState:
     @property
     def log_file_path(self) -> pathlib.Path:
         """Return the path to the log file."""
-        if not self._log_file_path:
-            raise RuntimeError
         return self._log_file_path
 
     @log_file_path.setter
-    def log_file_path(self, new_value: pathlib.Path | None) -> None:
+    def log_file_path(self, new_value: pathlib.Path) -> None:
         """Set a new value for the log file path."""
         if str(new_value) == str(self._log_file_path):
             return
@@ -747,7 +747,7 @@ class AppState:
         self._demo_active = False
         self._acquired_data = pd.DataFrame()
         self._most_recent_timestamp = datetime.datetime.min.replace(tzinfo=datetime.UTC)
-        self._log_file_path = None
+        self._log_file_path = AppState.canceled_file
         self._index_when_log_enabled = -1
         self._tk_notifier.event_generate(AppState.Event.BatteryLevelChanged)
         self._tk_notifier.event_generate(AppState.Event.BatteryVoltageChanged)
@@ -801,6 +801,7 @@ class SoilSwell(guikit.AsyncWindow):
         """Names used for menus and commands in the app."""
 
         File = "File"
+        SaveFullLog = "Save full log..."
         Exit = "Exit"
         View = "View"
         Theme = "Theme"
@@ -979,6 +980,12 @@ class SoilSwell(guikit.AsyncWindow):
             menu=self.file_menu,
             underline=0,
         )
+        self.file_menu.add_command(
+            command=self.save_full_log,
+            label=SoilSwell.CommandName.SaveFullLog,
+            underline=0,
+        )
+        self.file_menu.add_separator()
         self.file_menu.add_command(
             command=functools.partial(self.safe_exit, tk.Event()),
             label=SoilSwell.CommandName.Exit,
@@ -1257,6 +1264,27 @@ class SoilSwell(guikit.AsyncWindow):
         if self.scanner_process and self.scanner_process.is_alive():
             self.scanner_process.terminate()
         self.state.acquire_active = Tristate.BoolFalse
+
+    def save_full_log(self) -> None:
+        """Handle the 'Save full log' command."""
+        if not self.state.data.size:
+            return
+        time_zero = self.state.data.loc[0, "timestamp"]
+        time_zero_string = time_zero.astimezone().strftime("%Y.%m.%d_%H.%M.%S")
+        file_name = filedialog.asksaveasfilename(
+            parent=self.root_window,
+            title="Specify a CSV file to use for exported data",
+            initialfile=f"SoilSwell full log - {time_zero_string}.csv",
+            filetypes=[
+                ("CSV files", "*.csv"),
+            ],
+        )
+        file_path = pathlib.Path(file_name)
+        if file_path == AppState.canceled_file:
+            return
+
+        file_path = file_path.with_suffix(".csv")
+        self.state.data.to_csv(file_path)
 
     def toggle_demo(self) -> None:
         """Start a demonstration session."""
@@ -1565,7 +1593,7 @@ class SoilSwell(guikit.AsyncWindow):
             self.append_row_to_log(self.data_processor.logged_columns)
         else:
             new_style = bootstyle.DEFAULT
-            self.state.log_file_path = None
+            self.state.log_file_path = AppState.canceled_file
 
         self.log_data_button.configure(bootstyle=new_style)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         self.log_data_variable.set(log_data_active)
