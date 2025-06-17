@@ -1215,11 +1215,11 @@ class SoilSwell(guikit.AsyncWindow):
         """Configure the labels and ticks for every axes plot."""
         self.position_label = self.position_axes.set_ylabel("LVDT position (cm)", picker=True)
         self.position_axes.set_ylim(ymin=-0.1, ymax=2.6)
-        self.position_axes.yaxis.set_major_formatter("{x:0.2f}")
+        self.position_axes.yaxis.set_major_formatter("{x:.2f}")
 
         self.displacement_label = self.displacement_axes.set_ylabel("Displacement (cm)", picker=True)
         self.displacement_axes.set_ylim(ymin=-2.6, ymax=2.6)
-        self.displacement_axes.yaxis.set_major_formatter("{x:0.2f}")
+        self.displacement_axes.yaxis.set_major_formatter("{x:.2f}")
 
         self.g_level_label = self.g_level_axes.set_ylabel("Acceleration (g)", picker=True)
         self.g_level_axes.set_ylim(ymin=-1, ymax=255)
