@@ -31,6 +31,7 @@ class ExitCode(enum.IntEnum):
 
     Success = 0
     Equip_Without_USB_Failure = 31
+    Secrets_File_Missing = 32
     Discovery_Failure = 41
     COM1_Failure = 42
     Board_Lookup_Failure = 51
