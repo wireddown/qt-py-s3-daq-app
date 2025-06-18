@@ -38,6 +38,14 @@ class Behavior(StrEnum):
     NewerFilesOnly = "NewerFilesOnly"
 
 
+class SecretsBehavior(StrEnum):
+    """Supported behaviors for handling the --secrets option."""
+
+    Analyze = "Analyze"
+    Noop = "Noop"
+    Update = "Update"
+
+
 class SnsrNodeBundle(NamedTuple):
     """Represents the version, contents, and dependencies for a sensor_node."""
 
@@ -49,9 +57,24 @@ class SnsrNodeBundle(NamedTuple):
     installed_circuitpy_modules: list[tuple[str, str]]
 
 
-def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
+def handle_equip(behavior: Behavior, root: pathlib.Path | None, secrets: str) -> None:
     """Handle the equip CLI command."""
-    logger.debug(f"behavior: '{behavior}', root: '{root}'")
+    logger.debug(f"behavior: '{behavior}', root: '{root}', secrets: '{secrets}'")
+
+    secrets_file = None
+    if secrets == f"{SecretsBehavior.__name__}.{SecretsBehavior.Noop}":
+        secrets_behavior = SecretsBehavior.Noop
+    elif secrets == f"{SecretsBehavior.__name__}.{SecretsBehavior.Analyze}":
+        secrets_behavior = SecretsBehavior.Analyze
+    else:
+        secrets_behavior = SecretsBehavior.Update
+        if secrets == "-":
+            pass
+        else:
+            secrets_file = pathlib.Path(secrets)
+            if not (secrets_file.is_file() and secrets_file.exists()):
+                logger.error(f"Cannot open secrets file '{secrets_file!s}'.")
+                raise SystemExit(ExitCode.Secrets_File_Missing)
 
     this_file = pathlib.Path(__file__)
     this_folder = this_file.parent
@@ -96,6 +119,16 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
         _equip_snsr_node(behavior, comparison_information)
     else:
         logger.info(f"Skipping installation: {skip_reason}")
+
+    match secrets_behavior:
+        case SecretsBehavior.Noop:
+            raise SystemExit(ExitCode.Success)
+        case SecretsBehavior.Analyze:
+            node_secrets = _detect_node_secrets(device_bundle.device_files)
+            secrets_description = _format_secrets_description(node_secrets)
+            _ = [logger.info(line) for line in secrets_description]
+        case SecretsBehavior.Update:
+            _update_secrets(secrets_behavior, secrets_file)
 
 
 def _detect_snsr_bundle(main_folder: pathlib.Path) -> SnsrNodeBundle:
@@ -509,6 +542,20 @@ def _query_modules_from_circup(main_folder: pathlib.Path, log_info: bool) -> lis
         ]
     modules_with_version = [(name, details["__version__"]) for name, details in sorted(installed_cp_modules.items())]
     return modules_with_version
+
+
+def _detect_node_secrets(device_files: list[pathlib.Path]) -> list:
+    """Parse the settings.toml file on the sensor_node and return a list of detected secrets."""
+    return ["lol seekrits"]
+
+
+def _format_secrets_description(node_secrets: list) -> list[str]:
+    """Format and return a list of lines that describes this sensor_node's secrets."""
+    return node_secrets
+
+
+def _update_secrets(secrets_behavior: SecretsBehavior, secrets_file: pathlib.Path) -> None:
+    """Update the secrets on the sensor_node."""
 
 
 def _handle_generate_notice() -> str:
