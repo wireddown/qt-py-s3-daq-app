@@ -182,9 +182,9 @@ def run(behavior: str, app_name: str) -> None:
 )
 @click.option(
     "--secrets",
-    is_flag=False,
-    flag_value=f"{_equip.SecretsBehavior.__name__}.{_equip.SecretsBehavior.Analyze}",
-    default=f"{_equip.SecretsBehavior.__name__}.{_equip.SecretsBehavior.Noop}",
+    is_flag=False,  # This pattern is a corner case for click options
+    default=_equip.SecretsBehavior.Noop.as_full_name(),  # Use this value when '--secrets' is NOT on the command line
+    flag_value=_equip.SecretsBehavior.Analyze.as_full_name(),  # Use this value when '--secrets' is present but has no FILE value
     metavar="[FILE | -]",
     help="Update the secrets on the sensor_node from FILE or stdin with '-'. Without FILE, show which are missing.",
 )
