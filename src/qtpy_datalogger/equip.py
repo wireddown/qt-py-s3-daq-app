@@ -13,6 +13,7 @@ from typing import NamedTuple
 
 import bs4
 import circup
+import click
 import findimports
 import packaging.version
 import toml
@@ -115,20 +116,22 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None, secrets: str) ->
 
     should_install, skip_reason = _should_install(behavior, comparison_information)
 
+    match secrets_behavior:
+        case SecretsBehavior.Noop:
+            pass
+        case SecretsBehavior.Analyze:
+            node_secrets = _detect_node_secrets(device_bundle.device_files[0])
+            secrets_description = _format_secrets_description(node_secrets)
+            _ = [logger.info(line) for line in secrets_description]
+        case SecretsBehavior.Update:
+            logger.info("Updating sensor_node secrets")
+            _update_secrets(secrets_file, device_bundle.device_files[0])
+            logger.info("Secrets updated")
+
     if should_install:
         _equip_snsr_node(behavior, comparison_information)
     else:
         logger.info(f"Skipping installation: {skip_reason}")
-
-    match secrets_behavior:
-        case SecretsBehavior.Noop:
-            raise SystemExit(ExitCode.Success)
-        case SecretsBehavior.Analyze:
-            node_secrets = _detect_node_secrets(device_bundle.device_files)
-            secrets_description = _format_secrets_description(node_secrets)
-            _ = [logger.info(line) for line in secrets_description]
-        case SecretsBehavior.Update:
-            _update_secrets(secrets_behavior, secrets_file)
 
 
 def _detect_snsr_bundle(main_folder: pathlib.Path) -> SnsrNodeBundle:
@@ -544,18 +547,66 @@ def _query_modules_from_circup(main_folder: pathlib.Path, log_info: bool) -> lis
     return modules_with_version
 
 
-def _detect_node_secrets(device_files: list[pathlib.Path]) -> list:
-    """Parse the settings.toml file on the sensor_node and return a list of detected secrets."""
-    return ["lol seekrits"]
+def _detect_node_secrets(device_root: pathlib.Path) -> dict[str, bool]:
+    """Parse the settings.toml file on the sensor_node and return a dictionary of detected secrets."""
+    expected_secrets = {
+        "CIRCUITPY_WIFI_SSID": False,
+        "CIRCUITPY_WIFI_PASSWORD": False,
+        "QTPY_BROKER_IP_ADDRESS": False,
+        "QTPY_NODE_GROUP": False,
+        "QTPY_NODE_NAME": False,
+    }
+    settings_file = device_root.joinpath(SnsrPath.settings)
+    if not settings_file.exists():
+        return expected_secrets
+    device_settings = toml.load(settings_file)
+    detected_secrets = {
+        secret: secret in device_settings
+        for secret in expected_secrets
+    }
+    return detected_secrets
 
 
-def _format_secrets_description(node_secrets: list) -> list[str]:
+def _format_secrets_description(node_secrets: dict[str, bool]) -> list[str]:
     """Format and return a list of lines that describes this sensor_node's secrets."""
-    return node_secrets
+    secrets_report = []
+    secrets_report.append("Detecting secrets")
+    for secret_name, is_defined in node_secrets.items():
+        message = "ok" if is_defined else click.style("MISSING", "yellow")
+        secrets_report.append(f" * {secret_name:<24}  {message}")
+    return secrets_report
 
 
-def _update_secrets(secrets_behavior: SecretsBehavior, secrets_file: pathlib.Path) -> None:
+def _update_secrets(new_secrets_file: pathlib.Path | None, device_root: pathlib.Path) -> None:
     """Update the secrets on the sensor_node."""
+    secrets_file = device_root.joinpath(SnsrPath.settings)
+    if new_secrets_file:
+        shutil.copy(new_secrets_file, secrets_file)
+        return
+
+    click.echo()
+    click.echo(f"Set a new value or press {click.style('<Enter>', 'bright_cyan')} to skip")
+    new_secrets = {}
+    detected_secrets = _detect_node_secrets(device_root)
+    for secret in detected_secrets:
+        user_input = click.prompt(
+            text=f"  {click.style(secret, 'bright_green')}",
+            default="",
+            hide_input=True,
+            type=str,
+            show_default=False,
+        )
+        if user_input:
+            new_secrets[secret] = user_input
+    click.echo()
+
+    final_secrets = new_secrets.copy()
+    if secrets_file.exists():
+        old_secrets = toml.load(secrets_file)
+        final_secrets.update(old_secrets)  # Retain unrelated toml entries
+        final_secrets.update(new_secrets)  # Overlay the new secrets
+    with secrets_file.open("w") as secrets_fd:
+        toml.dump(final_secrets, secrets_fd)
 
 
 def _handle_generate_notice() -> str:
