@@ -309,6 +309,22 @@ class ToolWindow(guikit.AsyncDialog):
         self.origin_label.configure(text=message)
 
 
+
+class SettingsWindow(guikit.AsyncDialog):
+    """A class that shows a windows for configuring the app's settings."""
+
+    def __init__(self, parent: ttk.Toplevel | ttk.Window, title: str) -> None:
+        """Initialize a new SettingsWindow."""
+        super().__init__(parent=parent, title=title)
+
+    def create_user_interface(self) -> None:
+        """Create the layout and widget event handlers."""
+
+    async def on_loop(self) -> None:
+        """Update UI elements."""
+        await asyncio.sleep(20e-3)
+
+
 class RawDataProcessor:
     """A class that calculates derived data from raw sensor samples."""
 
@@ -852,6 +868,7 @@ class SoilSwell(guikit.AsyncWindow):
         }
         self.battery_level_tooltip = None
         self.tool_window = None
+        self.settings_window = None
         self.scanner_process = None
         self.position_axis_limits = (-0.1, 2.6)
         self.displacement_axis_limits = (-2.6, 2.6)
@@ -1297,6 +1314,15 @@ class SoilSwell(guikit.AsyncWindow):
 
     def open_settings_dialog(self, event_args: tk.Event) -> None:
         """Handle the Settings::AppSettings menu command."""
+        if not self.settings_window:
+            self.settings_window = SettingsWindow(parent=self.root_window, title=SoilSwell.CommandName.Settings)
+            open_settings_window_task = asyncio.create_task(self.settings_window.show(guikit.DialogBehavior.Modeless))
+            self.background_tasks.add(open_settings_window_task)
+            open_settings_window_task.add_done_callback(self.finalize_settings_window)
+
+    def finalize_settings_window(self, task: asyncio.Task) -> None:
+        """Finalize the SettingsWindow after the user closes it."""
+        self.tool_window = None
 
     def toggle_demo(self) -> None:
         """Start a demonstration session."""
