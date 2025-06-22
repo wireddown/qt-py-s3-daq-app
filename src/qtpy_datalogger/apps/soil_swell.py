@@ -1007,7 +1007,7 @@ class SoilSwell(guikit.AsyncWindow):
         self.root_window.bind(AppState.Event.DemoModeChanged, self.on_demo_mode_changed)
         self.root_window.bind(AppState.Event.NewDataProcessed, self.on_new_data_processed)
 
-        self.update_window_title("Centrifuge Test")
+        self.update_window_title(SoilSwell.app_name)
         self.handle_reset(sender=self.reset_button)
         self.root_window.update_idletasks()
 
@@ -1349,14 +1349,14 @@ class SoilSwell(guikit.AsyncWindow):
     def open_settings_dialog(self, event_args: tk.Event) -> None:
         """Handle the Settings::AppSettings menu command."""
         if not self.settings_window:
-            self.settings_window = SettingsWindow(parent=self.root_window, title=SoilSwell.CommandName.Settings)
+            self.settings_window = SettingsWindow(parent=self.root_window, title=f"{SoilSwell.app_name} {SoilSwell.CommandName.Settings}".capitalize())
             open_settings_window_task = asyncio.create_task(self.settings_window.show(guikit.DialogBehavior.Modeless))
             self.background_tasks.add(open_settings_window_task)
             open_settings_window_task.add_done_callback(self.finalize_settings_window)
 
     def finalize_settings_window(self, task: asyncio.Task) -> None:
         """Finalize the SettingsWindow after the user closes it."""
-        self.tool_window = None
+        self.settings_window = None
 
     def toggle_demo(self) -> None:
         """Start a demonstration session."""
