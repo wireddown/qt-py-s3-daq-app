@@ -374,7 +374,7 @@ class SettingsWindow(guikit.AsyncDialog):
         def update_sample_rate(new_sample_rate: str) -> None:
             self.settings["startup"]["sample rate"] = new_sample_rate
 
-        sample_rate_options = SampleRate._member_names_
+        sample_rate_options = SampleRate._member_names_.copy()
         sample_rate_options.remove(SampleRate.Unset)
         sample_rate_input = guikit.create_dropdown_combobox(settings_frame, values=sample_rate_options, width=10, justify=ttk.LEFT, completion=update_sample_rate)
         sample_rate_input.set(self.settings["startup"]["sample rate"])
@@ -644,7 +644,7 @@ class AppState:
                     "sample rate": str(SampleRate.Fast),
                     "calibration file": "(default)",
                 },
-                "calibration file history": []
+                "calibration file history": ["(default)"]
             }
             toml.dump(default_settings, file)
 
@@ -1126,6 +1126,22 @@ class SoilSwell(guikit.AsyncWindow):
             menu=self.settings_menu,
             underline=0,
         )
+        # Calibration submenu
+        self.calibration_menu = tk.Menu(self.settings_menu, name="calibration_menu")
+        self.settings_menu.add_cascade(
+            label="cali",
+            menu=self.calibration_menu,
+            underline=0,
+        )
+
+        self.calibration_menu.add_separator()
+        self.calibration_menu.add_command(
+            label="Browse..."
+        )
+        self.calibration_menu.add_command(
+            label="New..."
+        )
+        self.settings_menu.add_separator()
         self.settings_menu.add_command(
             command=functools.partial(self.open_settings_dialog, tk.Event()),
             label=SoilSwell.CommandName.AppSettings,
@@ -1473,6 +1489,7 @@ class SoilSwell(guikit.AsyncWindow):
         all_menus = [
             self.file_menu,
             self.settings_menu,
+            self.calibration_menu,
             self.view_menu,
             self.themes_menu,
             self.help_menu,
