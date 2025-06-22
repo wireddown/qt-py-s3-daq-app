@@ -1,7 +1,6 @@
 """An app that collects data from a soil swell test."""
 
 import asyncio
-import atexit
 import contextlib
 import datetime
 import functools
@@ -9,10 +8,7 @@ import importlib.resources
 import logging
 import multiprocessing
 import pathlib
-import shutil
-import tempfile
 import tkinter as tk
-import webbrowser
 from enum import StrEnum
 from tkinter import filedialog, font
 from typing import Any, Callable, NamedTuple
@@ -20,7 +16,6 @@ from typing import Any, Callable, NamedTuple
 import matplotlib.axes as mpl_axes
 import matplotlib.backend_bases as mpl_backend_bases
 import matplotlib.figure as mpl_figure
-import matplotlib.ticker as mpl_ticker
 import pandas as pd
 import ttkbootstrap as ttk
 import ttkbootstrap.themes.standard as ttk_themes
@@ -803,6 +798,8 @@ class SoilSwell(guikit.AsyncWindow):
         File = "File"
         SaveFullLog = "Save full log..."
         Exit = "Exit"
+        Settings = "Settings"
+        AppSettings = "App settings..."
         View = "View"
         Theme = "Theme"
         Help = "Help"
@@ -992,6 +989,18 @@ class SoilSwell(guikit.AsyncWindow):
             accelerator="Alt-F4",
         )
         self.root_window.bind("<Alt-F4>", self.safe_exit)
+
+        # Settings menu
+        self.settings_menu = tk.Menu(self.menubar, name="settings_menu")
+        self.menubar.add_cascade(
+            label="Settings",
+            menu=self.settings_menu,
+            underline=0,
+        )
+        self.settings_menu.add_command(
+            command=functools.partial(self.open_settings_dialog, tk.Event()),
+            label=SoilSwell.CommandName.AppSettings,
+        )
 
         # View menu
         self.view_menu = tk.Menu(self.menubar, name="view_menu")
@@ -1286,6 +1295,9 @@ class SoilSwell(guikit.AsyncWindow):
         file_path = file_path.with_suffix(".csv")
         self.state.data.to_csv(file_path)
 
+    def open_settings_dialog(self, event_args: tk.Event) -> None:
+        """Handle the Settings::AppSettings menu command."""
+
     def toggle_demo(self) -> None:
         """Start a demonstration session."""
         self.state.toggle_demo()
@@ -1314,6 +1326,7 @@ class SoilSwell(guikit.AsyncWindow):
         # Style the menus
         all_menus = [
             self.file_menu,
+            self.settings_menu,
             self.view_menu,
             self.themes_menu,
             self.help_menu,
