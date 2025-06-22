@@ -321,6 +321,54 @@ class SettingsWindow(guikit.AsyncDialog):
 
     def create_user_interface(self) -> None:
         """Create the layout and widget event handlers."""
+        self.root_window.columnconfigure(0, weight=1)
+        self.root_window.rowconfigure(0, weight=1)
+        # self.root_window.minsize(width=170, height=166)
+        # self.root_window.maxsize(width=170, height=400)
+
+        settings_frame = ttk.Frame(self.root_window, padding=16)
+        settings_frame.columnconfigure(0, weight=0)  # Labels
+        settings_frame.columnconfigure(1, weight=1)  # Controls
+        settings_frame.rowconfigure(0, weight=0)  # Start-up settings group name
+        settings_frame.rowconfigure(1, weight=0)  # Start-up theme
+        settings_frame.rowconfigure(2, weight=0)  # Start-up group name
+        settings_frame.rowconfigure(3, weight=0)  # Start-up sample rate
+        settings_frame.rowconfigure(4, weight=1)  # Start-up calibration file and create-new
+        settings_frame.grid(column=0, row=0, sticky=tk.NSEW)
+
+        startup_label = ttk.Label(settings_frame, text="Startup", font=font.Font(family="Segoe UI", size=10, weight=font.BOLD))
+        startup_label.grid(column=0, columnspan=2, row=0, pady=(0, 8), sticky=tk.W)
+
+        # Settings need the values from file
+        theme_label = ttk.Label(settings_frame, text="Theme")
+        theme_label.grid(column=0, row=1, padx=(0, 12), pady=(8, 8), sticky=tk.EW)
+        theme_input = ttk.Combobox(settings_frame, width=10, values=["Cosmo", "Flatly", "Cyborg", "Darkly"], state="readonly")
+        theme_input.grid(column=1, row=1, sticky=tk.W)
+
+        group_label = ttk.Label(settings_frame, text="Sensor group")
+        group_label.grid(column=0, row=2, padx=(0, 12), pady=(8, 8), sticky=tk.EW)
+        sensor_node_group = ttk.Entry(settings_frame, width=12)
+        sensor_node_group.grid(column=1, row=2, sticky=tk.W)
+
+        sample_rate_label = ttk.Label(settings_frame, text="Sample rate")
+        sample_rate_label.grid(column=0, row=3, padx=(0, 12), pady=(8, 8), sticky=tk.EW)
+        sample_rate_input = ttk.Combobox(settings_frame, width=10, values=SampleRate._member_names_, state="readonly")
+        sample_rate_input.grid(column=1, row=3, sticky=tk.W)
+
+        calibration_file_label = ttk.Label(settings_frame, text="Calibration file")
+        calibration_file_label.grid(column=0, row=4, padx=(0, 12), pady=(8, 8), sticky=(tk.N, tk.EW))
+        calibration_input_frame = ttk.Frame(settings_frame)
+        calibration_input_frame.columnconfigure(0, weight=1)
+        calibration_input_frame.columnconfigure(1, weight=0)
+        calibration_input_frame.columnconfigure(2, weight=0)
+        calibration_input_frame.rowconfigure(0, weight=1)
+        calibration_input_frame.grid(column=1, row=4, pady=(3, 0), sticky=(tk.N, tk.EW))
+        calibration_file_name = ttk.Combobox(calibration_input_frame, values=["(default)"])
+        calibration_file_name.grid(column=0, row=0, padx=(0, 8), sticky=tk.EW)
+        select_file_button = ttk.Button(calibration_input_frame, style=bootstyle.PRIMARY, text="Browse...")
+        select_file_button.grid(column=1, row=0, padx=(0, 8), sticky=tk.EW)
+        new_file_button = ttk.Button(calibration_input_frame, style=(bootstyle.PRIMARY, bootstyle.OUTLINE), text="New...")
+        new_file_button.grid(column=2, row=0, sticky=tk.EW)
 
     async def on_loop(self) -> None:
         """Update UI elements."""
