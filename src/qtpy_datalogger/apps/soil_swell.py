@@ -13,10 +13,12 @@ from enum import StrEnum
 from tkinter import filedialog, font
 from typing import Any, Callable, NamedTuple
 
+import click
 import matplotlib.axes as mpl_axes
 import matplotlib.backend_bases as mpl_backend_bases
 import matplotlib.figure as mpl_figure
 import pandas as pd
+import toml
 import ttkbootstrap as ttk
 import ttkbootstrap.themes.standard as ttk_themes
 import ttkbootstrap.tooltip as ttk_tooltip
@@ -548,7 +550,30 @@ class RawDataProcessor:
 class AppState:
     """A class that models and controls the app's settings and runtime state."""
 
-    canceled_file: pathlib.Path = pathlib.Path()
+    canceled_file = pathlib.Path()
+    settings_file = pathlib.Path(
+        click.get_app_dir(app_name="qtpy-datalogger", roaming=False)
+    ).joinpath(pathlib.Path(__file__).stem).joinpath("settings.toml")
+
+    @staticmethod
+    def ensure_settings_file() -> None:
+        """Guarantee that the settings file for the app exists and parses correctly."""
+        if AppState.settings_file.exists():
+            precheck = toml.load(AppState.settings_file)
+            if "startup" in precheck:
+                return
+        pathlib.Path.mkdir(AppState.settings_file.parent, parents=True, exist_ok=True)
+        with AppState.settings_file.open("w") as file:
+            default_settings = {
+                "startup": {
+                    "theme": "cosmo",
+                    "group": str(datatypes.Default.MqttGroup),
+                    "sample rate": str(SampleRate.Fast),
+                    "calibration file": "(default)",
+                },
+                "calibration file history": []
+            }
+            toml.dump(default_settings, file)
 
     class Event(StrEnum):
         """Events emitted when properties change."""
@@ -749,10 +774,11 @@ class AppState:
 
     def reset(self) -> None:
         """Reset the properties to default on-launch values."""
+        user_settings = self.load_user_settings()["startup"]
         self._battery_level = BatteryLevel.Unknown
         self._battery_voltage = 0.0
-        self._sensor_group = datatypes.Default.MqttGroup
-        self._sample_rate = SampleRate.Live
+        self._sensor_group = user_settings.get("group", datatypes.Default.MqttGroup)
+        self._sample_rate = SampleRate(user_settings.get("sample rate", SampleRate.Fast))
         self._acquire_active = Tristate.BoolFalse
         self._log_data_active = False
         self._demo_active = False
@@ -760,17 +786,27 @@ class AppState:
         self._most_recent_timestamp = datetime.datetime.min.replace(tzinfo=datetime.UTC)
         self._log_file_path = AppState.canceled_file
         self._index_when_log_enabled = -1
-        self._tk_notifier.event_generate(AppState.Event.BatteryLevelChanged)
-        self._tk_notifier.event_generate(AppState.Event.BatteryVoltageChanged)
-        self._tk_notifier.event_generate(AppState.Event.SensorGroupChanged)
-        self._tk_notifier.event_generate(AppState.Event.CanSetSensorGroupChanged)
-        self._tk_notifier.event_generate(AppState.Event.SampleRateChanged)
-        self._tk_notifier.event_generate(AppState.Event.AcquireDataChanged)
-        self._tk_notifier.event_generate(AppState.Event.CanAcquireDataChanged)
-        self._tk_notifier.event_generate(AppState.Event.DemoModeChanged)
-        self._tk_notifier.event_generate(AppState.Event.LogDataChanged)
-        self._tk_notifier.event_generate(AppState.Event.CanLogDataChanged)
-        self._tk_notifier.event_generate(AppState.Event.NewDataProcessed)
+
+        self.active_theme = user_settings.get("theme", "cosmo")  # Propagate theme first
+        def notify_all() -> None:
+            self._tk_notifier.event_generate(AppState.Event.BatteryLevelChanged)
+            self._tk_notifier.event_generate(AppState.Event.BatteryVoltageChanged)
+            self._tk_notifier.event_generate(AppState.Event.SensorGroupChanged)
+            self._tk_notifier.event_generate(AppState.Event.CanSetSensorGroupChanged)
+            self._tk_notifier.event_generate(AppState.Event.SampleRateChanged)
+            self._tk_notifier.event_generate(AppState.Event.AcquireDataChanged)
+            self._tk_notifier.event_generate(AppState.Event.CanAcquireDataChanged)
+            self._tk_notifier.event_generate(AppState.Event.DemoModeChanged)
+            self._tk_notifier.event_generate(AppState.Event.LogDataChanged)
+            self._tk_notifier.event_generate(AppState.Event.CanLogDataChanged)
+            self._tk_notifier.event_generate(AppState.Event.NewDataProcessed)
+        self._tk_notifier.after(0, notify_all)
+
+    def load_user_settings(self) -> dict:
+        """Load the user's configured settings and return a dictionary of their values."""
+        AppState.ensure_settings_file()
+        user_settings = toml.load(AppState.settings_file)
+        return user_settings
 
     def toggle_demo(self) -> None:
         """Start a demonstration session."""
@@ -972,10 +1008,8 @@ class SoilSwell(guikit.AsyncWindow):
         self.root_window.bind(AppState.Event.NewDataProcessed, self.on_new_data_processed)
 
         self.update_window_title("Centrifuge Test")
-        self.state.active_theme = "cosmo"
-
-        self.root_window.update_idletasks()
         self.handle_reset(sender=self.reset_button)
+        self.root_window.update_idletasks()
 
         self.icon_index = 0
         self.cycle_battery_icon()
