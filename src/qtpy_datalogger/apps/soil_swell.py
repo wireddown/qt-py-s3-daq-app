@@ -391,7 +391,9 @@ class SettingsWindow(guikit.AsyncDialog):
         def update_calibration_file(new_file_path: str) -> None:
             self.settings["startup"]["calibration file"] = new_file_path
 
-        calibration_file_name = guikit.create_dropdown_combobox(calibration_input_frame, values=["(default)"], width=10, justify=ttk.LEFT, completion=update_calibration_file)
+        previous_files = [str(SoilSwell.CommandName.DefaultCalibrationFile)]
+        previous_files.extend(self.settings["calibration file history"])
+        calibration_file_name = guikit.create_dropdown_combobox(calibration_input_frame, values=previous_files, width=20, justify=ttk.LEFT, completion=update_calibration_file)
         calibration_file_name.set(self.settings["startup"]["calibration file"])
         calibration_file_name.grid(column=0, row=0, padx=(0, 8), sticky=tk.EW)
 
@@ -642,9 +644,9 @@ class AppState:
                     "theme": "cosmo",
                     "group": str(datatypes.Default.MqttGroup),
                     "sample rate": str(SampleRate.Fast),
-                    "calibration file": "(default)",
+                    "calibration file": str(SoilSwell.CommandName.DefaultCalibrationFile),
                 },
-                "calibration file history": ["(default)"]
+                "calibration file history": []
             }
             toml.dump(default_settings, file)
 
@@ -654,6 +656,8 @@ class AppState:
         AcquireDataChanged = "<<AcquireDataChanged>>"
         BatteryLevelChanged = "<<BatteryLevelChanged>>"
         BatteryVoltageChanged = "<<BatteryVoltageChanged>>"
+        CalibrationFileChanged = "<<CalibrationFileChanged>>"
+        CalibrationFileHistoryChanged = "<<CalibrationFileHistoryChanged>>"
         CanAcquireDataChanged = "<<CanAcquireDataChanged>>"
         CanLogDataChanged = "<<CanLogDataChanged>>"
         CanSetSensorGroupChanged = "<<CanSetSensorGroupChanged>>"
@@ -679,6 +683,8 @@ class AppState:
         self._demo_active = False
         self._log_file_path = AppState.canceled_file
         self._index_when_log_enabled = -1
+        self._calibration_file = ""
+        self._calibration_file_history = []
 
     @property
     def active_theme(self) -> str:
@@ -845,9 +851,34 @@ class AppState:
         self._acquired_data = new_value
         self._tk_notifier.event_generate(AppState.Event.NewDataProcessed)
 
+    @property
+    def calibration_file(self) -> str:
+        """Return the path to the calibration file."""
+        return self._calibration_file
+
+    @calibration_file.setter
+    def calibration_file(self, new_value: str) -> None:
+        """Set a new value for the calibration file and notify CalibrationFileChanged and CalibrationFileHistoryChanged subscribers."""
+        if new_value == self._calibration_file:
+            return
+        self._calibration_file = new_value
+        self._tk_notifier.event_generate(AppState.Event.CalibrationFileChanged)
+        self._tk_notifier.event_generate(AppState.Event.CalibrationFileHistoryChanged)
+
+    @property
+    def calibration_file_history(self) -> list[str]:
+        """Return the list of previously used calibration files."""
+        valid_files = []
+        for file in self._calibration_file_history:
+            file_as_path = pathlib.Path(file)
+            if file_as_path.exists():
+                valid_files.append(file)
+        return valid_files
+
     def reset(self) -> None:
         """Reset the properties to default on-launch values."""
-        user_settings = self.load_user_settings()["startup"]
+        app_settings = self.load_user_settings()
+        user_settings = app_settings["startup"]
         self._battery_level = BatteryLevel.Unknown
         self._battery_voltage = 0.0
         self._sensor_group = user_settings.get("group", datatypes.Default.MqttGroup)
@@ -859,6 +890,8 @@ class AppState:
         self._most_recent_timestamp = datetime.datetime.min.replace(tzinfo=datetime.UTC)
         self._log_file_path = AppState.canceled_file
         self._index_when_log_enabled = -1
+        self._calibration_file = user_settings["calibration file"]
+        self._calibration_file_history = app_settings["calibration file history"]
 
         self.active_theme = user_settings.get("theme", "cosmo")  # Propagate theme first
         def notify_all() -> None:
@@ -873,6 +906,8 @@ class AppState:
             self._tk_notifier.event_generate(AppState.Event.LogDataChanged)
             self._tk_notifier.event_generate(AppState.Event.CanLogDataChanged)
             self._tk_notifier.event_generate(AppState.Event.NewDataProcessed)
+            self._tk_notifier.event_generate(AppState.Event.CalibrationFileChanged)
+            self._tk_notifier.event_generate(AppState.Event.CalibrationFileHistoryChanged)
         self._tk_notifier.after(0, notify_all)
 
     def load_user_settings(self) -> dict:
@@ -929,6 +964,10 @@ class SoilSwell(guikit.AsyncWindow):
         SaveFullLog = "Save full log..."
         Exit = "Exit"
         Settings = "Settings"
+        CalibrationFile = "Calibration file"
+        DefaultCalibrationFile = "Default scaling"
+        BrowseCalibrationFile = "Browse..."
+        NewCalibrationFile = "New..."
         AppSettings = "App settings..."
         View = "View"
         Theme = "Theme"
@@ -946,6 +985,7 @@ class SoilSwell(guikit.AsyncWindow):
         self.demo_variable = tk.BooleanVar()
         self.sensor_node_group_variable = tk.StringVar()
         self.sample_rate_variable = tk.StringVar()
+        self.calibration_file_variable = tk.StringVar()
         self.log_data_variable = tk.BooleanVar()
         self.svg_images: dict[str, tk.Image] = {}
         self.menu_text_for_theme = {
@@ -1084,6 +1124,8 @@ class SoilSwell(guikit.AsyncWindow):
         self.root_window.bind(AppState.Event.CanSetSensorGroupChanged, self.on_can_set_sensor_group_changed)
         self.root_window.bind(AppState.Event.DemoModeChanged, self.on_demo_mode_changed)
         self.root_window.bind(AppState.Event.NewDataProcessed, self.on_new_data_processed)
+        self.root_window.bind(AppState.Event.CalibrationFileChanged, self.on_calibration_file_changed)
+        self.root_window.bind(AppState.Event.CalibrationFileHistoryChanged, self.on_calibration_file_history_changed)
 
         self.update_window_title(SoilSwell.app_name)
         self.handle_reset(sender=self.reset_button)
@@ -1129,22 +1171,16 @@ class SoilSwell(guikit.AsyncWindow):
         # Calibration submenu
         self.calibration_menu = tk.Menu(self.settings_menu, name="calibration_menu")
         self.settings_menu.add_cascade(
-            label="cali",
+            label=SoilSwell.CommandName.CalibrationFile,
             menu=self.calibration_menu,
             underline=0,
         )
 
-        self.calibration_menu.add_separator()
-        self.calibration_menu.add_command(
-            label="Browse..."
-        )
-        self.calibration_menu.add_command(
-            label="New..."
-        )
         self.settings_menu.add_separator()
         self.settings_menu.add_command(
             command=functools.partial(self.open_settings_dialog, tk.Event()),
             label=SoilSwell.CommandName.AppSettings,
+            underline=0,
         )
 
         # View menu
@@ -1460,6 +1496,41 @@ class SoilSwell(guikit.AsyncWindow):
         self.settings_window = None
         self.background_tasks.discard(task)
 
+    def on_calibration_file_changed(self, event_args: tk.Event) -> None:
+        """Handle the CalibrationFileChanged event."""
+        self.calibration_file_variable.set(self.state.calibration_file)
+
+    def on_calibration_file_history_changed(self, event_args: tk.Event) -> None:
+        """Handle the CalibrationFileHistoryChanged event."""
+        self.remake_calibration_submenu()
+
+    def remake_calibration_submenu(self) -> None:
+        """Remake the submenu that holds the recently used calibration files."""
+        self.calibration_menu.delete(0, tk.LAST)
+        if self.state.calibration_file_history:
+            for entry in self.state.calibration_file_history[:9]:
+                self.calibration_menu.add_radiobutton(
+                    label=f"{entry!s}",
+                    variable=self.calibration_file_variable,
+                )
+        else:
+            self.calibration_menu.add_command(
+                label="(No recent files)",
+                state=tk.DISABLED,
+            )
+        self.calibration_menu.add_separator()
+        self.calibration_menu.add_radiobutton(
+            label=SoilSwell.CommandName.DefaultCalibrationFile,
+            variable=self.calibration_file_variable,
+        )
+        self.calibration_menu.add_separator()
+        self.calibration_menu.add_command(
+            label=SoilSwell.CommandName.BrowseCalibrationFile,
+        )
+        self.calibration_menu.add_command(
+            label=SoilSwell.CommandName.NewCalibrationFile,
+        )
+
     def toggle_demo(self) -> None:
         """Start a demonstration session."""
         self.state.toggle_demo()
@@ -1509,7 +1580,7 @@ class SoilSwell(guikit.AsyncWindow):
         """Style every entry in the specified menu."""
         last_entry = menu.index(tk.END)
         if last_entry is None:
-            raise ValueError()
+            return
         for index in range(last_entry + 1):
             self.style_menu_entry(menu, index)
 
