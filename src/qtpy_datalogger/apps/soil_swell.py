@@ -315,16 +315,18 @@ class ToolWindow(guikit.AsyncDialog):
 class SettingsWindow(guikit.AsyncDialog):
     """A class that shows a windows for configuring the app's settings."""
 
-    def __init__(self, parent: ttk.Toplevel | ttk.Window, title: str) -> None:
+    def __init__(self, parent: ttk.Toplevel | ttk.Window, title: str, settings: dict) -> None:
         """Initialize a new SettingsWindow."""
+        self.settings = settings
+        self.group_input_variable = tk.StringVar(value=settings["startup"]["group"])
         super().__init__(parent=parent, title=title)
 
     def create_user_interface(self) -> None:
         """Create the layout and widget event handlers."""
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
-        # self.root_window.minsize(width=170, height=166)
-        # self.root_window.maxsize(width=170, height=400)
+        self.root_window.minsize(width=220, height=201)
+        self.root_window.maxsize(width=800, height=201)
 
         settings_frame = ttk.Frame(self.root_window, padding=16)
         settings_frame.columnconfigure(0, weight=0)  # Labels
@@ -339,20 +341,43 @@ class SettingsWindow(guikit.AsyncDialog):
         startup_label = ttk.Label(settings_frame, text="Startup", font=font.Font(family="Segoe UI", size=10, weight=font.BOLD))
         startup_label.grid(column=0, columnspan=2, row=0, pady=(0, 8), sticky=tk.W)
 
-        # Settings need the values from file
         theme_label = ttk.Label(settings_frame, text="Theme")
         theme_label.grid(column=0, row=1, padx=(0, 12), pady=(8, 8), sticky=tk.EW)
-        theme_input = ttk.Combobox(settings_frame, width=10, values=["Cosmo", "Flatly", "Cyborg", "Darkly"], state="readonly")
+        def update_theme(new_theme: str) -> None:
+            self.settings["startup"]["theme"] = new_theme.lower()
+
+        theme_input = guikit.create_dropdown_combobox(settings_frame, values=["Cosmo", "Flatly", "Cyborg", "Darkly"], width=10, justify=ttk.LEFT, completion=update_theme)
+        theme_input.set(self.settings["startup"]["theme"].capitalize())
         theme_input.grid(column=1, row=1, sticky=tk.W)
 
         group_label = ttk.Label(settings_frame, text="Sensor group")
         group_label.grid(column=0, row=2, padx=(0, 12), pady=(8, 8), sticky=tk.EW)
-        sensor_node_group = ttk.Entry(settings_frame, width=12)
+
+        sensor_node_group = ttk.Entry(settings_frame, width=12, textvariable=self.group_input_variable)
+        def check_valid_group_name(sender: tk.Entry, candidate_value: str, operation: str) -> bool:
+            """Return True if candidate_value is a valid sensor group name."""
+            illegal_chars = [" ", "/", "#", "+"]
+            has_illegal_char = any(char in candidate_value for char in illegal_chars)
+            return not has_illegal_char
+
+        def handle_new_value(sender: tk.Entry, variable_name: str, empty: str, operation: str) -> None:
+            """Process a new value that passed input validation."""
+            self.settings["startup"]["group"] = sender.get()
+
+        input_validator = self.parent.register(functools.partial(check_valid_group_name, sensor_node_group))
+        self.group_input_variable.trace_add("write", functools.partial(handle_new_value, sensor_node_group))
+        sensor_node_group.configure(validate=tk.ALL, validatecommand=(input_validator, "%P", "%V"))
         sensor_node_group.grid(column=1, row=2, sticky=tk.W)
 
         sample_rate_label = ttk.Label(settings_frame, text="Sample rate")
         sample_rate_label.grid(column=0, row=3, padx=(0, 12), pady=(8, 8), sticky=tk.EW)
-        sample_rate_input = ttk.Combobox(settings_frame, width=10, values=SampleRate._member_names_, state="readonly")
+        def update_sample_rate(new_sample_rate: str) -> None:
+            self.settings["startup"]["sample rate"] = new_sample_rate
+
+        sample_rate_options = SampleRate._member_names_
+        sample_rate_options.remove(SampleRate.Unset)
+        sample_rate_input = guikit.create_dropdown_combobox(settings_frame, values=sample_rate_options, width=10, justify=ttk.LEFT, completion=update_sample_rate)
+        sample_rate_input.set(self.settings["startup"]["sample rate"])
         sample_rate_input.grid(column=1, row=3, sticky=tk.W)
 
         calibration_file_label = ttk.Label(settings_frame, text="Calibration file")
@@ -363,12 +388,12 @@ class SettingsWindow(guikit.AsyncDialog):
         calibration_input_frame.columnconfigure(2, weight=0)
         calibration_input_frame.rowconfigure(0, weight=1)
         calibration_input_frame.grid(column=1, row=4, pady=(3, 0), sticky=(tk.N, tk.EW))
-        calibration_file_name = ttk.Combobox(calibration_input_frame, values=["(default)"])
+        def update_calibration_file(new_file_path: str) -> None:
+            self.settings["startup"]["calibration file"] = new_file_path
+
+        calibration_file_name = guikit.create_dropdown_combobox(calibration_input_frame, values=["(default)"], width=10, justify=ttk.LEFT, completion=update_calibration_file)
+        calibration_file_name.set(self.settings["startup"]["calibration file"])
         calibration_file_name.grid(column=0, row=0, padx=(0, 8), sticky=tk.EW)
-        select_file_button = ttk.Button(calibration_input_frame, style=bootstyle.PRIMARY, text="Browse...")
-        select_file_button.grid(column=1, row=0, padx=(0, 8), sticky=tk.EW)
-        new_file_button = ttk.Button(calibration_input_frame, style=(bootstyle.PRIMARY, bootstyle.OUTLINE), text="New...")
-        new_file_button.grid(column=2, row=0, sticky=tk.EW)
 
     async def on_loop(self) -> None:
         """Update UI elements."""
@@ -855,6 +880,11 @@ class AppState:
         AppState.ensure_settings_file()
         user_settings = toml.load(AppState.settings_file)
         return user_settings
+
+    def save_user_settings(self, new_settings: dict) -> None:
+        """Save the user's configured settings."""
+        with AppState.settings_file.open("w") as file:
+            toml.dump(new_settings, file)
 
     def toggle_demo(self) -> None:
         """Start a demonstration session."""
@@ -1397,14 +1427,22 @@ class SoilSwell(guikit.AsyncWindow):
     def open_settings_dialog(self, event_args: tk.Event) -> None:
         """Handle the Settings::AppSettings menu command."""
         if not self.settings_window:
-            self.settings_window = SettingsWindow(parent=self.root_window, title=f"{SoilSwell.app_name} {SoilSwell.CommandName.Settings}".capitalize())
+            self.settings_window = SettingsWindow(
+                parent=self.root_window,
+                title=f"{SoilSwell.app_name} {SoilSwell.CommandName.Settings}".capitalize(),
+                settings=self.state.load_user_settings(),
+            )
             open_settings_window_task = asyncio.create_task(self.settings_window.show(guikit.DialogBehavior.Modeless))
             self.background_tasks.add(open_settings_window_task)
             open_settings_window_task.add_done_callback(self.finalize_settings_window)
 
     def finalize_settings_window(self, task: asyncio.Task) -> None:
         """Finalize the SettingsWindow after the user closes it."""
+        if not self.settings_window:
+            raise RuntimeError()
+        self.state.save_user_settings(self.settings_window.settings)
         self.settings_window = None
+        self.background_tasks.discard(task)
 
     def toggle_demo(self) -> None:
         """Start a demonstration session."""
