@@ -5,6 +5,7 @@ import enum
 import functools
 import logging
 import tkinter as tk
+from typing import Callable, Literal
 
 import ttkbootstrap as ttk
 import ttkbootstrap.icons as ttk_icons
@@ -386,6 +387,29 @@ def create_theme_combobox(parent: tk.BaseWidget) -> ttk.Combobox:
 
     theme_combobox.bind("<<ComboboxSelected>>", handle_change_theme)
     return theme_combobox
+
+
+def create_dropdown_combobox(
+    parent: tk.Misc,
+    values: list[str],
+    width: int,
+    justify: Literal["left", "center", "right"],
+    completion: Callable[[str], None],
+) -> ttk.Combobox:
+    """Create a ttk.Combobox that only allows selection of entries."""
+    def handle_selection(event_args: tk.Event) -> None:
+        """Handle the selection event for the combobox."""
+        sender = event_args.widget
+        if not isinstance(sender, ttk.Combobox):
+            raise TypeError()
+        sender.selection_clear()
+        selected_value = sender.get()
+        completion(selected_value)
+
+    combobox = ttk.Combobox(parent, justify=justify, state=ttk.READONLY, values=values, width=width)
+    combobox.bind("<<ComboboxSelected>>", handle_selection)
+    combobox.selection_clear()
+    return combobox
 
 
 def hex_string_for_style(style_name: str, theme_name: str = "") -> str:
