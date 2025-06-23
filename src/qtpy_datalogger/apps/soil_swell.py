@@ -436,64 +436,7 @@ class RawDataProcessor:
         self._lvdt_position_columns = []
         self._lvdt_displacement_columns = []
         self._relative_time_column = "relative_time_minutes"
-        self._frame_columns.extend(["timestamp", self._relative_time_column])
-        self._frame_columns.extend(["node_id", "node_name"])
-        for index, (channel_name, channel_parameters) in enumerate(self._default_node_parameters.items()):
-            sensor_id = channel_parameters["sensor_id"]
-            match sensor_id:
-                case "lvdt":
-                    sensor_parameters = self._default_lvdt_parameters
-                    sensor_units = sensor_parameters["units"]
-                    lvdt_position_column = f"{sensor_id}{index+1}_position_{sensor_units}"  # 6 LVDTs, index them starting at 1
-                    lvdt_displacement_column = f"{sensor_id}{index+1}_displacement_{sensor_units}"
-                    self._lvdt_position_columns.append(lvdt_position_column)
-                    self._lvdt_displacement_columns.append(lvdt_displacement_column)
-                    self._frame_columns.extend(
-                        [
-                            f"{channel_name}_average_code",
-                            f"{channel_name}_volts",
-                            lvdt_position_column,
-                            lvdt_displacement_column,
-                        ]
-                    )
-                case "thrm":
-                    sensor_parameters = self._default_thrm_parameters
-                    sensor_units = sensor_parameters["units"]
-                    self._temperature_column = f"temperature_{sensor_units}"  # No index, only one temp sensor
-                    self._frame_columns.extend(
-                        [
-                            f"{channel_name}_average_code",
-                            f"{channel_name}_volts",
-                            self._temperature_column,
-                        ]
-                    )
-                case "battery_sense":
-                    sensor_parameters = self._default_battery_parameters
-                    sensor_units = sensor_parameters["units"]
-                    self._battery_column = f"{sensor_id}_{sensor_units}"  # No index, only one battery sense channel
-                    self._frame_columns.extend(
-                        [
-                            f"{channel_name}_average_code",
-                            f"{channel_name}_volts",
-                            self._battery_column,
-                        ]
-                    )
-                case "xl3d_default":
-                    sensor_parameters = self._default_xl3d_parameters
-                    sensor_units = sensor_parameters["units"]
-                    self._g_level_column = f"z_accel_{sensor_units}"
-                    self._frame_columns.extend(
-                        [
-                            "z_accel_average_code",
-                            self._g_level_column,
-                        ]
-                    )
-
-        # Helper for
-        # - getting plot X / Y columns, legend titles
-        # - getting battery voltage columns, last sample
-        # - getting log file columns
-
+        self._build_column_information()
 
     @property
     def frame_columns(self) -> list:
@@ -540,6 +483,30 @@ class RawDataProcessor:
         ]
 
     @property
+    def get_calibration_file_comments(self) -> str:
+        """Return a formatted string to use as comments in a calibration file."""
+        return textwrap.dedent("""\
+            # Calibration coefficients for the QT Py Soil Swell app
+
+            # Sensor collection
+            #   Name format:  [sensors.{sensor_identifier}]
+            #   Example:  [sensors.lvdt_10cm_1]
+            #   The value of {sensor_identifier} must be used in the 'sensor_id' for a node's channel to apply scaling to that channel
+            #   The same {sensor_identifier} may used on multiple channels to apply the same scaling to each
+            #   The scaling is linear and converts the innate measurement from the channel to the sensor's physical units:  physical = {gain} * volts + {offset}
+
+            # Node collection
+            #   Name format:  [nodes.{node_identifier}.{node_channel}]
+            #   Example:  [nodes.node-77aa77aa77aa-0].A0]
+            #   The {node_identifier} must match the 'Node ID' reported by the QT Py Scanner app
+            #   To use a sensor node, 8 analog input channels and the accelerometer channel must be specified
+            #     {node_channel} values:  A0  A1  A2  A3  A4  A5  A6  A7  xl3d
+            #   The scaling is linear and converts the raw codes from the channel to its innate measurement:  measurement = {gain} * code + {offset}
+
+            """
+        )
+
+    @property
     def default_scaling_coefficients(self) -> dict:
         """Return the default scaling coefficients used by the RawDataProcessor."""
         return {
@@ -561,6 +528,66 @@ class RawDataProcessor:
         self._sensor_node_parameters.update(scaling_information["nodes"])
         self._sensor_parameters.clear()
         self._sensor_parameters.update(scaling_information["sensors"])
+
+    def _build_column_information(self) -> None:
+        """Iterate over the channels and initialize the column properties."""
+        self._frame_columns.extend(["timestamp", self._relative_time_column])
+        self._frame_columns.extend(["node_id", "node_name"])
+        for index, channel_name in enumerate(self._default_node_parameters):
+            match index:
+                case i if 0 <= i <= 5:
+                    sensor_parameters = self._default_lvdt_parameters
+                    sensor_units = sensor_parameters["units"]
+                    lvdt_position_column = f"lvdt{index+1}_position_{sensor_units}"  # 6 LVDTs, index them starting at 1
+                    lvdt_displacement_column = f"lvdt{index+1}_displacement_{sensor_units}"
+                    self._lvdt_position_columns.append(lvdt_position_column)
+                    self._lvdt_displacement_columns.append(lvdt_displacement_column)
+                    self._frame_columns.extend(
+                        [
+                            f"{channel_name}_average_code",
+                            f"{channel_name}_volts",
+                            lvdt_position_column,
+                            lvdt_displacement_column,
+                        ]
+                    )
+                case 6:
+                    sensor_parameters = self._default_thrm_parameters
+                    sensor_units = sensor_parameters["units"]
+                    self._temperature_column = f"temperature_{sensor_units}"  # No index, only one temp sensor
+                    self._frame_columns.extend(
+                        [
+                            f"{channel_name}_average_code",
+                            f"{channel_name}_volts",
+                            self._temperature_column,
+                        ]
+                    )
+                case 7:
+                    sensor_parameters = self._default_battery_parameters
+                    sensor_units = sensor_parameters["units"]
+                    self._battery_column = f"battery_sense_{sensor_units}"  # No index, only one battery sense channel
+                    self._frame_columns.extend(
+                        [
+                            f"{channel_name}_average_code",
+                            f"{channel_name}_volts",
+                            self._battery_column,
+                        ]
+                    )
+                case 8:
+                    sensor_parameters = self._default_xl3d_parameters
+                    sensor_units = sensor_parameters["units"]
+                    self._g_level_column = f"z_accel_{sensor_units}"
+                    self._frame_columns.extend(
+                        [
+                            "z_accel_average_code",
+                            self._g_level_column,
+                        ]
+                    )
+
+        # Helper for
+        # - getting plot X / Y columns, legend titles
+        # - getting battery voltage columns, last sample
+        # - getting log file columns
+
 
     def _preview(self, first_row: pd.Series| None, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.Series:
         first_timestamp = first_row.loc["timestamp"] if first_row is not None else data_timestamp
@@ -1603,28 +1630,8 @@ class SoilSwell(guikit.AsyncWindow):
         """Create a new calibration file from the default template."""
         home_folder = pathlib.Path.home()
         new_file = home_folder.joinpath(f"Soil Swell sensor calibration for {self.state.sensor_group}.toml")
-        comments = textwrap.dedent("""\
-            # Calibration coefficients for the QT Py Soil Swell app
-
-            # Sensor collection
-            #   Name format:  [sensors.{sensor_identifier}]
-            #   Example:  [sensors.lvdt_10cm_1]
-            #   The value of {sensor_identifier} must be used in the 'sensor_id' for a node's channel to apply scaling to that channel
-            #   The same {sensor_identifier} may used on multiple channels to apply the same scaling to each
-            #   The scaling is linear and converts the innate measurement from the channel to the sensor's physical units:  physical = {gain} * volts + {offset}
-
-            # Node collection
-            #   Name format:  [nodes.{node_identifier}.{node_channel}]
-            #   Example:  [nodes.node-77aa77aa77aa-0].A0]
-            #   The {node_identifier} must match the 'Node ID' reported by the QT Py Scanner app
-            #   To use a sensor node, 8 analog input channels and the accelerometer channel must be specified
-            #     {node_channel} values:  A0  A1  A2  A3  A4  A5  A6  A7  xl3d
-            #   The scaling is linear and converts the raw codes from the channel to its innate measurement:  measurement = {gain} * code + {offset}
-
-            """
-        )
         with new_file.open("w") as file:
-            file.write(comments)
+            file.write(self.data_processor.get_calibration_file_comments)
             toml.dump(self.data_processor.default_scaling_coefficients, file)
         try:
             click.edit(filename=str(new_file), editor="code")
