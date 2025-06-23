@@ -405,26 +405,65 @@ class SettingsWindow(guikit.AsyncDialog):
 class RawDataProcessor:
     """A class that calculates derived data from raw sensor samples."""
 
-    def __init__(self) -> None:
-        """Initialize a new RawDataProcessor instance."""
-        self._default_lvdt_parameters = { "gain": 1.0, "offset": 0.0, "units": "cm" }
-        self._default_thrm_parameters = { "gain": 1.0, "offset": 0.0, "units": "degC"}
-        self._default_battery_parameters = { "gain": 1.0, "offset": 0.0, "units": "V"}
-        self._default_xl3d_parameters = { "gain": 49e-3, "offset": 0, "units": "g" }
+    _default_lvdt_parameters = { "gain": 1.0, "offset": 0.0, "units": "cm" }
+    _default_thrm_parameters = { "gain": 1.0, "offset": 0.0, "units": "degC"}
+    _default_battery_parameters = { "gain": 1.0, "offset": 0.0, "units": "V"}
+    _default_xl3d_parameters = { "gain": 49e-3, "offset": 0, "units": "g" }
 
-        simple_linear_adc_gain = 3.3 / 2**16
-        self._default_node_parameters = {
-            "A0": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
-            "A1": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
-            "A2": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
-            "A3": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
-            "A4": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
-            "A5": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
-            "A6": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "thrm_mcp9700" },
-            "A7": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "battery_sense" },
-            "xl3d": { "gain": 1.0, "offset": 0.0, "sensor_id": "xl3d_adxl375"},
+    _simple_linear_adc_gain = 3.3 / 2**16
+    _default_node_parameters = {
+        "A0": { "gain": _simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
+        "A1": { "gain": _simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
+        "A2": { "gain": _simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
+        "A3": { "gain": _simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
+        "A4": { "gain": _simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
+        "A5": { "gain": _simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
+        "A6": { "gain": _simple_linear_adc_gain, "offset": 0.0, "sensor_id": "thrm_mcp9700" },
+        "A7": { "gain": _simple_linear_adc_gain, "offset": 0.0, "sensor_id": "battery_sense" },
+        "xl3d": { "gain": 1.0, "offset": 0.0, "sensor_id": "xl3d_adxl375"},
+    }
+
+    @staticmethod
+    def get_calibration_file_comments() -> str:
+        """Return a formatted string to use as comments in a calibration file."""
+        return textwrap.dedent("""\
+            # Calibration coefficients for the QT Py Soil Swell app
+
+            # Sensor collection
+            #   Name format:  [sensors.{sensor_identifier}]
+            #   Example:  [sensors.lvdt_10cm_1]
+            #   The value of {sensor_identifier} must be used in the 'sensor_id' for a node's channel to apply scaling to that channel
+            #   The same {sensor_identifier} may used on multiple channels to apply the same scaling to each
+            #   The scaling is linear and converts the innate measurement from the channel to the sensor's physical units:  physical = {gain} * volts + {offset}
+
+            # Node collection
+            #   Name format:  [nodes.{node_identifier}.{node_channel}]
+            #   Example:  [nodes.node-77aa77aa77aa-0].A0]
+            #   The {node_identifier} must match the 'Node ID' reported by the QT Py Scanner app
+            #   To use a sensor node, 8 analog input channels and the accelerometer channel must be specified
+            #     {node_channel} values:  A0  A1  A2  A3  A4  A5  A6  A7  xl3d
+            #   The scaling is linear and converts the raw codes from the channel to its innate measurement:  measurement = {gain} * code + {offset}
+
+            """
+        )
+
+    @staticmethod
+    def get_default_scaling_coefficients() -> dict:
+        """Return the default scaling coefficients used by the RawDataProcessor."""
+        return {
+            "nodes": {
+                "node-77aa77aa77aa-0": RawDataProcessor._default_node_parameters,
+            },
+            "sensors": {
+                "lvdt": RawDataProcessor._default_lvdt_parameters,
+                "thrm_mcp9700": RawDataProcessor._default_thrm_parameters,
+                "battery_sense": RawDataProcessor._default_battery_parameters,
+                "xl3d_adxl375": RawDataProcessor._default_xl3d_parameters,
+            },
         }
 
+    def __init__(self) -> None:
+        """Initialize a new RawDataProcessor instance."""
         self._sensor_parameters = {
             # Loaded from file
         }
@@ -482,45 +521,6 @@ class RawDataProcessor:
             self.g_level_column,
         ]
 
-    @property
-    def get_calibration_file_comments(self) -> str:
-        """Return a formatted string to use as comments in a calibration file."""
-        return textwrap.dedent("""\
-            # Calibration coefficients for the QT Py Soil Swell app
-
-            # Sensor collection
-            #   Name format:  [sensors.{sensor_identifier}]
-            #   Example:  [sensors.lvdt_10cm_1]
-            #   The value of {sensor_identifier} must be used in the 'sensor_id' for a node's channel to apply scaling to that channel
-            #   The same {sensor_identifier} may used on multiple channels to apply the same scaling to each
-            #   The scaling is linear and converts the innate measurement from the channel to the sensor's physical units:  physical = {gain} * volts + {offset}
-
-            # Node collection
-            #   Name format:  [nodes.{node_identifier}.{node_channel}]
-            #   Example:  [nodes.node-77aa77aa77aa-0].A0]
-            #   The {node_identifier} must match the 'Node ID' reported by the QT Py Scanner app
-            #   To use a sensor node, 8 analog input channels and the accelerometer channel must be specified
-            #     {node_channel} values:  A0  A1  A2  A3  A4  A5  A6  A7  xl3d
-            #   The scaling is linear and converts the raw codes from the channel to its innate measurement:  measurement = {gain} * code + {offset}
-
-            """
-        )
-
-    @property
-    def default_scaling_coefficients(self) -> dict:
-        """Return the default scaling coefficients used by the RawDataProcessor."""
-        return {
-            "nodes": {
-                "qtpys3": self._default_node_parameters,
-            },
-            "sensors": {
-                "lvdt": self._default_lvdt_parameters,
-                "thrm_mcp9700": self._default_thrm_parameters,
-                "battery_sense": self._default_battery_parameters,
-                "xl3d_adxl375": self._default_xl3d_parameters,
-            },
-        }
-
     def load_scaling_coefficients_from_file(self, calibration_file: pathlib.Path) -> None:
         """Load the scaling coefficients from the specified calibration_file."""
         scaling_information = toml.load(calibration_file)
@@ -533,10 +533,10 @@ class RawDataProcessor:
         """Iterate over the channels and initialize the column properties."""
         self._frame_columns.extend(["timestamp", self._relative_time_column])
         self._frame_columns.extend(["node_id", "node_name"])
-        for index, channel_name in enumerate(self._default_node_parameters):
+        for index, channel_name in enumerate(RawDataProcessor._default_node_parameters):
             match index:
                 case i if 0 <= i <= 5:
-                    sensor_parameters = self._default_lvdt_parameters
+                    sensor_parameters = RawDataProcessor._default_lvdt_parameters
                     sensor_units = sensor_parameters["units"]
                     lvdt_position_column = f"lvdt{index+1}_position_{sensor_units}"  # 6 LVDTs, index them starting at 1
                     lvdt_displacement_column = f"lvdt{index+1}_displacement_{sensor_units}"
@@ -551,7 +551,7 @@ class RawDataProcessor:
                         ]
                     )
                 case 6:
-                    sensor_parameters = self._default_thrm_parameters
+                    sensor_parameters = RawDataProcessor._default_thrm_parameters
                     sensor_units = sensor_parameters["units"]
                     self._temperature_column = f"temperature_{sensor_units}"  # No index, only one temp sensor
                     self._frame_columns.extend(
@@ -562,7 +562,7 @@ class RawDataProcessor:
                         ]
                     )
                 case 7:
-                    sensor_parameters = self._default_battery_parameters
+                    sensor_parameters = RawDataProcessor._default_battery_parameters
                     sensor_units = sensor_parameters["units"]
                     self._battery_column = f"battery_sense_{sensor_units}"  # No index, only one battery sense channel
                     self._frame_columns.extend(
@@ -573,7 +573,7 @@ class RawDataProcessor:
                         ]
                     )
                 case 8:
-                    sensor_parameters = self._default_xl3d_parameters
+                    sensor_parameters = RawDataProcessor._default_xl3d_parameters
                     sensor_units = sensor_parameters["units"]
                     self._g_level_column = f"z_accel_{sensor_units}"
                     self._frame_columns.extend(
@@ -589,21 +589,26 @@ class RawDataProcessor:
         # - getting log file columns
 
 
-    def _preview(self, first_row: pd.Series| None, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.Series:
+    def process_raw_data(self, first_row: pd.Series | None, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.Series:
+        """Scale the raw data to Volts and physical units and return a Series of the new row."""
         first_timestamp = first_row.loc["timestamp"] if first_row is not None else data_timestamp
         relative_timestamp = (data_timestamp - first_timestamp).seconds / 60
 
         new_row = []
         new_row.extend([data_timestamp, relative_timestamp])
         new_row.extend([node_id, node_id])
-        node_parameters = self._sensor_node_parameters.get(node_id, self._default_node_parameters)
-        for index, channel_name in enumerate(node_parameters.keys()):
+        if node_id not in self._sensor_node_parameters:
+            print(f"No calibration information for node '{node_id}'")
+        node_parameters = self._sensor_node_parameters.get(node_id, RawDataProcessor._default_node_parameters)
+        for index, channel_name in enumerate(node_parameters):
             channel_parameters = node_parameters[channel_name]
             sensor_id = channel_parameters["sensor_id"]
+            if sensor_id not in self._sensor_parameters:
+                print(f"  No calibration information for sensor '{sensor_id}'")
             raw_sample = raw_data[index]
             match index:
                 case i if 0 <= i <= 5:
-                    default_sensor_parameters = self._default_lvdt_parameters
+                    default_sensor_parameters = RawDataProcessor._default_lvdt_parameters
                     sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
                     scaled_sample = raw_sample * channel_parameters["gain"] + channel_parameters["offset"]
                     physical_measurement = scaled_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
@@ -617,7 +622,7 @@ class RawDataProcessor:
                         ]
                     )
                 case 6:
-                    default_sensor_parameters = self._default_thrm_parameters
+                    default_sensor_parameters = RawDataProcessor._default_thrm_parameters
                     sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
                     scaled_sample = raw_sample * channel_parameters["gain"] + channel_parameters["offset"]
                     physical_measurement = scaled_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
@@ -629,7 +634,7 @@ class RawDataProcessor:
                         ]
                     )
                 case 7:
-                    default_sensor_parameters = self._default_battery_parameters
+                    default_sensor_parameters = RawDataProcessor._default_battery_parameters
                     sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
                     scaled_sample = raw_sample * channel_parameters["gain"] + channel_parameters["offset"]
                     physical_measurement = scaled_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
@@ -641,7 +646,7 @@ class RawDataProcessor:
                         ]
                     )
                 case 8:
-                    default_sensor_parameters = self._default_xl3d_parameters
+                    default_sensor_parameters = RawDataProcessor._default_xl3d_parameters
                     sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
                     physical_measurement = raw_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
                     new_row.extend(
@@ -665,11 +670,6 @@ class RawDataProcessor:
                     )
         new_row_series = pd.Series(new_row, index=self.frame_columns)
         return new_row_series
-
-    def process_raw_data(self, first_row_frame: pd.Series | None, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.Series:
-        """Scale the raw data to Volts and physical units and return a Series of the new row."""
-        dataframe_row = self._preview(first_row_frame, data_timestamp, node_id, raw_data)
-        return dataframe_row
 
 
 class AppState:
@@ -699,6 +699,10 @@ class AppState:
                 "calibration file history": []
             }
             toml.dump(default_settings, file)
+        default_scaling_file = AppState.settings_file.with_name(f"{SoilSwell.CommandName.DefaultCalibrationFile}.toml")
+        with default_scaling_file.open("w") as file:
+            file.write(RawDataProcessor.get_calibration_file_comments())
+            toml.dump(RawDataProcessor.get_default_scaling_coefficients(), file)
 
     class Event(StrEnum):
         """Events emitted when properties change."""
@@ -912,6 +916,7 @@ class AppState:
         if new_value == self._calibration_file:
             return
         self._calibration_file = new_value
+        self.load_calibration()
         self._tk_notifier.event_generate(AppState.Event.CalibrationFileChanged)
 
         if new_value == SoilSwell.CommandName.DefaultCalibrationFile:
@@ -958,6 +963,7 @@ class AppState:
         self._calibration_file = user_settings["calibration file"]
         self._calibration_file_history = app_settings["calibration file history"]
 
+        self.load_calibration()
         self.active_theme = user_settings.get("theme", "cosmo")  # Propagate theme first
         def notify_all() -> None:
             self._tk_notifier.event_generate(AppState.Event.BatteryLevelChanged)
@@ -985,6 +991,13 @@ class AppState:
         """Save the user's configured settings."""
         with AppState.settings_file.open("w") as file:
             toml.dump(new_settings, file)
+
+    def load_calibration(self) -> None:
+        """Load the scaling coefficients."""
+        file = self.calibration_file
+        if file == SoilSwell.CommandName.DefaultCalibrationFile:
+            file = AppState.settings_file.with_name(f"{SoilSwell.CommandName.DefaultCalibrationFile}.toml")
+        self._post_processor.load_scaling_coefficients_from_file(pathlib.Path(file))
 
     def toggle_demo(self) -> None:
         """Start a demonstration session."""
@@ -1631,8 +1644,8 @@ class SoilSwell(guikit.AsyncWindow):
         home_folder = pathlib.Path.home()
         new_file = home_folder.joinpath(f"Soil Swell sensor calibration for {self.state.sensor_group}.toml")
         with new_file.open("w") as file:
-            file.write(self.data_processor.get_calibration_file_comments)
-            toml.dump(self.data_processor.default_scaling_coefficients, file)
+            file.write(self.data_processor.get_calibration_file_comments())
+            toml.dump(self.data_processor.get_default_scaling_coefficients(), file)
         try:
             click.edit(filename=str(new_file), editor="code")
         except click.ClickException:
@@ -2081,7 +2094,7 @@ class SoilSwell(guikit.AsyncWindow):
     async def do_acquire(self) -> None:
         """Acquire data from the nodes in the group and return it."""
         if self.state.demo_active:
-            node_id = "<< DEMO >>"
+            node_id = "node-77aa77aa77aa-0"
             relative_demo_time_series = self.state._demo_data["minutes"]
             time_zero = self.state.most_recent_timestamp
             if len(self.state.data) > 0:
