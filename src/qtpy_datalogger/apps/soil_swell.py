@@ -8,6 +8,7 @@ import importlib.resources
 import logging
 import multiprocessing
 import pathlib
+import textwrap
 import tkinter as tk
 from enum import StrEnum
 from tkinter import filedialog, font
@@ -311,7 +312,6 @@ class ToolWindow(guikit.AsyncDialog):
         self.origin_label.configure(text=message)
 
 
-
 class SettingsWindow(guikit.AsyncDialog):
     """A class that shows a windows for configuring the app's settings."""
 
@@ -420,16 +420,16 @@ class RawDataProcessor:
             "A3": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
             "A4": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
             "A5": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
-            "A6": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "thrm" },
+            "A6": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "thrm_mcp9700" },
             "A7": { "gain": simple_linear_adc_gain, "offset": 0.0, "sensor_id": "battery_sense" },
-            "xl3d": { "gain": 1.0, "offset": 0.0, "sensor_id": "xl3d_default"},
+            "xl3d": { "gain": 1.0, "offset": 0.0, "sensor_id": "xl3d_adxl375"},
         }
 
         self._sensor_parameters = {
-            # Load from file when the app needs matched scaling or uses more than one node
+            # Loaded from file
         }
-        self._sensor_node_configuration = {
-            # Load from file when the app needs matched scaling or uses more than one node
+        self._sensor_node_parameters = {
+            # Loaded from file
         }
 
         self._frame_columns = []
@@ -539,6 +539,29 @@ class RawDataProcessor:
             self.g_level_column,
         ]
 
+    @property
+    def default_scaling_coefficients(self) -> dict:
+        """Return the default scaling coefficients used by the RawDataProcessor."""
+        return {
+            "nodes": {
+                "qtpys3": self._default_node_parameters,
+            },
+            "sensors": {
+                "lvdt": self._default_lvdt_parameters,
+                "thrm_mcp9700": self._default_thrm_parameters,
+                "battery_sense": self._default_battery_parameters,
+                "xl3d_adxl375": self._default_xl3d_parameters,
+            },
+        }
+
+    def load_scaling_coefficients_from_file(self, calibration_file: pathlib.Path) -> None:
+        """Load the scaling coefficients from the specified calibration_file."""
+        scaling_information = toml.load(calibration_file)
+        self._sensor_node_parameters.clear()
+        self._sensor_node_parameters.update(scaling_information["nodes"])
+        self._sensor_parameters.clear()
+        self._sensor_parameters.update(scaling_information["sensors"])
+
     def _preview(self, first_row: pd.Series| None, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.Series:
         first_timestamp = first_row.loc["timestamp"] if first_row is not None else data_timestamp
         relative_timestamp = (data_timestamp - first_timestamp).seconds / 60
@@ -546,7 +569,7 @@ class RawDataProcessor:
         new_row = []
         new_row.extend([data_timestamp, relative_timestamp])
         new_row.extend([node_id, node_id])
-        node_parameters = self._sensor_node_configuration.get(node_id, self._default_node_parameters)
+        node_parameters = self._sensor_node_parameters.get(node_id, self._default_node_parameters)
         for index, channel_name in enumerate(node_parameters.keys()):
             channel_parameters = node_parameters[channel_name]
             sensor_id = channel_parameters["sensor_id"]
@@ -1580,7 +1603,29 @@ class SoilSwell(guikit.AsyncWindow):
         """Create a new calibration file from the default template."""
         home_folder = pathlib.Path.home()
         new_file = home_folder.joinpath(f"Soil Swell sensor calibration for {self.state.sensor_group}.toml")
-        new_file.touch()
+        comments = textwrap.dedent("""\
+            # Calibration coefficients for the QT Py Soil Swell app
+
+            # Sensor collection
+            #   Name format:  [sensors.{sensor_identifier}]
+            #   Example:  [sensors.lvdt_10cm_1]
+            #   The value of {sensor_identifier} must be used in the 'sensor_id' for a node's channel to apply scaling to that channel
+            #   The same {sensor_identifier} may used on multiple channels to apply the same scaling to each
+            #   The scaling is linear and converts the innate measurement from the channel to the sensor's physical units:  physical = {gain} * volts + {offset}
+
+            # Node collection
+            #   Name format:  [nodes.{node_identifier}.{node_channel}]
+            #   Example:  [nodes.node-77aa77aa77aa-0].A0]
+            #   The {node_identifier} must match the 'Node ID' reported by the QT Py Scanner app
+            #   To use a sensor node, 8 analog input channels and the accelerometer channel must be specified
+            #     {node_channel} values:  A0  A1  A2  A3  A4  A5  A6  A7  xl3d
+            #   The scaling is linear and converts the raw codes from the channel to its innate measurement:  measurement = {gain} * code + {offset}
+
+            """
+        )
+        with new_file.open("w") as file:
+            file.write(comments)
+            toml.dump(self.data_processor.default_scaling_coefficients, file)
         try:
             click.edit(filename=str(new_file), editor="code")
         except click.ClickException:
