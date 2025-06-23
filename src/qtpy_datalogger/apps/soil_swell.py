@@ -863,6 +863,21 @@ class AppState:
             return
         self._calibration_file = new_value
         self._tk_notifier.event_generate(AppState.Event.CalibrationFileChanged)
+
+        if new_value == SoilSwell.CommandName.DefaultCalibrationFile:
+            return
+
+        settings = self.load_app_settings()
+        history: list[str] = settings["calibration file history"]
+        try:
+            old_index = history.index(new_value)
+            history.pop(old_index)
+        except ValueError:
+            pass
+        history.insert(0, new_value)
+        self.save_app_settings(settings)
+        self._calibration_file_history.clear()
+        self._calibration_file_history.extend(history)
         self._tk_notifier.event_generate(AppState.Event.CalibrationFileHistoryChanged)
 
     @property
@@ -877,7 +892,7 @@ class AppState:
 
     def reset(self) -> None:
         """Reset the properties to default on-launch values."""
-        app_settings = self.load_user_settings()
+        app_settings = self.load_app_settings()
         user_settings = app_settings["startup"]
         self._battery_level = BatteryLevel.Unknown
         self._battery_voltage = 0.0
@@ -910,13 +925,13 @@ class AppState:
             self._tk_notifier.event_generate(AppState.Event.CalibrationFileHistoryChanged)
         self._tk_notifier.after(0, notify_all)
 
-    def load_user_settings(self) -> dict:
+    def load_app_settings(self) -> dict:
         """Load the user's configured settings and return a dictionary of their values."""
         AppState.ensure_settings_file()
         user_settings = toml.load(AppState.settings_file)
         return user_settings
 
-    def save_user_settings(self, new_settings: dict) -> None:
+    def save_app_settings(self, new_settings: dict) -> None:
         """Save the user's configured settings."""
         with AppState.settings_file.open("w") as file:
             toml.dump(new_settings, file)
@@ -1482,7 +1497,7 @@ class SoilSwell(guikit.AsyncWindow):
             self.settings_window = SettingsWindow(
                 parent=self.root_window,
                 title=f"{SoilSwell.app_name} {SoilSwell.CommandName.Settings}".capitalize(),
-                settings=self.state.load_user_settings(),
+                settings=self.state.load_app_settings(),
             )
             open_settings_window_task = asyncio.create_task(self.settings_window.show(guikit.DialogBehavior.Modeless))
             self.background_tasks.add(open_settings_window_task)
@@ -1492,7 +1507,7 @@ class SoilSwell(guikit.AsyncWindow):
         """Finalize the SettingsWindow after the user closes it."""
         if not self.settings_window:
             raise RuntimeError()
-        self.state.save_user_settings(self.settings_window.settings)
+        self.state.save_app_settings(self.settings_window.settings)
         self.settings_window = None
         self.background_tasks.discard(task)
 
@@ -1508,9 +1523,11 @@ class SoilSwell(guikit.AsyncWindow):
         """Remake the submenu that holds the recently used calibration files."""
         self.calibration_menu.delete(0, tk.LAST)
         if self.state.calibration_file_history:
-            for entry in self.state.calibration_file_history[:9]:
+            for entry in self.state.calibration_file_history[:10]:
+                entry_name = f"{entry!s}"
                 self.calibration_menu.add_radiobutton(
-                    label=f"{entry!s}",
+                    command=functools.partial(self.select_calibration_file, entry_name),
+                    label=entry_name,
                     variable=self.calibration_file_variable,
                 )
         else:
@@ -1520,16 +1537,54 @@ class SoilSwell(guikit.AsyncWindow):
             )
         self.calibration_menu.add_separator()
         self.calibration_menu.add_radiobutton(
+            command=functools.partial(self.select_calibration_file, SoilSwell.CommandName.DefaultCalibrationFile),
             label=SoilSwell.CommandName.DefaultCalibrationFile,
             variable=self.calibration_file_variable,
         )
         self.calibration_menu.add_separator()
         self.calibration_menu.add_command(
+            command=self.browse_for_calibration_file,
             label=SoilSwell.CommandName.BrowseCalibrationFile,
         )
         self.calibration_menu.add_command(
+            command=self.create_new_calibration_file,
             label=SoilSwell.CommandName.NewCalibrationFile,
         )
+        self.style_menu(self.calibration_menu)
+
+    def select_calibration_file(self, new_file: str) -> None:
+        """Set a new value for the calibration file."""
+        self.state.calibration_file = new_file
+
+    def browse_for_calibration_file(self) -> None:
+        """Browse for a calibration file."""
+        file_name = filedialog.askopenfilename(
+            parent=self.root_window,
+            title="Specify a calibration file to use for scaling data",
+            filetypes=[
+                ("TOML files", "*.toml"),
+            ],
+        )
+        file_path = pathlib.Path(file_name)
+        if file_path == AppState.canceled_file:
+            return
+        if not self.calibration_file_is_valid(file_path):
+            return
+        self.state.calibration_file = f"{file_path!s}"
+
+    def calibration_file_is_valid(self, file_path: pathlib.Path) -> bool:
+        """Return True if the specified file is a valid calibration file."""
+        return True
+
+    def create_new_calibration_file(self) -> None:
+        """Create a new calibration file from the default template."""
+        home_folder = pathlib.Path.home()
+        new_file = home_folder.joinpath(f"Soil Swell sensor calibration for {self.state.sensor_group}.toml")
+        new_file.touch()
+        try:
+            click.edit(filename=str(new_file), editor="code")
+        except click.ClickException:
+            click.edit(filename=str(new_file))
 
     def toggle_demo(self) -> None:
         """Start a demonstration session."""
@@ -1543,7 +1598,7 @@ class SoilSwell(guikit.AsyncWindow):
     def show_about(self) -> None:
         """Handle the Help::About menu command."""
 
-    def change_theme(self, theme_name:str) -> None:
+    def change_theme(self, theme_name: str) -> None:
         """Handle the View::Theme selection command."""
         self.state.active_theme = theme_name
 
