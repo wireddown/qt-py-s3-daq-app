@@ -371,20 +371,14 @@ class SettingsWindow(guikit.AsyncDialog):
 
         calibration_file_label = ttk.Label(settings_frame, text="Calibration file")
         calibration_file_label.grid(column=0, row=4, padx=(0, 12), pady=(8, 8), sticky=(tk.N, tk.EW))  # pyright: ignore reportArgumentType -- the type hint for library is incorrect
-        calibration_input_frame = ttk.Frame(settings_frame)
-        calibration_input_frame.columnconfigure(0, weight=1)
-        calibration_input_frame.columnconfigure(1, weight=0)
-        calibration_input_frame.columnconfigure(2, weight=0)
-        calibration_input_frame.rowconfigure(0, weight=1)
-        calibration_input_frame.grid(column=1, row=4, pady=(3, 0), sticky=(tk.N, tk.EW))  # pyright: ignore reportArgumentType -- the type hint for library is incorrect
         def update_calibration_file(new_file_path: str) -> None:
             self.settings["startup"]["calibration file"] = new_file_path
 
         previous_files = [str(SoilSwell.CommandName.DefaultCalibrationFile)]
         previous_files.extend(self.settings["calibration file history"])
-        calibration_file_name = guikit.create_dropdown_combobox(calibration_input_frame, values=previous_files, width=20, justify=ttk.LEFT, completion=update_calibration_file)
+        calibration_file_name = guikit.create_dropdown_combobox(settings_frame, values=previous_files, width=40, justify=ttk.LEFT, completion=update_calibration_file)
         calibration_file_name.set(self.settings["startup"]["calibration file"])
-        calibration_file_name.grid(column=0, row=0, padx=(0, 8), sticky=tk.EW)
+        calibration_file_name.grid(column=1, row=4, padx=(0, 8), sticky=tk.EW)
 
     async def on_loop(self) -> None:
         """Update UI elements."""
