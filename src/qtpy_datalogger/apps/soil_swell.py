@@ -304,9 +304,10 @@ class ToolWindow(guikit.AsyncDialog):
 class SettingsWindow(guikit.AsyncDialog):
     """A class that shows a windows for configuring the app's settings."""
 
-    def __init__(self, parent: ttk.Toplevel | ttk.Window, title: str, settings: dict) -> None:
+    def __init__(self, parent: ttk.Toplevel | ttk.Window, title: str, settings: dict, settings_file: pathlib.Path) -> None:
         """Initialize a new SettingsWindow."""
         self.settings = settings
+        self.settings_file = settings_file
         self.group_input_variable = tk.StringVar(value=settings["startup"]["group"])
         super().__init__(parent=parent, title=title)
 
@@ -314,7 +315,7 @@ class SettingsWindow(guikit.AsyncDialog):
         """Create the layout and widget event handlers."""
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
-        self.root_window.minsize(width=220, height=201)
+        self.root_window.minsize(width=256, height=201)
         self.root_window.maxsize(width=800, height=201)
 
         settings_frame = ttk.Frame(self.root_window, padding=16)
@@ -329,6 +330,11 @@ class SettingsWindow(guikit.AsyncDialog):
 
         startup_label = ttk.Label(settings_frame, text="Startup", font=font.Font(family="Segoe UI", size=10, weight=font.BOLD))
         startup_label.grid(column=0, columnspan=2, row=0, pady=(0, 8), sticky=tk.W)
+        def open_settings_folder() -> None:
+            click.launch(str(self.settings_file), locate=True)
+
+        open_settings_folder_button = ttk.Button(settings_frame, command=open_settings_folder, text="Open settings folder", style=ttk.OUTLINE)
+        open_settings_folder_button.grid(column=1, row=0, sticky=tk.E)
 
         theme_label = ttk.Label(settings_frame, text="Theme")
         theme_label.grid(column=0, row=1, padx=(0, 12), pady=(8, 8), sticky=tk.EW)
@@ -1536,6 +1542,7 @@ class SoilSwell(guikit.AsyncWindow):
                 parent=self.root_window,
                 title=f"{SoilSwell.app_name} {SoilSwell.CommandName.Settings}".capitalize(),
                 settings=self.state.load_app_settings(),
+                settings_file=AppState.settings_file,
             )
             open_settings_window_task = asyncio.create_task(self.settings_window.show(guikit.DialogBehavior.Modeless))
             self.background_tasks.add(open_settings_window_task)
