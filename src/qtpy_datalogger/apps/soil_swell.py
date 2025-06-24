@@ -431,7 +431,7 @@ class RawDataProcessor:
             #   Example:  [nodes.node-77aa77aa77aa-0].A0]
             #   The {node_identifier} must match the 'Node ID' reported by the QT Py Scanner app
             #   To use a sensor node, 8 analog input channels and the accelerometer channel must be specified
-            #     {node_channel} values:  A0  A1  A2  A3  A4  A5  A6  A7  xl3d
+            #     {node_channel} values:  A0  A1  A2  A3  A4  A5  A6  A7  StemmaQT
             #   The scaling is linear and converts the raw codes from the channel to its innate measurement:  measurement = {gain} * code + {offset}
 
             """
@@ -446,7 +446,6 @@ class RawDataProcessor:
             },
             "sensors": RawDataProcessor.DEFAULT_SENSOR_PARAMETERS,
         }
-
 
     @staticmethod
     def check_calibration_file_contents(candidate: pathlib.Path) -> bool:
@@ -471,7 +470,6 @@ class RawDataProcessor:
             sensors_defined &= sorted(sensor.keys()) == sorted(["gain", "offset", "units"])
 
         return nodes_defined and sensors_defined
-
 
     def __init__(self) -> None:
         """Initialize a new RawDataProcessor instance."""
