@@ -189,21 +189,10 @@ class NumericInput:
 class ToolWindow(guikit.AsyncDialog):
     """A class that shows a window with tools that apply to its origin."""
 
-    def __init__(self, parent: ttk.Toplevel | ttk.Window, title: str, origin: object) -> None:
+    def __init__(self, parent: ttk.Toplevel | ttk.Window, title: str | None = None) -> None:
         """Initialize a new ToolWindow."""
-        self.origin = origin
         self.tool_frames: dict[str, ttk.Frame] = {}
-        super().__init__(parent=parent, title=title)
-
-    def create_user_interface(self) -> None:
-        """Create the layout and widget event handlers."""
-        main_frame = ttk.Frame(self.root_window, style=bootstyle.INFO)
-        main_frame.columnconfigure(0, weight=1)
-        main_frame.rowconfigure(0, weight=1)
-        main_frame.grid(column=0, row=0, sticky=tk.NSEW)
-
-        self.origin_label = ttk.Label(main_frame, text=f"clicked by {self.origin}")
-        self.origin_label.grid(column=0, row=0, sticky=tk.NSEW)
+        super().__init__(parent=parent, title=title if title else "")
 
     async def on_loop(self) -> None:
         """Update UI elements."""
@@ -310,10 +299,6 @@ class ToolWindow(guikit.AsyncDialog):
         scale_input.selection_clear()
 
         return tool_frame
-
-    def update_message(self, message: str) -> None:
-        """Update the message string."""
-        self.origin_label.configure(text=message)
 
 
 class SettingsWindow(guikit.AsyncDialog):
@@ -1753,17 +1738,14 @@ class SoilSwell(guikit.AsyncWindow):
 
         clicked = event_args.inaxes
         if clicked is self.position_axes:
-            message = "position area"
             axes = self.position_axes
             axis = "yaxis"
             limits = self.position_axis_limits
         elif clicked is self.displacement_axes:
-            message = "displacement area"
             axes = self.displacement_axes
             axis = "yaxis"
             limits = self.displacement_axis_limits
         elif clicked is self.g_level_axes:
-            message = "g level area"
             axes = self.g_level_axes
             axis = "yaxis"
             limits = self.g_level_axis_limits
@@ -1771,11 +1753,10 @@ class SoilSwell(guikit.AsyncWindow):
             return
 
         if not self.tool_window:
-            self.tool_window = ToolWindow(parent=self.root_window, title="", origin=message)
+            self.tool_window = ToolWindow(self.root_window)
             open_tool_window_task = asyncio.create_task(self.tool_window.show(guikit.DialogBehavior.Modeless))
             self.background_tasks.add(open_tool_window_task)
             open_tool_window_task.add_done_callback(self.finalize_tool_window)
-        self.tool_window.update_message(message)
         self.tool_window.attach_to_axis(event_args.canvas.draw_idle, axes, axis, limits)
 
     def on_graph_pick(self, event_args: mpl_backend_bases.Event) -> None:
@@ -1785,29 +1766,25 @@ class SoilSwell(guikit.AsyncWindow):
         if not self.is_left_double_click(event_args.mouseevent):
             return
         if event_args.artist is self.position_label:
-            message = "position label"
             axes = self.position_axes
             axis = "yaxis"
             limits =self.position_axis_limits
         elif event_args.artist is self.displacement_label:
-            message = "displacement label"
             axes = self.displacement_axes
             axis = "yaxis"
             limits = self.displacement_axis_limits
         elif event_args.artist is self.g_level_label:
-            message = "g level label"
             axes = self.g_level_axes
             axis = "yaxis"
             limits = self.g_level_axis_limits
         elif event_args.artist is self.time_label:
-            message = "time label"
             axes = self.g_level_axes
             axis = "xaxis"
             limits = self.time_axis_limits
         else:
             return
         if not self.tool_window:
-            self.tool_window = ToolWindow(parent=self.root_window, title="", origin=message)
+            self.tool_window = ToolWindow(self.root_window)
             open_tool_window_task = asyncio.create_task(self.tool_window.show(guikit.DialogBehavior.Modeless))
             self.background_tasks.add(open_tool_window_task)
             open_tool_window_task.add_done_callback(self.finalize_tool_window)
