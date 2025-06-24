@@ -88,7 +88,7 @@ class TextInput:
 
         ValueChanged = "<<ValueChanged>>"
 
-    def __init__(self, parent: tk.Widget, limits: Range, default_value: float) -> None:
+    def __init__(self, parent: tk.Widget, limits: Range, default_value: float) -> None:  # noqa: PLR0915 -- allow long function to initialize the control
         """Initialize a new TextInput widget."""
         self._value = default_value
 
@@ -231,7 +231,7 @@ class ToolWindow(guikit.AsyncDialog):
             self.root_window.update_idletasks()
         self.root_window.focus()
 
-    def create_axis_tool_frame(self, refresh_graph: Callable[[], None], axes: mpl_axes.Axes, axis: str, limits: tuple[float, float]) -> ttk.Frame:
+    def create_axis_tool_frame(self, refresh_graph: Callable[[], None], axes: mpl_axes.Axes, axis: str, limits: tuple[float, float]) -> ttk.Frame:  # noqa: PLR0915 -- allow long function to create the UI
         """Create a ttk.Frame that shows configuration settings and handles user input."""
         tool_frame = ttk.Frame(self.root_window, padding=16)
         tool_frame.columnconfigure(0, weight=1)  # Labels
@@ -325,7 +325,7 @@ class SettingsWindow(guikit.AsyncDialog):
         self.group_input_variable = tk.StringVar(value=settings["startup"]["group"])
         super().__init__(parent=parent, title=title)
 
-    def create_user_interface(self) -> None:
+    def create_user_interface(self) -> None:  # noqa: PLR0915 -- allow long function to create the UI
         """Create the layout and widget event handlers."""
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
