@@ -394,21 +394,22 @@ class SettingsWindow(guikit.AsyncDialog):
 class RawDataProcessor:
     """A class that calculates derived data from raw sensor samples."""
 
-    _default_lvdt_parameters = { "gain": 1.0, "offset": 0.0, "units": "cm" }
-    _default_thrm_parameters = { "gain": 1.0, "offset": 0.0, "units": "degC"}
-    _default_battery_parameters = { "gain": 1.0, "offset": 0.0, "units": "V"}
-    _default_xl3d_parameters = { "gain": 49e-3, "offset": 0, "units": "g" }
+    DEFAULT_SENSOR_PARAMETERS = {  # noqa: RUF012 -- dict is mutable but treated as a constant
+        "lvdt": { "gain": 1.0, "offset": 0.0, "units": "cm" },
+        "thrm_mcp9700": { "gain": 1.0, "offset": 0.0, "units": "degC"},
+        "battery_sense": { "gain": 1.0, "offset": 0.0, "units": "V"},
+        "xl3d_adxl375": { "gain": 49e-3, "offset": 0, "units": "g" },
+    }
 
-    _simple_linear_adc_gain = 3.3 / 2**16
-    _default_node_parameters = {
-        "A0": { "gain": _simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
-        "A1": { "gain": _simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
-        "A2": { "gain": _simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
-        "A3": { "gain": _simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
-        "A4": { "gain": _simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
-        "A5": { "gain": _simple_linear_adc_gain, "offset": 0.0, "sensor_id": "lvdt" },
-        "A6": { "gain": _simple_linear_adc_gain, "offset": 0.0, "sensor_id": "thrm_mcp9700" },
-        "A7": { "gain": _simple_linear_adc_gain, "offset": 0.0, "sensor_id": "battery_sense" },
+    DEFAULT_NODE_PARAMETERS = {  # noqa: RUF012 -- dict is mutable but treated as a constant
+        "A0": { "gain": 3.3 / 2**16, "offset": 0.0, "sensor_id": "lvdt" },
+        "A1": { "gain": 3.3 / 2**16, "offset": 0.0, "sensor_id": "lvdt" },
+        "A2": { "gain": 3.3 / 2**16, "offset": 0.0, "sensor_id": "lvdt" },
+        "A3": { "gain": 3.3 / 2**16, "offset": 0.0, "sensor_id": "lvdt" },
+        "A4": { "gain": 3.3 / 2**16, "offset": 0.0, "sensor_id": "lvdt" },
+        "A5": { "gain": 3.3 / 2**16, "offset": 0.0, "sensor_id": "lvdt" },
+        "A6": { "gain": 3.3 / 2**16, "offset": 0.0, "sensor_id": "thrm_mcp9700" },
+        "A7": { "gain": 3.3 / 2**16, "offset": 0.0, "sensor_id": "battery_sense" },
         "xl3d": { "gain": 1.0, "offset": 0.0, "sensor_id": "xl3d_adxl375"},
     }
 
@@ -441,14 +442,9 @@ class RawDataProcessor:
         """Return the default scaling coefficients used by the RawDataProcessor."""
         return {
             "nodes": {
-                "node-77aa77aa77aa-0": RawDataProcessor._default_node_parameters,
+                "node-77aa77aa77aa-0": RawDataProcessor.DEFAULT_NODE_PARAMETERS,
             },
-            "sensors": {
-                "lvdt": RawDataProcessor._default_lvdt_parameters,
-                "thrm_mcp9700": RawDataProcessor._default_thrm_parameters,
-                "battery_sense": RawDataProcessor._default_battery_parameters,
-                "xl3d_adxl375": RawDataProcessor._default_xl3d_parameters,
-            },
+            "sensors": RawDataProcessor.DEFAULT_SENSOR_PARAMETERS,
         }
 
     def __init__(self) -> None:
@@ -522,10 +518,10 @@ class RawDataProcessor:
         """Iterate over the channels and initialize the column properties."""
         self._frame_columns.extend(["timestamp", self._relative_time_column])
         self._frame_columns.extend(["node_id", "node_name"])
-        for index, channel_name in enumerate(RawDataProcessor._default_node_parameters):
+        for index, channel_name in enumerate(RawDataProcessor.DEFAULT_NODE_PARAMETERS):
             match index:
                 case i if 0 <= i <= 5:
-                    sensor_parameters = RawDataProcessor._default_lvdt_parameters
+                    sensor_parameters = RawDataProcessor.DEFAULT_SENSOR_PARAMETERS["lvdt"]
                     sensor_units = sensor_parameters["units"]
                     lvdt_position_column = f"lvdt{index+1}_position_{sensor_units}"  # 6 LVDTs, index them starting at 1
                     lvdt_displacement_column = f"lvdt{index+1}_displacement_{sensor_units}"
@@ -540,7 +536,7 @@ class RawDataProcessor:
                         ]
                     )
                 case 6:
-                    sensor_parameters = RawDataProcessor._default_thrm_parameters
+                    sensor_parameters = RawDataProcessor.DEFAULT_SENSOR_PARAMETERS["thrm_mcp9700"]
                     sensor_units = sensor_parameters["units"]
                     self._temperature_column = f"temperature_{sensor_units}"  # No index, only one temp sensor
                     self._frame_columns.extend(
@@ -551,7 +547,7 @@ class RawDataProcessor:
                         ]
                     )
                 case 7:
-                    sensor_parameters = RawDataProcessor._default_battery_parameters
+                    sensor_parameters = RawDataProcessor.DEFAULT_SENSOR_PARAMETERS["battery_sense"]
                     sensor_units = sensor_parameters["units"]
                     self._battery_column = f"battery_sense_{sensor_units}"  # No index, only one battery sense channel
                     self._frame_columns.extend(
@@ -562,7 +558,7 @@ class RawDataProcessor:
                         ]
                     )
                 case 8:
-                    sensor_parameters = RawDataProcessor._default_xl3d_parameters
+                    sensor_parameters = RawDataProcessor.DEFAULT_SENSOR_PARAMETERS["xl3d_adxl375"]
                     sensor_units = sensor_parameters["units"]
                     self._g_level_column = f"z_accel_{sensor_units}"
                     self._frame_columns.extend(
@@ -588,7 +584,7 @@ class RawDataProcessor:
         new_row.extend([node_id, node_id])
         if node_id not in self._sensor_node_parameters:
             print(f"No calibration information for node '{node_id}'")
-        node_parameters = self._sensor_node_parameters.get(node_id, RawDataProcessor._default_node_parameters)
+        node_parameters = self._sensor_node_parameters.get(node_id, RawDataProcessor.DEFAULT_NODE_PARAMETERS)
         for index, channel_name in enumerate(node_parameters):
             channel_parameters = node_parameters[channel_name]
             sensor_id = channel_parameters["sensor_id"]
@@ -597,7 +593,7 @@ class RawDataProcessor:
             raw_sample = raw_data[index]
             match index:
                 case i if 0 <= i <= 5:
-                    default_sensor_parameters = RawDataProcessor._default_lvdt_parameters
+                    default_sensor_parameters = RawDataProcessor.DEFAULT_SENSOR_PARAMETERS["lvdt"]
                     sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
                     scaled_sample = raw_sample * channel_parameters["gain"] + channel_parameters["offset"]
                     physical_measurement = scaled_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
@@ -611,7 +607,7 @@ class RawDataProcessor:
                         ]
                     )
                 case 6:
-                    default_sensor_parameters = RawDataProcessor._default_thrm_parameters
+                    default_sensor_parameters = RawDataProcessor.DEFAULT_SENSOR_PARAMETERS["thrm_mcp9700"]
                     sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
                     scaled_sample = raw_sample * channel_parameters["gain"] + channel_parameters["offset"]
                     physical_measurement = scaled_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
@@ -623,7 +619,7 @@ class RawDataProcessor:
                         ]
                     )
                 case 7:
-                    default_sensor_parameters = RawDataProcessor._default_battery_parameters
+                    default_sensor_parameters = RawDataProcessor.DEFAULT_SENSOR_PARAMETERS["battery_sense"]
                     sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
                     scaled_sample = raw_sample * channel_parameters["gain"] + channel_parameters["offset"]
                     physical_measurement = scaled_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
@@ -635,7 +631,7 @@ class RawDataProcessor:
                         ]
                     )
                 case 8:
-                    default_sensor_parameters = RawDataProcessor._default_xl3d_parameters
+                    default_sensor_parameters = RawDataProcessor.DEFAULT_SENSOR_PARAMETERS["xl3d_adxl375"]
                     sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
                     physical_measurement = raw_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
                     new_row.extend(
