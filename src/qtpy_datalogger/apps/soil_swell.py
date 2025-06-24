@@ -410,7 +410,7 @@ class RawDataProcessor:
         "A5": { "gain": 3.3 / 2**16, "offset": 0.0, "sensor_id": "lvdt" },
         "A6": { "gain": 3.3 / 2**16, "offset": 0.0, "sensor_id": "thrm_mcp9700" },
         "A7": { "gain": 3.3 / 2**16, "offset": 0.0, "sensor_id": "battery_sense" },
-        "xl3d": { "gain": 1.0, "offset": 0.0, "sensor_id": "xl3d_adxl375"},
+        "StemmaQT": { "gain": 1.0, "offset": 0.0, "sensor_id": "xl3d_adxl375"},
     }
 
     @staticmethod
@@ -446,6 +446,32 @@ class RawDataProcessor:
             },
             "sensors": RawDataProcessor.DEFAULT_SENSOR_PARAMETERS,
         }
+
+
+    @staticmethod
+    def check_calibration_file_contents(candidate: pathlib.Path) -> bool:
+        """Return True if the candidate file is valid."""
+        try:
+            toml_contents = toml.load(candidate)
+        except toml.TomlDecodeError:
+            return False
+        if "sensors" not in toml_contents:
+            return False
+        if "nodes" not in toml_contents:
+            return False
+
+        nodes_defined = True
+        for node in toml_contents["nodes"].values():
+            nodes_defined &= sorted(node.keys()) == sorted(RawDataProcessor.DEFAULT_NODE_PARAMETERS.keys())
+            for channel in node.values():
+                nodes_defined &= sorted(channel.keys()) == sorted(["gain", "offset", "sensor_id"])
+
+        sensors_defined = True
+        for sensor in toml_contents["sensors"].values():
+            sensors_defined &= sorted(sensor.keys()) == sorted(["gain", "offset", "units"])
+
+        return nodes_defined and sensors_defined
+
 
     def __init__(self) -> None:
         """Initialize a new RawDataProcessor instance."""
@@ -1613,13 +1639,9 @@ class SoilSwell(guikit.AsyncWindow):
         file_path = pathlib.Path(file_name)
         if file_path == AppState.canceled_file:
             return
-        if not self.calibration_file_is_valid(file_path):
+        if not RawDataProcessor.check_calibration_file_contents(file_path):
             return
         self.state.calibration_file = f"{file_path!s}"
-
-    def calibration_file_is_valid(self, file_path: pathlib.Path) -> bool:
-        """Return True if the specified file is a valid calibration file."""
-        return True
 
     def create_new_calibration_file(self) -> None:
         """Create a new calibration file from the default template."""
@@ -1630,8 +1652,8 @@ class SoilSwell(guikit.AsyncWindow):
             timestamp = datetime.datetime.now(tz=datetime.UTC).astimezone().strftime("%Y.%m.%d-%H.%M.%S")
             new_file = new_file.with_name(f"{new_file.stem} - {timestamp}.toml")
         with new_file.open("w") as file:
-            file.write(self.data_processor.get_calibration_file_comments())
-            toml.dump(self.data_processor.get_default_scaling_coefficients(), file)
+            file.write(RawDataProcessor.get_calibration_file_comments())
+            toml.dump(RawDataProcessor.get_default_scaling_coefficients(), file)
         try:
             click.edit(filename=str(new_file), editor="code")
         except click.ClickException:
@@ -2104,7 +2126,7 @@ class SoilSwell(guikit.AsyncWindow):
                 node_id=node_id,
                 command_name=f"{self.snsr_app_name} scan",
                 parameters={
-                    "channels": ["A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7"],
+                    "channels": ["A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7", "StemmaQT"],
                     "samples_to_average": 50,
                     "xl3d_offset": XL3D_HARDWARE_OFFSET,
                 },
