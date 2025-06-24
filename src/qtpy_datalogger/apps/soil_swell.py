@@ -1623,7 +1623,11 @@ class SoilSwell(guikit.AsyncWindow):
     def create_new_calibration_file(self) -> None:
         """Create a new calibration file from the default template."""
         home_folder = pathlib.Path.home()
-        new_file = home_folder.joinpath(f"Soil Swell sensor calibration for {self.state.sensor_group}.toml")
+        file_name = f"Soil Swell sensor calibration for {self.state.sensor_group}.toml"
+        new_file = home_folder.joinpath(file_name)
+        if new_file.exists():
+            timestamp = datetime.datetime.now(tz=datetime.UTC).astimezone().strftime("%Y.%m.%d-%H.%M.%S")
+            new_file = new_file.with_name(f"{new_file.stem} - {timestamp}.toml")
         with new_file.open("w") as file:
             file.write(self.data_processor.get_calibration_file_comments())
             toml.dump(self.data_processor.get_default_scaling_coefficients(), file)
