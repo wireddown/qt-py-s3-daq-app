@@ -660,12 +660,12 @@ class AppState:
     ).joinpath(pathlib.Path(__file__).stem).joinpath("settings.toml")
 
     @staticmethod
-    def ensure_settings_file() -> None:
-        """Guarantee that the settings file for the app exists and parses correctly."""
+    def ensure_configuration_files() -> dict:
+        """Guarantee that the settings and default scaling files for the app exist and parse correctly. Return the settings."""
         if AppState.settings_file.exists():
             precheck = toml.load(AppState.settings_file)
             if "startup" in precheck:
-                return
+                return precheck
         pathlib.Path.mkdir(AppState.settings_file.parent, parents=True, exist_ok=True)
         with AppState.settings_file.open("w") as file:
             default_settings = {
@@ -682,6 +682,7 @@ class AppState:
         with default_scaling_file.open("w") as file:
             file.write(RawDataProcessor.get_calibration_file_comments())
             toml.dump(RawDataProcessor.get_default_scaling_coefficients(), file)
+        return default_settings
 
     class Event(StrEnum):
         """Events emitted when properties change."""
@@ -694,11 +695,11 @@ class AppState:
         CanAcquireDataChanged = "<<CanAcquireDataChanged>>"
         CanLogDataChanged = "<<CanLogDataChanged>>"
         CanSetSensorGroupChanged = "<<CanSetSensorGroupChanged>>"
+        DemoModeChanged = "<<DemoModeChanged>>"
         LogDataChanged = "<<LogDataChanged>>"
+        NewDataProcessed = "<<NewDataProcessed>>"
         SampleRateChanged = "<<SampleRateChanged>>"
         SensorGroupChanged = "<<SensorGroupChanged>>"
-        DemoModeChanged = "<<DemoModeChanged>>"
-        NewDataProcessed = "<<NewDataProcessed>>"
 
     def __init__(self, tk_root: tk.Tk, post_processor: RawDataProcessor) -> None:
         """Initialize a new AppState instance."""
@@ -962,8 +963,7 @@ class AppState:
 
     def load_app_settings(self) -> dict:
         """Load the user's configured settings and return a dictionary of their values."""
-        AppState.ensure_settings_file()
-        user_settings = toml.load(AppState.settings_file)
+        user_settings = AppState.ensure_configuration_files()
         return user_settings
 
     def save_app_settings(self, new_settings: dict) -> None:
