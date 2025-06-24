@@ -117,7 +117,7 @@ class TextInput:
 
             is_valid = limits.lower <= as_float <= limits.upper
             new_style = bootstyle.DEFAULT if is_valid else bootstyle.DANGER
-            sender.configure(bootstyle=new_style)
+            sender.configure(bootstyle=new_style)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
             return is_valid
 
         def handle_new_value(sender: tk.Entry, variable_name: str, empty: str, operation: str) -> None:
@@ -131,6 +131,8 @@ class TextInput:
         def handle_entry_complete(fallback_value: float, decimal_places: int, event_args: tk.Event) -> None:
             """Handle the Enter key and FocusOut events."""
             sender = event_args.widget
+            if not isinstance(sender, ttk.Spinbox):
+                raise TypeError()
             try:
                 sender.set(f"{float(sender.get()):.{decimal_places}f}")
                 self._input_control.event_generate(TextInput.Event.ValueChanged)
@@ -167,7 +169,7 @@ class TextInput:
         self._input_control.bind("<FocusOut>", functools.partial(handle_entry_complete, default_value, decimal_places))
 
     @property
-    def widget(self) -> tk.Widget:
+    def widget(self) -> ttk.Spinbox:
         """Return the Tk widget for this TextInput."""
         return self._input_control
 
@@ -260,7 +262,7 @@ class ToolWindow(guikit.AsyncDialog):
         min_limit_label = ttk.Label(tool_frame, text="Minimum")
         min_limit_label.grid(column=0, row=2, padx=(0, 12), pady=(8, 8), sticky=tk.EW)
         scale_label = ttk.Label(tool_frame, text="Scale")
-        scale_label.grid(column=0, row=3, padx=(0, 12), pady=(8, 8), sticky=(tk.EW, tk.N))
+        scale_label.grid(column=0, row=3, padx=(0, 12), pady=(8, 8), sticky=(tk.EW, tk.N))  # pyright: ignore reportArgumentType -- the type hint for library is incorrect
 
         limits_range = Range(lower=limits[0], upper=limits[1])
         viewing_range = Range(lower=axis_view_limits[0], upper=axis_view_limits[1])
@@ -283,11 +285,13 @@ class ToolWindow(guikit.AsyncDialog):
         axis_min_input.widget.bind(TextInput.Event.ValueChanged, on_new_upper_or_lower_bound)
 
         scale_input = ttk.Combobox(master=tool_frame, values=["Linear", "Log"], state="readonly", width=5, justify=tk.RIGHT)
-        scale_input.grid(column=1, row=3, sticky=(tk.EW, tk.N))
+        scale_input.grid(column=1, row=3, sticky=(tk.EW, tk.N))  # pyright: ignore reportArgumentType -- the type hint for library is incorrect
         scale_input.set(axis_scale.capitalize())
         def handle_scale_selection(event_args: tk.Event) -> None:
             """Handle the selection event for the linear/log scale combobox."""
             sender = event_args.widget
+            if not isinstance(sender, ttk.Combobox):
+                raise TypeError()
             sender.selection_clear()
             selected_value = sender.get()
             if selected_value == axis_scale:
@@ -381,13 +385,13 @@ class SettingsWindow(guikit.AsyncDialog):
         sample_rate_input.grid(column=1, row=3, sticky=tk.W)
 
         calibration_file_label = ttk.Label(settings_frame, text="Calibration file")
-        calibration_file_label.grid(column=0, row=4, padx=(0, 12), pady=(8, 8), sticky=(tk.N, tk.EW))
+        calibration_file_label.grid(column=0, row=4, padx=(0, 12), pady=(8, 8), sticky=(tk.N, tk.EW))  # pyright: ignore reportArgumentType -- the type hint for library is incorrect
         calibration_input_frame = ttk.Frame(settings_frame)
         calibration_input_frame.columnconfigure(0, weight=1)
         calibration_input_frame.columnconfigure(1, weight=0)
         calibration_input_frame.columnconfigure(2, weight=0)
         calibration_input_frame.rowconfigure(0, weight=1)
-        calibration_input_frame.grid(column=1, row=4, pady=(3, 0), sticky=(tk.N, tk.EW))
+        calibration_input_frame.grid(column=1, row=4, pady=(3, 0), sticky=(tk.N, tk.EW))  # pyright: ignore reportArgumentType -- the type hint for library is incorrect
         def update_calibration_file(new_file_path: str) -> None:
             self.settings["startup"]["calibration file"] = new_file_path
 
@@ -1538,6 +1542,8 @@ class SoilSwell(guikit.AsyncWindow):
         if not self.state.data.size:
             return
         time_zero = self.state.data.loc[0, "timestamp"]
+        if not isinstance(time_zero, datetime.datetime):
+            raise TypeError()
         time_zero_string = time_zero.astimezone().strftime("%Y.%m.%d_%H.%M.%S")
         file_name = filedialog.asksaveasfilename(
             parent=self.root_window,
@@ -2032,7 +2038,7 @@ class SoilSwell(guikit.AsyncWindow):
         self.qtpy_controller = None
         self.nodes_in_group.clear()
         self.state.acquire_active = Tristate.BoolFalse
-        self.acquire_button.configure(bootstyle=bootstyle.DANGER)
+        self.acquire_button.configure(bootstyle=bootstyle.DANGER)  # pyright: ignore reportArgumentType -- the type hint for library is incorrect
         self.no_nodes_tooltip.leave()
         self.no_nodes_tooltip = ttk_tooltip.ToolTip(
             self.acquire_button,
@@ -2048,7 +2054,7 @@ class SoilSwell(guikit.AsyncWindow):
         self.qtpy_controller = None
         self.nodes_in_group.clear()
         self.state.acquire_active = Tristate.BoolFalse
-        self.acquire_button.configure(bootstyle=bootstyle.DANGER)
+        self.acquire_button.configure(bootstyle=bootstyle.DANGER)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         self.no_nodes_tooltip.leave()
         self.no_nodes_tooltip = ttk_tooltip.ToolTip(
             self.acquire_button,
@@ -2064,7 +2070,7 @@ class SoilSwell(guikit.AsyncWindow):
         self.qtpy_controller = None
         self.nodes_in_group.clear()
         self.state.acquire_active = Tristate.BoolFalse
-        self.acquire_button.configure(bootstyle=bootstyle.DANGER)
+        self.acquire_button.configure(bootstyle=bootstyle.DANGER)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         self.no_nodes_tooltip.leave()
         self.no_nodes_tooltip = ttk_tooltip.ToolTip(
             self.acquire_button,
@@ -2188,7 +2194,7 @@ class SoilSwell(guikit.AsyncWindow):
         self.canvas_figure.draw_idle()
 
         if self.state.log_data_active:
-            new_row = all_data.loc[all_data.index[-1], self.data_processor.logged_columns].to_list()
+            new_row = all_data.loc[all_data.index[-1], self.data_processor.logged_columns].to_list()  # pyright: ignore callIssue -- Series[Unknown] confuses the analyzer
             first_log_sample_timestamp = all_data.loc[all_data.index[self.state.index_when_log_enabled], self.data_processor.relative_time_column]
             adjusted_relative_timestamp = new_row[0] - first_log_sample_timestamp
             new_row[0] = adjusted_relative_timestamp
