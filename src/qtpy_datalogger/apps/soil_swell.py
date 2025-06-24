@@ -568,12 +568,6 @@ class RawDataProcessor:
                         ]
                     )
 
-        # Helper for
-        # - getting plot X / Y columns, legend titles
-        # - getting battery voltage columns, last sample
-        # - getting log file columns
-
-
     def process_raw_data(self, first_row: pd.Series | None, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.Series:
         """Scale the raw data to Volts and physical units and return a Series of the new row."""
         first_timestamp = first_row.loc["timestamp"] if first_row is not None else data_timestamp
