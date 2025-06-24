@@ -80,8 +80,8 @@ class Tristate(StrEnum):
     BoolFalse = "False"
 
 
-class TextInput:
-    """A class that takes user input as text."""
+class NumericInput:
+    """A class that takes text input as a numeric value."""
 
     class Event(StrEnum):
         """Events emitted by this control."""
@@ -89,7 +89,7 @@ class TextInput:
         ValueChanged = "<<ValueChanged>>"
 
     def __init__(self, parent: tk.Widget, limits: Range, default_value: float) -> None:  # noqa: PLR0915 -- allow long function to initialize the control
-        """Initialize a new TextInput widget."""
+        """Initialize a new NumericInput widget."""
         self._value = default_value
 
         def value_is_indeterminate(candidate_value: str) -> bool:
@@ -135,7 +135,7 @@ class TextInput:
                 raise TypeError()
             try:
                 sender.set(f"{float(sender.get()):.{decimal_places}f}")
-                self._input_control.event_generate(TextInput.Event.ValueChanged)
+                self._input_control.event_generate(NumericInput.Event.ValueChanged)
             except ValueError:
                 sender.set(f"{fallback_value:.{decimal_places}f}")
             finally:
@@ -170,12 +170,12 @@ class TextInput:
 
     @property
     def widget(self) -> ttk.Spinbox:
-        """Return the Tk widget for this TextInput."""
+        """Return the Tk widget for this NumericInput."""
         return self._input_control
 
     @property
     def value(self) -> float:
-        """Return the value of the TextInput as a float."""
+        """Return the value of the NumericInput as a float."""
         return self._value
 
     @value.setter
@@ -267,11 +267,11 @@ class ToolWindow(guikit.AsyncDialog):
         limits_range = Range(lower=limits[0], upper=limits[1])
         viewing_range = Range(lower=axis_view_limits[0], upper=axis_view_limits[1])
 
-        axis_max_input = TextInput(tool_frame, limits=limits_range, default_value=viewing_range.upper)
+        axis_max_input = NumericInput(tool_frame, limits=limits_range, default_value=viewing_range.upper)
         ttk_tooltip.ToolTip(axis_max_input.widget, text=f"Cannot be greater than {limits_range.upper}", bootstyle=bootstyle.DEFAULT)
         axis_max_input.widget.grid(column=1, row=1, sticky=tk.EW)
 
-        axis_min_input = TextInput(tool_frame, limits=limits_range, default_value=viewing_range.lower)
+        axis_min_input = NumericInput(tool_frame, limits=limits_range, default_value=viewing_range.lower)
         ttk_tooltip.ToolTip(axis_min_input.widget, text=f"Cannot be less than {limits_range.lower}", bootstyle=bootstyle.DEFAULT)
         axis_min_input.widget.grid(column=1, row=2, sticky=tk.EW)
 
@@ -281,8 +281,8 @@ class ToolWindow(guikit.AsyncDialog):
             upper_bound = axis_max_input.value
             set_axis_limits(lower_bound, upper_bound)
             refresh_graph()
-        axis_max_input.widget.bind(TextInput.Event.ValueChanged, on_new_upper_or_lower_bound)
-        axis_min_input.widget.bind(TextInput.Event.ValueChanged, on_new_upper_or_lower_bound)
+        axis_max_input.widget.bind(NumericInput.Event.ValueChanged, on_new_upper_or_lower_bound)
+        axis_min_input.widget.bind(NumericInput.Event.ValueChanged, on_new_upper_or_lower_bound)
 
         scale_input = ttk.Combobox(master=tool_frame, values=["Linear", "Log"], state="readonly", width=5, justify=tk.RIGHT)
         scale_input.grid(column=1, row=3, sticky=(tk.EW, tk.N))  # pyright: ignore reportArgumentType -- the type hint for library is incorrect
