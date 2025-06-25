@@ -587,7 +587,7 @@ class RawDataProcessor:
                     self._g_level_column = f"z_accel_{sensor_units}"
                     self._frame_columns.extend(
                         [
-                            "z_accel_average_code",
+                            f"{channel_name}_average_code",
                             self._g_level_column,
                         ]
                     )
@@ -673,6 +673,25 @@ class RawDataProcessor:
                     )
         new_row_series = pd.Series(new_row, index=self.frame_columns)
         return new_row_series
+
+    def rescale_all(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Rescale all data from the raw codes and return the updated DataFrame."""
+        data_columns = [f"{channel_name}_average_code" for channel_name in RawDataProcessor.DEFAULT_NODE_PARAMETERS]
+        original_columns = ["timestamp", self._relative_time_column, "node_id"]
+        original_columns.extend(data_columns)
+        original_data = data[original_columns]
+
+        first_row = None
+        new_data = pd.DataFrame(columns=self.frame_columns)
+        for row_index, row in original_data.iterrows():
+            data_timestamp = row["timestamp"]
+            node_id = row["node_id"]
+            raw_data = row[data_columns].to_list()
+            rescaled_row = self.process_raw_data(first_row=first_row, data_timestamp=data_timestamp, node_id=node_id, raw_data=raw_data)
+            new_data = pd.concat([new_data, rescaled_row.to_frame().T], ignore_index=True)
+            if row_index == 0:
+                first_row = new_data.iloc[0]
+        return new_data
 
 
 class AppState:
@@ -917,11 +936,19 @@ class AppState:
     @calibration_file.setter
     def calibration_file(self, new_value: str) -> None:
         """Set a new value for the calibration file and notify CalibrationFileChanged and CalibrationFileHistoryChanged subscribers."""
+        if self.log_data_active:
+            message = "Incorrectly allowed the calibration file to change when logging"
+            raise RuntimeError(message)
         if new_value == self._calibration_file:
             return
         self._calibration_file = new_value
         self.load_calibration()
         self._tk_notifier.event_generate(AppState.Event.CalibrationFileChanged)
+
+        if self.data.size > 0:
+            rescaled_data = self._post_processor.rescale_all(self.data.copy())
+            self._acquired_data = rescaled_data
+            self._tk_notifier.event_generate(AppState.Event.NewDataProcessed)
 
         if new_value == SoilSwell.CommandName.DefaultCalibrationFile:
             return
