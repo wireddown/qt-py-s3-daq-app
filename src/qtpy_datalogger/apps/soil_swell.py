@@ -2009,6 +2009,13 @@ class SoilSwell(guikit.AsyncWindow):
                 "text": "",
             }
         self.battery_level_indicator.configure(args)
+        if battery_level == BatteryLevel.Unset:
+            high_time = 750
+            def blink_low_battery() -> None:
+                low_battery_image = self.svg_images[self.icon_name_for_battery_level[BatteryLevel.Low]]
+                self.battery_level_indicator.configure({ "image": low_battery_image, "text": "" })
+            self.root_window.after(high_time, blink_low_battery)
+            self.battery_level_indicator.after(2 * high_time, self.on_battery_level_changed, tk.Event())
         if self.battery_level_tooltip:
             self.battery_level_tooltip.leave()
         self.battery_level_tooltip = ttk_tooltip.ToolTip(self.battery_level_indicator, text=self.tooltip_message_for_battery_level[battery_level], bootstyle=bootstyle.DEFAULT)
