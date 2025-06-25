@@ -382,7 +382,7 @@ class SettingsWindow(guikit.AsyncDialog):
 
         previous_files = [str(SoilSwell.CommandName.DefaultCalibrationFile)]
         previous_files.extend(self.settings["calibration file history"])
-        calibration_file_name = guikit.create_dropdown_combobox(settings_frame, values=previous_files, width=40, justify=ttk.LEFT, completion=update_calibration_file)
+        calibration_file_name = guikit.create_dropdown_combobox(settings_frame, values=previous_files, width=70, justify=ttk.LEFT, completion=update_calibration_file)
         calibration_file_name.set(self.settings["startup"]["calibration file"])
         calibration_file_name.grid(column=1, row=4, padx=(0, 8), sticky=tk.EW)
 
@@ -1153,7 +1153,7 @@ class SoilSwell(guikit.AsyncWindow):
         self.build_window_menu()
 
         figure_dpi = 112
-        # self.root_window.minsize
+        self.root_window.minsize(width=1035, height=592)
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
 
