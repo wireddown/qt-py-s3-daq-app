@@ -1591,6 +1591,7 @@ class SoilSwell(guikit.AsyncWindow):
     def remake_calibration_submenu(self) -> None:
         """Remake the submenu that holds the recently used calibration files."""
         self.calibration_menu.delete(0, tk.LAST)
+        can_select = tk.DISABLED if self.state.log_data_active else tk.NORMAL
         if self.state.calibration_file_history:
             for entry in self.state.calibration_file_history[:10]:
                 entry_name = f"{entry!s}"
@@ -1598,6 +1599,7 @@ class SoilSwell(guikit.AsyncWindow):
                     command=functools.partial(self.select_calibration_file, entry_name),
                     label=entry_name,
                     variable=self.calibration_file_variable,
+                    state = can_select,
                 )
         else:
             self.calibration_menu.add_command(
@@ -1609,11 +1611,13 @@ class SoilSwell(guikit.AsyncWindow):
             command=functools.partial(self.select_calibration_file, SoilSwell.CommandName.DefaultCalibrationFile),
             label=SoilSwell.CommandName.DefaultCalibrationFile,
             variable=self.calibration_file_variable,
+            state = can_select,
         )
         self.calibration_menu.add_separator()
         self.calibration_menu.add_command(
             command=self.browse_for_calibration_file,
             label=SoilSwell.CommandName.BrowseCalibrationFile,
+            state = can_select,
         )
         self.calibration_menu.add_command(
             command=self.create_new_calibration_file,
@@ -1959,7 +1963,7 @@ class SoilSwell(guikit.AsyncWindow):
         else:
             new_style = bootstyle.DEFAULT
             self.state.log_file_path = AppState.canceled_file
-
+        self.remake_calibration_submenu()
         self.log_data_button.configure(bootstyle=new_style)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         self.log_data_variable.set(log_data_active)
 
