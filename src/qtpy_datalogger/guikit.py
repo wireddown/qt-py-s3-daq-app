@@ -295,7 +295,7 @@ class AboutDialog(AsyncDialog):
             message_frame,
             text=f"{self.notice_information.version} {bullet} {self.notice_information.timestamp:%Y-%m-%d} {bullet} {self.notice_information.commit}",
         )
-        version_label.grid(column=5, row=2, sticky=tk.W, padx=(4, 0))
+        version_label.grid(column=5, row=2, sticky=tk.W, padx=(2, 0))
         separator = ttk.Separator(message_frame)
         separator.grid(column=1, row=3, columnspan=5, sticky=tk.EW, pady=4)
         button_text_color = hex_string_for_style(StyleKey.SelectFg)
