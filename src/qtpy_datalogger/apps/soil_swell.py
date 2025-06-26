@@ -27,18 +27,12 @@ from tkfontawesome import icon_to_image, svg_to_image
 from ttkbootstrap import constants as bootstyle
 
 import qtpy_datalogger.apps.scanner
-from qtpy_datalogger import datatypes, discovery, guikit, network, ttkbootstrap_matplotlib
+from qtpy_datalogger import datatypes, discovery, network, ttkbootstrap_matplotlib
+from qtpy_datalogger import guikit as gk
 
 logger = logging.getLogger(pathlib.Path(__file__).stem)
 
 app_icon_color = "#07a000"
-
-
-class StyleKey(StrEnum):
-    """A class that extends the palette names of ttkbootstrap styles."""
-
-    Fg = "fg"
-    SelectFg = "selectfg"
 
 
 class BatteryLevel(StrEnum):
@@ -186,7 +180,7 @@ class NumericInput:
         self._value = new_value
 
 
-class ToolWindow(guikit.AsyncDialog):
+class ToolWindow(gk.AsyncDialog):
     """A class that shows a window with tools that apply to its origin."""
 
     def __init__(self, parent: ttk.Toplevel | ttk.Window, title: str | None = None) -> None:
@@ -301,7 +295,7 @@ class ToolWindow(guikit.AsyncDialog):
         return tool_frame
 
 
-class SettingsWindow(guikit.AsyncDialog):
+class SettingsWindow(gk.AsyncDialog):
     """A class that shows a windows for configuring the app's settings."""
 
     def __init__(self, parent: ttk.Toplevel | ttk.Window, title: str, settings: dict, settings_file: pathlib.Path) -> None:
@@ -341,7 +335,7 @@ class SettingsWindow(guikit.AsyncDialog):
         def update_theme(new_theme: str) -> None:
             self.settings["startup"]["theme"] = new_theme.lower()
 
-        theme_input = guikit.create_dropdown_combobox(settings_frame, values=["Cosmo", "Flatly", "Cyborg", "Darkly"], width=10, justify=ttk.LEFT, completion=update_theme)
+        theme_input = gk.create_dropdown_combobox(settings_frame, values=["Cosmo", "Flatly", "Cyborg", "Darkly"], width=10, justify=ttk.LEFT, completion=update_theme)
         theme_input.set(self.settings["startup"]["theme"].capitalize())
         theme_input.grid(column=1, row=1, sticky=tk.W)
 
@@ -371,7 +365,7 @@ class SettingsWindow(guikit.AsyncDialog):
 
         sample_rate_options = SampleRate._member_names_.copy()
         sample_rate_options.remove(SampleRate.Unset)
-        sample_rate_input = guikit.create_dropdown_combobox(settings_frame, values=sample_rate_options, width=10, justify=ttk.LEFT, completion=update_sample_rate)
+        sample_rate_input = gk.create_dropdown_combobox(settings_frame, values=sample_rate_options, width=10, justify=ttk.LEFT, completion=update_sample_rate)
         sample_rate_input.set(self.settings["startup"]["sample rate"])
         sample_rate_input.grid(column=1, row=3, sticky=tk.W)
 
@@ -382,7 +376,7 @@ class SettingsWindow(guikit.AsyncDialog):
 
         previous_files = [str(SoilSwell.CommandName.DefaultCalibrationFile)]
         previous_files.extend(self.settings["calibration file history"])
-        calibration_file_name = guikit.create_dropdown_combobox(settings_frame, values=previous_files, width=70, justify=ttk.LEFT, completion=update_calibration_file)
+        calibration_file_name = gk.create_dropdown_combobox(settings_frame, values=previous_files, width=70, justify=ttk.LEFT, completion=update_calibration_file)
         calibration_file_name.set(self.settings["startup"]["calibration file"])
         calibration_file_name.grid(column=1, row=4, padx=(0, 8), sticky=tk.EW)
 
@@ -1060,7 +1054,7 @@ class AppState:
         self.data = pd.concat([self.data, new_frame_row.to_frame().T], ignore_index=True)
 
 
-class SoilSwell(guikit.AsyncWindow):
+class SoilSwell(gk.AsyncWindow):
     """A GUI that acquires, plots, and logs data from a soil swell test."""
 
     app_name = "Soil Swell Test"
@@ -1129,6 +1123,7 @@ class SoilSwell(guikit.AsyncWindow):
             BatteryLevel.Full: "The battery is full",
         }
         self.battery_level_tooltip = None
+        self.about_window = None
         self.tool_window = None
         self.settings_window = None
         self.scanner_process = None
@@ -1299,7 +1294,7 @@ class SoilSwell(guikit.AsyncWindow):
             underline=0,
         )
         # Themes submenu
-        icon_color = guikit.hex_string_for_style(StyleKey.Fg)
+        icon_color = gk.hex_string_for_style(gk.StyleKey.Fg)
         light_mode_icon = icon_to_image("sun", fill=icon_color, scale_to_height=15)
         dark_mode_icon = icon_to_image("moon", fill=icon_color, scale_to_height=15)
         debug_mode_icon = icon_to_image("bolt", fill=icon_color, scale_to_height=15)
@@ -1392,19 +1387,19 @@ class SoilSwell(guikit.AsyncWindow):
 
     def refresh_battery_icons(self) -> None:
         """Create the icon images for the battery level indicator."""
-        full_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.Full], fill=guikit.hex_string_for_style(bootstyle.SUCCESS), scale_to_height=24)
+        full_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.Full], fill=gk.hex_string_for_style(bootstyle.SUCCESS), scale_to_height=24)
         self.svg_images[self.icon_name_for_battery_level[BatteryLevel.Full]] = full_battery_icon
 
-        high_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.High], fill=guikit.hex_string_for_style(bootstyle.SUCCESS), scale_to_height=24)
+        high_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.High], fill=gk.hex_string_for_style(bootstyle.SUCCESS), scale_to_height=24)
         self.svg_images[self.icon_name_for_battery_level[BatteryLevel.High]] = high_battery_icon
 
-        half_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.Half], fill=guikit.hex_string_for_style(bootstyle.WARNING), scale_to_height=24)
+        half_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.Half], fill=gk.hex_string_for_style(bootstyle.WARNING), scale_to_height=24)
         self.svg_images[self.icon_name_for_battery_level[BatteryLevel.Half]] = half_battery_icon
 
-        low_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.Low], fill=guikit.hex_string_for_style(bootstyle.DANGER), scale_to_height=24)
+        low_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.Low], fill=gk.hex_string_for_style(bootstyle.DANGER), scale_to_height=24)
         self.svg_images[self.icon_name_for_battery_level[BatteryLevel.Low]] = low_battery_icon
 
-        unknown_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.Unknown], fill=guikit.hex_string_for_style(bootstyle.SECONDARY), scale_to_height=24)
+        unknown_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.Unknown], fill=gk.hex_string_for_style(bootstyle.SECONDARY), scale_to_height=24)
         self.svg_images[self.icon_name_for_battery_level[BatteryLevel.Unknown]] = unknown_battery_icon
 
         self.battery_level_indicator.configure(image=self.svg_images[self.icon_name_for_battery_level[self.state.battery_level]])
@@ -1480,11 +1475,11 @@ class SoilSwell(guikit.AsyncWindow):
             panel,
             text=SoilSwell.CommandName.Reset,
             icon_name="rotate-left",
-            icon_fill=guikit.hex_string_for_style(bootstyle.WARNING),
+            icon_fill=gk.hex_string_for_style(bootstyle.WARNING),
             spaces=5,
             bootstyle=(bootstyle.OUTLINE, bootstyle.WARNING),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         )
-        self.svg_images["hover-rotate-left"] = icon_to_image("rotate-left", fill=guikit.hex_string_for_style(StyleKey.SelectFg), scale_to_height=24)
+        self.svg_images["hover-rotate-left"] = icon_to_image("rotate-left", fill=gk.hex_string_for_style(gk.StyleKey.SelectFg), scale_to_height=24)
         self.reset_button.configure(command=functools.partial(self.handle_reset, self.reset_button))
         self.reset_button.bind("<Enter>", self.on_mouse_enter)
         self.reset_button.bind("<Leave>", self.on_mouse_leave)
@@ -1504,7 +1499,7 @@ class SoilSwell(guikit.AsyncWindow):
     ) -> ttk.Button:
         """Create a ttk.Button using the specified text and FontAwesome icon_name."""
         text_spacing = 3 * " "
-        fill = icon_fill if icon_fill else guikit.hex_string_for_style(StyleKey.SelectFg)
+        fill = icon_fill if icon_fill else gk.hex_string_for_style(gk.StyleKey.SelectFg)
         button_image = icon_to_image(icon_name, fill=fill, scale_to_height=24)
         self.svg_images[icon_name] = button_image
         button = ttk.Button(
@@ -1595,7 +1590,7 @@ class SoilSwell(guikit.AsyncWindow):
                 settings=self.state.load_app_settings(),
                 settings_file=AppState.settings_file,
             )
-            open_settings_window_task = asyncio.create_task(self.settings_window.show(guikit.DialogBehavior.Modeless))
+            open_settings_window_task = asyncio.create_task(self.settings_window.show(gk.DialogBehavior.Modeless))
             self.background_tasks.add(open_settings_window_task)
             open_settings_window_task.add_done_callback(self.finalize_settings_window)
 
@@ -1699,6 +1694,18 @@ class SoilSwell(guikit.AsyncWindow):
 
     def show_about(self) -> None:
         """Handle the Help::About menu command."""
+        if not self.about_window:
+            def finalize_about_window(task: asyncio.Task) -> None:
+                self.about_window = None
+                self.background_tasks.discard(task)
+            self.about_window = gk.AboutDialog(
+                parent=self.root_window,
+                app_name=SoilSwell.app_name,
+                app_icon="arrow-up-from-ground-water",
+            )
+            open_about_window_task = asyncio.create_task(self.about_window.show(gk.DialogBehavior.Modeless))
+            open_about_window_task.add_done_callback(finalize_about_window)
+            self.background_tasks.add(open_about_window_task)
 
     def change_theme(self, theme_name: str) -> None:
         """Handle the View::Theme selection command."""
@@ -1729,7 +1736,7 @@ class SoilSwell(guikit.AsyncWindow):
         self.theme_variable.set(self.menu_text_for_theme[self.state.active_theme])
 
         # Update image colors -- these could be cached rather than recalculated
-        self.svg_images["rotate-left"] = icon_to_image("rotate-left", guikit.hex_string_for_style(bootstyle.WARNING), scale_to_height=24)
+        self.svg_images["rotate-left"] = icon_to_image("rotate-left", gk.hex_string_for_style(bootstyle.WARNING), scale_to_height=24)
         self.reset_button.configure(image=self.svg_images["rotate-left"])
         self.refresh_battery_icons()
 
@@ -1800,7 +1807,7 @@ class SoilSwell(guikit.AsyncWindow):
 
         if not self.tool_window:
             self.tool_window = ToolWindow(self.root_window)
-            open_tool_window_task = asyncio.create_task(self.tool_window.show(guikit.DialogBehavior.Modeless))
+            open_tool_window_task = asyncio.create_task(self.tool_window.show(gk.DialogBehavior.Modeless))
             self.background_tasks.add(open_tool_window_task)
             open_tool_window_task.add_done_callback(self.finalize_tool_window)
         self.tool_window.attach_to_axis(event_args.canvas.draw_idle, axes, axis, limits)
@@ -1831,7 +1838,7 @@ class SoilSwell(guikit.AsyncWindow):
             return
         if not self.tool_window:
             self.tool_window = ToolWindow(self.root_window)
-            open_tool_window_task = asyncio.create_task(self.tool_window.show(guikit.DialogBehavior.Modeless))
+            open_tool_window_task = asyncio.create_task(self.tool_window.show(gk.DialogBehavior.Modeless))
             self.background_tasks.add(open_tool_window_task)
             open_tool_window_task.add_done_callback(self.finalize_tool_window)
         self.tool_window.attach_to_axis(event_args.canvas.draw_idle, axes, axis, limits)
@@ -2247,4 +2254,4 @@ def get_first_in_range(upper_bound: float, selection: dict) -> Any:
 
 if __name__ == "__main__":
     logger.debug(f"Launching {__package__}")
-    asyncio.run(guikit.AsyncApp.create_and_run(SoilSwell))
+    asyncio.run(gk.AsyncApp.create_and_run(SoilSwell))

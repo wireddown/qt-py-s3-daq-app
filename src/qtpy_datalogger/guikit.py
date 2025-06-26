@@ -3,16 +3,29 @@
 import asyncio
 import enum
 import functools
+import json
 import logging
 import tkinter as tk
+import webbrowser
+from tkinter import font
 from typing import Callable, Literal
 
 import ttkbootstrap as ttk
 import ttkbootstrap.icons as ttk_icons
 import ttkbootstrap.themes.standard as ttk_themes
+from tkfontawesome import icon_to_image
 from ttkbootstrap import constants as bootstyle
 
+from qtpy_datalogger import datatypes
+
 logger = logging.getLogger(__name__)
+
+
+class StyleKey(enum.StrEnum):
+    """A class that extends the palette names of ttkbootstrap styles."""
+
+    Fg = "fg"
+    SelectFg = "selectfg"
 
 
 class AsyncApp:
@@ -210,6 +223,148 @@ class AsyncWindow:
         self.should_run_loop = False
 
 
+class AboutDialog(AsyncDialog):
+    """A class that presents information about the app."""
+
+    def __init__(  # noqa PLR0913 -- allow many parameters for a framework class
+            self,
+            parent: ttk.Toplevel | ttk.Window,
+            app_name: str = "",
+            app_icon: str = "",
+            all_icons: list[str] | None = None,
+            help_url: str = "",
+            source_url: str = "",
+        ) -> None:
+        """Initialize a new AboutDialog instance."""
+        self.app_name = app_name
+        if not app_icon:
+            app_icon = "chart-line"
+        if not all_icons:
+            all_icons = ["microchip", "worm", app_icon]
+        self.app_icons = all_icons[:3]
+        self.app_icon_images = []
+        self.help_url = help_url if help_url else datatypes.Links.Homepage
+        self.source_url = source_url if source_url else datatypes.Links.Source
+        self.copy_version_text = "Copy version"
+        super().__init__(parent, f"About {app_name}".strip())
+
+    def create_user_interface(self) -> None:  # noqa: PLR0915 -- allow long function to create the UI
+        """Create the UI for the dialog."""
+        self.root_window.columnconfigure(0, weight=1)
+        self.root_window.rowconfigure(0, weight=1)
+        self.root_window.resizable(width=False, height=False)
+        main_frame = ttk.Frame(self.root_window, padding=16)
+        main_frame.grid(column=0, row=0, sticky=tk.NSEW)
+        main_frame.columnconfigure(0, weight=1)
+        main_frame.rowconfigure(0, weight=1)
+        main_frame.rowconfigure(1, weight=1)
+
+        message_frame = ttk.Frame(main_frame)
+        message_frame.grid(column=0, row=0, sticky=tk.NSEW)
+        message_frame.columnconfigure(0, weight=0, minsize=40)  # Filler
+        message_frame.columnconfigure(1, weight=0)  # Icon1
+        message_frame.columnconfigure(2, weight=0)  # Icon2
+        message_frame.columnconfigure(3, weight=0)  # Icon3
+        message_frame.columnconfigure(4, weight=0, minsize=20)  # Filler
+        message_frame.columnconfigure(5, weight=0)  # Text
+        message_frame.columnconfigure(6, weight=0, minsize=40)  # Filler
+        message_frame.rowconfigure(0, weight=0, minsize=20)  # Filler
+        message_frame.rowconfigure(1, weight=0)  # Icons and Name
+        message_frame.rowconfigure(2, weight=0)  # Icons and Version
+        message_frame.rowconfigure(3, weight=0)  # Separator
+        message_frame.rowconfigure(4, weight=0)  # Help
+        message_frame.rowconfigure(5, weight=0)  # Source
+        message_frame.rowconfigure(6, weight=0)  # Source2
+        message_frame.rowconfigure(7, weight=0, minsize=50)  # Filler
+
+        icon_height = 48
+        icon_color = hex_string_for_style(StyleKey.Fg)
+        icon_column = 3
+        for icon_name in reversed(self.app_icons):
+            icon_image = icon_to_image(icon_name, fill=icon_color, scale_to_height=icon_height)
+            self.app_icon_images.append(icon_image)
+            chart_label = ttk.Label(message_frame, image=icon_image, padding=4)
+            chart_label.grid(column=icon_column, row=1, rowspan=2)
+            icon_column = icon_column - 1
+
+        name_label = ttk.Label(message_frame, font=font.Font(weight="bold", size=28), text=self.app_name)
+        name_label.grid(column=5, row=1, sticky=tk.W)
+        self.notice_information = datatypes.SnsrNotice.get_package_notice_info(allow_dev_version=True)
+        bullet = ttk_icons.Emoji.get("black medium small square")
+        version_label = ttk.Label(
+            message_frame,
+            text=f"{self.notice_information.version} {bullet} {self.notice_information.timestamp:%Y-%m-%d} {bullet} {self.notice_information.commit}",
+        )
+        version_label.grid(column=5, row=2, sticky=tk.W, padx=(4, 0))
+        separator = ttk.Separator(message_frame)
+        separator.grid(column=1, row=3, columnspan=5, sticky=tk.EW, pady=4)
+        button_text_color = hex_string_for_style(StyleKey.SelectFg)
+        spacer = "   "
+        self.help_icon = icon_to_image("parachute-box", fill=button_text_color, scale_to_width=16)
+        help_button = ttk.Button(
+            message_frame,
+            compound=tk.LEFT,
+            image=self.help_icon,
+            text=f"{spacer}Online help ",  # The trailing space helps with internal margins
+            style=bootstyle.INFO,
+            width=18,
+            command=functools.partial(webbrowser.open_new_tab, self.help_url),
+        )
+        help_button.grid(column=5, row=4, sticky=tk.W, pady=(18, 0))
+        self.source_icon = icon_to_image("github-alt", fill=button_text_color, scale_to_width=16)
+        source_button = ttk.Button(
+            message_frame,
+            compound=tk.LEFT,
+            image=self.source_icon,
+            text=f"{spacer}Source code",
+            style=bootstyle.INFO,
+            width=18,
+            command=functools.partial(webbrowser.open_new_tab, self.source_url),
+        )
+        source_button.grid(column=5, row=5, sticky=tk.W, pady=(22, 0))
+
+        button_frame = ttk.Frame(main_frame)
+        button_frame.grid(column=0, row=1, sticky=tk.NSEW, padx=(0, 16), pady=(8, 0))
+        button_frame.columnconfigure(0, weight=1)
+        button_frame.columnconfigure(1, weight=0)
+        button_frame.rowconfigure(0, weight=0)
+        self.copy_version_button = ttk.Button(
+            button_frame,
+            text=self.copy_version_text,
+            style=bootstyle.OUTLINE,
+            command=self.copy_version,
+            width=12,
+        )
+        self.copy_version_button.grid(column=0, row=0, sticky=tk.E, padx=(0, 16))
+        ok_button = ttk.Button(button_frame, text="OK", command=self.exit)
+        ok_button.grid(column=1, row=0, sticky=tk.E)
+        self.initial_focus = ok_button
+
+    def copy_version(self) -> None:
+        """Copy the version information to the clipboard."""
+        formatted_version = {
+            "version": self.notice_information.version,
+            "timestamp": str(self.notice_information.timestamp),
+            "commit": self.notice_information.commit,
+        }
+        self.parent.clipboard_clear()
+        self.parent.clipboard_append(json.dumps(formatted_version))
+        status_emoji = ttk_icons.Emoji.get("white heavy check mark")
+        self.copy_version_button.configure(text=f"{status_emoji}   Copied!", bootstyle=bootstyle.SUCCESS)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+        self.copy_version_button.after(
+            850,
+            functools.partial(
+                self.copy_version_button.configure,
+                text=self.copy_version_text,
+                bootstyle=(bootstyle.DEFAULT, bootstyle.OUTLINE),  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+            ),
+        )
+
+    async def on_loop(self) -> None:
+        """Update UI elements."""
+        await asyncio.sleep(20e-3)
+
+
 class DemoWithAnimation(AsyncWindow):
     """Compare synchronous vs asynchronous calls in Tk."""
 
@@ -377,6 +532,8 @@ def create_theme_combobox(parent: tk.BaseWidget) -> ttk.Combobox:
     def handle_change_theme(event_args: tk.Event) -> None:
         """Handle the selection event for the theme Combobox."""
         sending_combobox = event_args.widget
+        if not isinstance(sending_combobox, ttk.Combobox):
+            raise TypeError()
         theme_name = sending_combobox.get().lower()
         style = ttk.Style.get_instance()
         if not style:
