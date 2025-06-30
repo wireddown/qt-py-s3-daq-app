@@ -12,7 +12,7 @@ import textwrap
 import tkinter as tk
 from enum import StrEnum
 from tkinter import filedialog, font
-from typing import Any, Callable, NamedTuple
+from typing import Any, Callable, NamedTuple, Protocol
 
 import click
 import matplotlib.axes as mpl_axes
@@ -72,6 +72,15 @@ class Tristate(StrEnum):
     BoolUnset = "Unset"
     BoolTrue = "True"
     BoolFalse = "False"
+
+
+class CalibrationFile(StrEnum):
+    """An enumeration that represents the state of the calibration file."""
+
+    Invalid = "Invalid"
+    Active = "Active"
+    MissingNode = "Missing node"
+    MissingSensor = "Missing sensor"
 
 
 class NumericInput:
@@ -388,6 +397,32 @@ class SettingsWindow(gk.AsyncDialog):
 class RawDataProcessor:
     """A class that calculates derived data from raw sensor samples."""
 
+    class EventHandler(Protocol):
+        """A protocol that represents a data processing event handler."""
+
+        def __call__(self, missing_node: str, missing_sensor: str) -> None:
+            """Handle the data processing event."""
+
+    class Event:
+        """A class that represents a data processing event."""
+
+        def __init__(self) -> None:
+            """Initialize a new Event."""
+            self._subscribers: set[RawDataProcessor.EventHandler] = set()
+
+        def subscribe(self, callback: "RawDataProcessor.EventHandler") -> None:
+            """Begin receiving events."""
+            self._subscribers.add(callback)
+
+        def unsubscribe(self, callback: "RawDataProcessor.EventHandler") -> None:
+            """Stop receiving events."""
+            self._subscribers.remove(callback)
+
+        def notify(self, missing_node = "", missing_sensor: str = "") -> None:
+            """Send an event to the subscribers."""
+            for subscriber in self._subscribers:
+                subscriber(missing_node, missing_sensor)
+
     DEFAULT_SENSOR_PARAMETERS = {  # noqa: RUF012 -- dict is mutable but treated as a constant
         "lvdt": { "gain": 1.0, "offset": 0.0, "units": "cm" },
         "thrm_mcp9700": { "gain": 1.0, "offset": 0.0, "units": "degC"},
@@ -467,6 +502,7 @@ class RawDataProcessor:
 
     def __init__(self) -> None:
         """Initialize a new RawDataProcessor instance."""
+        self._event = RawDataProcessor.Event()
         self._sensor_parameters = {
             # Loaded from file
         }
@@ -479,6 +515,11 @@ class RawDataProcessor:
         self._lvdt_displacement_columns = []
         self._relative_time_column = "relative_time_minutes"
         self._build_column_information()
+
+    @property
+    def event(self) -> "RawDataProcessor.Event":
+        """Get the event for the data processor."""
+        return self._event
 
     @property
     def frame_columns(self) -> list:
@@ -591,17 +632,20 @@ class RawDataProcessor:
         first_timestamp = first_row.loc["timestamp"] if first_row is not None else data_timestamp
         relative_timestamp = (data_timestamp - first_timestamp).seconds / 60
 
+        matched_all_lookups = True
         new_row = []
         new_row.extend([data_timestamp, relative_timestamp])
         new_row.extend([node_id, node_id])
         if node_id not in self._sensor_node_parameters:
-            print(f"No calibration information for node '{node_id}'")
+            self.event.notify(missing_node=node_id)
+            matched_all_lookups = False
         node_parameters = self._sensor_node_parameters.get(node_id, RawDataProcessor.DEFAULT_NODE_PARAMETERS)
         for index, channel_name in enumerate(node_parameters):
             channel_parameters = node_parameters[channel_name]
             sensor_id = channel_parameters["sensor_id"]
             if sensor_id not in self._sensor_parameters:
-                print(f"  No calibration information for sensor '{sensor_id}'")
+                self.event.notify(missing_sensor=sensor_id)
+                matched_all_lookups = False
             raw_sample = raw_data[index]
             match index:
                 case i if 0 <= i <= 5:
@@ -665,6 +709,8 @@ class RawDataProcessor:
                             physical_measurement,
                         ]
                     )
+        if matched_all_lookups:
+            self.event.notify()
         new_row_series = pd.Series(new_row, index=self.frame_columns)
         return new_row_series
 
