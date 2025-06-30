@@ -758,7 +758,7 @@ class AppState:
                     "sample rate": str(SampleRate.Fast),
                     "calibration file": str(SoilSwell.CommandName.DefaultCalibrationFile),
                 },
-                "calibration file history": []
+                "calibration file history": [],
             }
             toml.dump(default_settings, file)
         default_scaling_file = AppState.settings_file.with_name(f"{SoilSwell.CommandName.DefaultCalibrationFile}.toml")
