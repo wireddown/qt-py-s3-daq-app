@@ -418,7 +418,7 @@ class RawDataProcessor:
             """Stop receiving events."""
             self._subscribers.remove(callback)
 
-        def notify(self, missing_node = "", missing_sensor: str = "") -> None:
+        def notify(self, missing_node: str = "", missing_sensor: str = "") -> None:
             """Send an event to the subscribers."""
             for subscriber in self._subscribers:
                 subscriber(missing_node, missing_sensor)
@@ -1314,6 +1314,7 @@ class SoilSwell(gk.AsyncWindow):
         self.root_window.bind(AppState.Event.DemoModeChanged, self.on_demo_mode_changed)
         self.root_window.bind(AppState.Event.NewDataProcessed, self.on_new_data_processed)
         self.root_window.bind(AppState.Event.CalibrationFileChanged, self.on_calibration_file_changed)
+        self.root_window.bind(AppState.Event.CalibrationFileStatusChanged, self.on_calibration_file_status_changed)
         self.root_window.bind(AppState.Event.CalibrationFileHistoryChanged, self.on_calibration_file_history_changed)
 
         self.update_window_title(SoilSwell.app_name)
@@ -1358,11 +1359,40 @@ class SoilSwell(gk.AsyncWindow):
             underline=0,
         )
         # Calibration submenu
+        self.svg_images["o"] = icon_to_image("o", fill=gk.hex_string_for_style(bootstyle.SUCCESS), scale_to_height=15)
+        self.svg_images["circle-question"] = icon_to_image("circle-question", fill=gk.hex_string_for_style(bootstyle.WARNING), scale_to_height=15)
+        self.svg_images["circle-xmark"] = icon_to_image("circle-xmark", fill=gk.hex_string_for_style(bootstyle.DANGER), scale_to_height=15)
         self.calibration_menu = tk.Menu(self.settings_menu, name="calibration_menu")
         self.settings_menu.add_cascade(
             label=SoilSwell.CommandName.CalibrationFile,
             menu=self.calibration_menu,
             underline=0,
+        )
+        self.calibration_menu.add_command(
+            label="status placeholder",
+        )
+        self.calibration_menu.add_separator()
+        self.calibration_menu.add_command(
+            label="(No recent files)",
+            state=tk.DISABLED,
+        )
+        self.calibration_menu.add_separator()
+        can_select = tk.DISABLED if self.state.log_data_active else tk.NORMAL
+        self.calibration_menu.add_radiobutton(
+            command=functools.partial(self.select_calibration_file, SoilSwell.CommandName.DefaultCalibrationFile),
+            label=SoilSwell.CommandName.DefaultCalibrationFile,
+            variable=self.calibration_file_variable,
+            state = can_select,
+        )
+        self.calibration_menu.add_separator()
+        self.calibration_menu.add_command(
+            command=self.browse_for_calibration_file,
+            label=SoilSwell.CommandName.BrowseCalibrationFile,
+            state = can_select,
+        )
+        self.calibration_menu.add_command(
+            command=self.create_new_calibration_file,
+            label=SoilSwell.CommandName.NewCalibrationFile,
         )
 
         self.settings_menu.add_separator()
@@ -1691,47 +1721,74 @@ class SoilSwell(gk.AsyncWindow):
     def on_calibration_file_changed(self, event_args: tk.Event) -> None:
         """Handle the CalibrationFileChanged event."""
         self.calibration_file_variable.set(self.state.calibration_file)
+        self.update_calibration_file_status()
+
+    def on_calibration_file_status_changed(self, event_args: tk.Event) -> None:
+        """Handle the CalibrationFileStatusChanged event."""
+        if self.state.calibration_file_status != CalibrationFile.Active:
+            self.calibration_file_variable.set(SoilSwell.CommandName.DefaultCalibrationFile)
+        self.update_calibration_file_status()
 
     def on_calibration_file_history_changed(self, event_args: tk.Event) -> None:
         """Handle the CalibrationFileHistoryChanged event."""
-        self.remake_calibration_submenu()
+        old_entries = 0
+        first_history_index = 2
+        entry_type = self.calibration_menu.type(first_history_index)
+        while entry_type != "separator":
+            old_entries = old_entries + 1
+            entry_type = self.calibration_menu.type(first_history_index + old_entries)
 
-    def remake_calibration_submenu(self) -> None:
-        """Remake the submenu that holds the recently used calibration files."""
-        self.calibration_menu.delete(0, tk.LAST)
+        self.calibration_menu.delete(first_history_index, first_history_index + old_entries - 1)
         can_select = tk.DISABLED if self.state.log_data_active else tk.NORMAL
         if self.state.calibration_file_history:
-            for entry in self.state.calibration_file_history[:10]:
+            for index, entry in enumerate(sorted(self.state.calibration_file_history[:10])):
                 entry_name = f"{entry!s}"
-                self.calibration_menu.add_radiobutton(
+                self.calibration_menu.insert_radiobutton(
+                    index=first_history_index + index,
                     command=functools.partial(self.select_calibration_file, entry_name),
                     label=entry_name,
                     variable=self.calibration_file_variable,
                     state = can_select,
                 )
         else:
-            self.calibration_menu.add_command(
+            self.calibration_menu.insert_command(
+                index=first_history_index,
                 label="(No recent files)",
                 state=tk.DISABLED,
             )
-        self.calibration_menu.add_separator()
-        self.calibration_menu.add_radiobutton(
-            command=functools.partial(self.select_calibration_file, SoilSwell.CommandName.DefaultCalibrationFile),
-            label=SoilSwell.CommandName.DefaultCalibrationFile,
-            variable=self.calibration_file_variable,
-            state = can_select,
-        )
-        self.calibration_menu.add_separator()
-        self.calibration_menu.add_command(
-            command=self.browse_for_calibration_file,
-            label=SoilSwell.CommandName.BrowseCalibrationFile,
-            state = can_select,
-        )
-        self.calibration_menu.add_command(
-            command=self.create_new_calibration_file,
-            label=SoilSwell.CommandName.NewCalibrationFile,
-        )
         self.style_menu(self.calibration_menu)
+
+    def update_calibration_file_status(self) -> None:
+        """Update the menu indicator for the active calibration file."""
+        status_message = f"{self.state.calibration_file_status}: {pathlib.Path(self.state.calibration_file).stem}"
+        match self.state.calibration_file_status:
+            case CalibrationFile.Active:
+                status_icon = self.svg_images["o"]
+            case CalibrationFile.Invalid:
+                status_icon = self.svg_images["circle-xmark"]
+            case s if s in [CalibrationFile.MissingSensor, CalibrationFile.MissingNode]:
+                status_icon = self.svg_images["circle-question"]
+            case _:
+                raise RuntimeError()
+        status_index = 0
+        self.calibration_menu.entryconfigure(
+            index=status_index,
+            cnf={
+                "label": status_message,
+                "image": status_icon,
+                "compound": tk.LEFT,
+            },
+        )
+
+    def update_calibration_commands(self) -> None:
+        """Update the calibration commands."""
+        can_select = tk.DISABLED if self.state.log_data_active else tk.NORMAL
+        last_entry = self.calibration_menu.index(tk.END)
+        if last_entry is None:
+            raise RuntimeError()
+        selectable_entries = [index for index in range(last_entry + 1) if self.calibration_menu.type(index) != "separator"]
+        for index in selectable_entries[1:]:
+            self.calibration_menu.entryconfig(index, {"state": can_select})
 
     def select_calibration_file(self, new_file: str) -> None:
         """Set a new value for the calibration file."""
@@ -1748,8 +1805,6 @@ class SoilSwell(gk.AsyncWindow):
         )
         file_path = pathlib.Path(file_name)
         if file_path == AppState.canceled_file:
-            return
-        if not RawDataProcessor.check_calibration_file_contents(file_path):
             return
         self.state.calibration_file = f"{file_path!s}"
 
@@ -2083,7 +2138,7 @@ class SoilSwell(gk.AsyncWindow):
         else:
             new_style = bootstyle.DEFAULT
             self.state.log_file_path = AppState.canceled_file
-        self.remake_calibration_submenu()
+        self.update_calibration_commands()
         self.log_data_button.configure(bootstyle=new_style)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         self.log_data_variable.set(log_data_active)
 
