@@ -788,6 +788,7 @@ class AppState:
         """Initialize a new AppState instance."""
         self._tk_notifier = tk_root
         self._post_processor = post_processor
+        self._persisted_settings = {}
         self._theme_name = ""
         self._sensor_group = ""
         self._sample_rate = SampleRate.Unset
@@ -993,37 +994,29 @@ class AppState:
         if new_value == SoilSwell.CommandName.DefaultCalibrationFile:
             return
 
-        settings = self.load_app_settings()
-        history: list[str] = settings["calibration file history"]
         try:
-            old_index = history.index(new_value)
-            history.pop(old_index)
+            old_index = self._persisted_settings["calibration file history"].index(new_value)
+            self._persisted_settings["calibration file history"].pop(old_index)
         except ValueError:
             pass
-        history.insert(0, new_value)
-        self.save_app_settings(settings)
-        self._calibration_file_history.clear()
-        self._calibration_file_history.extend(history)
+        self._persisted_settings["calibration file history"].insert(0, new_value)
+        self.save_app_settings(self._persisted_settings)
         self._tk_notifier.event_generate(AppState.Event.CalibrationFileHistoryChanged)
 
     @property
     def calibration_file_history(self) -> list[str]:
         """Return the list of previously used calibration files."""
-        valid_files = []
-        for file in self._calibration_file_history:
-            file_as_path = pathlib.Path(file)
-            if file_as_path.exists():
-                valid_files.append(file)
-        return valid_files
+        self.keep_existing_files()
+        return self._persisted_settings["calibration file history"]
 
     def reset(self) -> None:
         """Reset the properties to default on-launch values."""
-        app_settings = self.load_app_settings()
-        user_settings = app_settings["startup"]
+        self.load_app_settings()
+        startup_settings = self._persisted_settings["startup"]
         self._battery_level = BatteryLevel.Unknown
         self._battery_voltage = 0.0
-        self._sensor_group = user_settings.get("group", datatypes.Default.MqttGroup)
-        self._sample_rate = SampleRate(user_settings.get("sample rate", SampleRate.Fast))
+        self._sensor_group = startup_settings.get("group", datatypes.Default.MqttGroup)
+        self._sample_rate = SampleRate(startup_settings.get("sample rate", SampleRate.Fast))
         self._acquire_active = Tristate.BoolFalse
         self._log_data_active = False
         self._demo_active = False
@@ -1031,11 +1024,11 @@ class AppState:
         self._most_recent_timestamp = datetime.datetime.min.replace(tzinfo=datetime.UTC)
         self._log_file_path = AppState.canceled_file
         self._index_when_log_enabled = -1
-        self._calibration_file = user_settings["calibration file"]
-        self._calibration_file_history = app_settings["calibration file history"]
+        self._calibration_file = startup_settings["calibration file"]
+        self._calibration_file_status = CalibrationFile.Invalid
 
         self.load_calibration()
-        self.active_theme = user_settings.get("theme", "cosmo")  # Propagate theme first
+        self.active_theme = startup_settings.get("theme", "cosmo")  # Propagate theme first
         def notify_all() -> None:
             self._tk_notifier.event_generate(AppState.Event.BatteryLevelChanged)
             self._tk_notifier.event_generate(AppState.Event.BatteryVoltageChanged)
@@ -1054,8 +1047,18 @@ class AppState:
 
     def load_app_settings(self) -> dict:
         """Load the user's configured settings and return a dictionary of their values."""
-        user_settings = AppState.ensure_configuration_files()
-        return user_settings
+        self._persisted_settings = AppState.ensure_configuration_files()
+        self.keep_existing_files()
+        return self._persisted_settings
+
+    def keep_existing_files(self) -> None:
+        """Remove files from the calibration history that do not exist."""
+        valid_files = []
+        for file in self._persisted_settings["calibration file history"]:
+            file_as_path = pathlib.Path(file)
+            if file_as_path.exists():
+                valid_files.append(file)
+        self._persisted_settings["calibration file history"] = valid_files
 
     def save_app_settings(self, new_settings: dict) -> None:
         """Save the user's configured settings."""
