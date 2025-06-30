@@ -993,14 +993,16 @@ class AppState:
         self._tk_notifier.event_generate(AppState.Event.CalibrationFileChanged)
 
         if self.calibration_file_status == CalibrationFile.Invalid:
-            return
+            self._calibration_file = SoilSwell.CommandName.DefaultCalibrationFile
+            self.load_calibration()
+            self._tk_notifier.event_generate(AppState.Event.CalibrationFileChanged)
 
         if self.data.size > 0:
             rescaled_data = self._post_processor.rescale_all(self.data.copy())
             self._acquired_data = rescaled_data
             self._tk_notifier.event_generate(AppState.Event.NewDataProcessed)
 
-        if new_value == SoilSwell.CommandName.DefaultCalibrationFile:
+        if self.calibration_file == SoilSwell.CommandName.DefaultCalibrationFile:
             return
 
         try:
