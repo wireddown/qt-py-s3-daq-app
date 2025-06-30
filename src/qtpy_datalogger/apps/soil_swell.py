@@ -565,12 +565,15 @@ class RawDataProcessor:
             self.g_level_column,
         ]
 
+    def clear_scaling_coefficients(self) -> None:
+        """Clear all previously loaded scaling coefficients."""
+        self._sensor_node_parameters.clear()
+        self._sensor_parameters.clear()
+
     def load_scaling_coefficients_from_file(self, calibration_file: pathlib.Path) -> None:
         """Load the scaling coefficients from the specified calibration_file."""
         scaling_information = toml.load(calibration_file)
-        self._sensor_node_parameters.clear()
         self._sensor_node_parameters.update(scaling_information["nodes"])
-        self._sensor_parameters.clear()
         self._sensor_parameters.update(scaling_information["sensors"])
 
     def _build_column_information(self) -> None:
@@ -775,6 +778,7 @@ class AppState:
         BatteryVoltageChanged = "<<BatteryVoltageChanged>>"
         CalibrationFileChanged = "<<CalibrationFileChanged>>"
         CalibrationFileHistoryChanged = "<<CalibrationFileHistoryChanged>>"
+        CalibrationFileStatusChanged = "<<CalibrationFileStatusChanged>>"
         CanAcquireDataChanged = "<<CanAcquireDataChanged>>"
         CanLogDataChanged = "<<CanLogDataChanged>>"
         CanSetSensorGroupChanged = "<<CanSetSensorGroupChanged>>"
@@ -802,7 +806,9 @@ class AppState:
         self._log_file_path = AppState.canceled_file
         self._index_when_log_enabled = -1
         self._calibration_file = ""
-        self._calibration_file_history = []
+        self._calibration_file_status = CalibrationFile.Invalid
+
+        self._post_processor.event.subscribe(self.on_data_processing_event)
 
     @property
     def active_theme(self) -> str:
@@ -986,6 +992,9 @@ class AppState:
         self.load_calibration()
         self._tk_notifier.event_generate(AppState.Event.CalibrationFileChanged)
 
+        if self.calibration_file_status == CalibrationFile.Invalid:
+            return
+
         if self.data.size > 0:
             rescaled_data = self._post_processor.rescale_all(self.data.copy())
             self._acquired_data = rescaled_data
@@ -1002,6 +1011,27 @@ class AppState:
         self._persisted_settings["calibration file history"].insert(0, new_value)
         self.save_app_settings(self._persisted_settings)
         self._tk_notifier.event_generate(AppState.Event.CalibrationFileHistoryChanged)
+
+    @property
+    def calibration_file_status(self) -> CalibrationFile:
+        """Return the status of the calibration file."""
+        return self._calibration_file_status
+
+    def _set_calibration_file_status(self, new_value: CalibrationFile) -> None:
+        """Set a new value for the calibration file status and notify CalibrationFileChanged subscribers."""
+        if new_value == self._calibration_file_status:
+            return
+        self._calibration_file_status = new_value
+        self._tk_notifier.event_generate(AppState.Event.CalibrationFileStatusChanged)
+
+    def on_data_processing_event(self, missing_node: str, missing_sensor: str) -> None:
+        """Handle the data processing event."""
+        if missing_sensor:
+            self._set_calibration_file_status(CalibrationFile.MissingSensor)
+        if missing_node:
+            self._set_calibration_file_status(CalibrationFile.MissingNode)
+        if not (missing_node or missing_sensor):
+            self._set_calibration_file_status(CalibrationFile.Active)
 
     @property
     def calibration_file_history(self) -> list[str]:
@@ -1042,6 +1072,7 @@ class AppState:
             self._tk_notifier.event_generate(AppState.Event.CanLogDataChanged)
             self._tk_notifier.event_generate(AppState.Event.NewDataProcessed)
             self._tk_notifier.event_generate(AppState.Event.CalibrationFileChanged)
+            self._tk_notifier.event_generate(AppState.Event.CalibrationFileStatusChanged)
             self._tk_notifier.event_generate(AppState.Event.CalibrationFileHistoryChanged)
         self._tk_notifier.after(0, notify_all)
 
@@ -1070,7 +1101,13 @@ class AppState:
         file = self.calibration_file
         if file == SoilSwell.CommandName.DefaultCalibrationFile:
             file = AppState.settings_file.with_name(f"{SoilSwell.CommandName.DefaultCalibrationFile}.toml")
-        self._post_processor.load_scaling_coefficients_from_file(pathlib.Path(file))
+        file = pathlib.Path(file)
+        self._post_processor.clear_scaling_coefficients()
+        if not RawDataProcessor.check_calibration_file_contents(file):
+            self._set_calibration_file_status(CalibrationFile.Invalid)
+            return
+        self._set_calibration_file_status(CalibrationFile.Active)
+        self._post_processor.load_scaling_coefficients_from_file(file)
 
     def toggle_demo(self) -> None:
         """Start a demonstration session."""
