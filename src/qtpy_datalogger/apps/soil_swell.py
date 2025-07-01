@@ -1323,9 +1323,6 @@ class SoilSwell(gk.AsyncWindow):
         self.handle_reset(sender=self.reset_button)
         self.root_window.update_idletasks()
 
-        self.icon_index = 0
-        self.cycle_battery_icon()
-
     def build_window_menu(self) -> None:
         """Create the entries for the window menu bar."""
         self.menubar = tk.Menu(
