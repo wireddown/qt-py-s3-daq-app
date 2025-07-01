@@ -259,7 +259,7 @@ class ActionDialog(AsyncDialog):
             image_name = "o"
         if not image_fill:
             image_fill = StyleKey.Fg
-        self.message_image = icon_to_image(name=image_name, fill=hex_string_for_style(image_fill), scale_to_height=36)
+        self.message_image = icon_to_image(name=image_name, fill=hex_string_for_style(image_fill), scale_to_height=40)
         if not message_paragraphs:
             message_paragraphs = ["Click OK to close."]
         self.message = "\n\n".join([click.wrap_text(message, width=64) for message in message_paragraphs])
@@ -315,9 +315,9 @@ class ActionDialog(AsyncDialog):
         button_frame.grid(column=0, row=3, sticky=tk.E)
 
         image_label = ttk.Label(message_frame, image=self.message_image, padding=4)
-        image_label.grid(column=0, row=0)
+        image_label.grid(column=0, row=0, sticky=tk.N, padx=(12, 8), pady=(12, 0))
         image_text = ttk.Label(message_frame, text=self.message)
-        image_text.grid(column=1, row=0, sticky=tk.W, padx=(16, 32), pady=(4, 0))
+        image_text.grid(column=1, row=0, sticky=tk.W, padx=(8, 32), pady=(4, 0))
 
         for index, action in enumerate([self.action1, self.action2, self.action3]):
             if action == ActionDialog.Action.NoAction:
