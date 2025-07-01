@@ -35,7 +35,7 @@ pyright = "^1.1.398"
 [tool.poetry.group.circup.dependencies]
 circuitpython-stubs = "==9.2.1"
 adafruit-circuitpython-neopixel = "^6.3.16"
-adafruit-circuitpython-adxl37x = "^1.2.2"
+adafruit-circuitpython-adxl37x = "^1.2.4"
 adafruit-circuitpython-minimqtt = "^8.0.0"
 adafruit-circuitpython-connectionmanager = "^3.1.4"
 
