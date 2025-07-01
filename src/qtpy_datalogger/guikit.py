@@ -9,8 +9,9 @@ import tkinter as tk
 import webbrowser
 from collections.abc import Callable
 from tkinter import font
-from typing import ClassVar
+from typing import ClassVar, NamedTuple
 
+import click
 import ttkbootstrap as ttk
 import ttkbootstrap.icons as ttk_icons
 import ttkbootstrap.style as ttk_style
@@ -254,6 +255,148 @@ class AsyncWindow:
         self.should_run_loop = False
 
 
+class ActionDialog(AsyncDialog):
+    """A dialog that presents a message and handles user actions."""
+
+    class Action(enum.StrEnum):
+        """Supported actions for an ActionDialog."""
+
+        NoAction = "NoAction"
+        Cancel = "Cancel"
+        CopyAll = "Copy all"
+        Ok = "OK"
+
+    class Information(NamedTuple):
+        """A NamedTuple that holds information for a supported Action."""
+
+        text: str
+        command: Callable
+        style: str
+
+    def __init__(self, parent: ttk.Toplevel | ttk.Window) -> None:
+        """Initialize a new ActionDialog instance."""
+        self.action_information = self.build_action_information()
+        super().__init__(parent, "")
+
+    def build_action_information(self) -> dict[Action, Information]:
+        """Create the action information for the dialog."""
+        return {
+            ActionDialog.Action.Ok: ActionDialog.Information(
+                text="OK",
+                command=self.exit,
+                style=bootstyle.PRIMARY,
+            ),
+            ActionDialog.Action.CopyAll: ActionDialog.Information(
+                text="Copy all",
+                command=self.copy_message,
+                style=bootstyle.OUTLINE,
+            ),
+            ActionDialog.Action.Cancel: ActionDialog.Information(
+                text="Cancel",
+                command=self.exit,
+                style=(bootstyle.OUTLINE, bootstyle.WARNING),  # pyright: ignore reportArgumentType -- the type hints do not understand tuples
+            ),
+        }
+
+    def handle_ctrl_c(self, event_args: tk.Event) -> None:
+        """Handle the Ctrl-C keyboard event."""
+        self.copy_message()
+
+    def copy_message(self) -> None:
+        """Copy the full message to the clipboard."""
+        message_paragraphs = self.message.split("\n\n")
+        unwrapped_paragraphs = [paragraph.replace("\n", " ") for paragraph in message_paragraphs]
+        unwrapped_message = "\n\n".join(unwrapped_paragraphs)
+        self.parent.clipboard_clear()
+        self.parent.clipboard_append(unwrapped_message)
+        success_text = f"{ttk_icons.Emoji.get('white heavy check mark')}   Copied!"
+        show_button_feedback(self.copy_button, command_result=True, success_text=success_text)
+
+    def create_user_interface(self) -> None:
+        """Create the layout and widget event handlers."""
+        self.root_window.columnconfigure(0, weight=1)
+        self.root_window.rowconfigure(0, weight=1)
+        self.root_window.resizable(width=False, height=False)
+
+        main_frame = ttk.Frame(self.root_window, padding=16)
+        main_frame.grid(column=0, row=0, sticky=tk.NSEW)
+        main_frame.columnconfigure(0, weight=1)
+        main_frame.rowconfigure(0, weight=1, minsize=8)  # Filler
+        main_frame.rowconfigure(1, weight=1)  # Image and message frame
+        main_frame.rowconfigure(2, weight=1, minsize=20)  # Filler
+        main_frame.rowconfigure(3, weight=1)  # Button frame
+
+        self.message_frame = ttk.Frame(main_frame)
+        self.message_frame.columnconfigure(0, weight=1)  # Message image
+        self.message_frame.columnconfigure(1, weight=1, minsize=200)  # Message text
+        self.message_frame.grid(column=0, row=1)
+
+        self.button_frame = ttk.Frame(main_frame)
+        self.button_frame.columnconfigure(0, weight=1)  # Filler
+        self.button_frame.columnconfigure(1, weight=1)  # Action 3
+        self.button_frame.columnconfigure(2, weight=1)  # Action 2
+        self.button_frame.columnconfigure(3, weight=1)  # Action 1
+        self.button_frame.grid(column=0, row=3, sticky=tk.E)
+
+    def update(  # noqa PLR0913 -- allow many parameters for a framework class method
+        self,
+        title: str = "",
+        image_name: str = "",
+        image_fill: str = "",
+        message_paragraphs: list[str] | None = None,
+        action1: Action = Action.Ok,
+        action2: Action = Action.CopyAll,
+        action3: Action = Action.NoAction,
+    ) -> None:
+        """Update the UI with new information."""
+        self.root_window.title(title)
+        if not image_name:
+            image_name = "o"
+        if not image_fill:
+            image_fill = StyleKey.Fg
+        self.message_image = icon_to_image(name=image_name, fill=hex_string_for_style(image_fill), scale_to_height=40)
+        if not message_paragraphs:
+            message_paragraphs = ["Click OK to close."]
+        self.message = "\n\n".join([click.wrap_text(message, width=64) for message in message_paragraphs])
+        if action1 == ActionDialog.Action.NoAction:
+            action1 = ActionDialog.Action.Ok
+        self.action1 = action1
+        self.action2 = action2
+        self.action3 = action3
+
+        for widget in [
+            *self.message_frame.winfo_children(),
+            *self.button_frame.winfo_children(),
+        ]:
+            widget.destroy()
+
+        image_label = ttk.Label(self.message_frame, image=self.message_image, padding=4)
+        image_label.grid(column=0, row=0, sticky=tk.N, padx=(12, 8), pady=(12, 0))
+        image_text = ttk.Label(self.message_frame, text=self.message)
+        image_text.grid(column=1, row=0, sticky=tk.W, padx=(8, 32), pady=(4, 0))
+
+        for index, action in enumerate([self.action1, self.action2, self.action3]):
+            if action == ActionDialog.Action.NoAction:
+                continue
+            button = ttk.Button(
+                self.button_frame,
+                command=self.action_information[action].command,
+                text=self.action_information[action].text,
+                style=self.action_information[action].style,
+            )
+            button.grid(column=3 - index, row=0, sticky=tk.E, padx=(8, 0))
+            if index == 0:
+                self.initial_focus = button
+            if action == ActionDialog.Action.CopyAll:
+                button.configure(width=12)
+                self.copy_button = button
+                self.root_window.bind("<Control-c>", self.handle_ctrl_c)
+
+    async def on_loop(self) -> None:
+        """Update UI elements."""
+        await asyncio.sleep(20e-3)
+
+
 class AboutDialog(AsyncDialog):
     """A class that presents information about the app."""
 
@@ -391,16 +534,8 @@ class AboutDialog(AsyncDialog):
         }
         self.parent.clipboard_clear()
         self.parent.clipboard_append(json.dumps(formatted_version))
-        status_emoji = ttk_icons.Emoji.get("white heavy check mark")
-        self.copy_version_button.configure(text=f"{status_emoji}   Copied!", bootstyle=bootstyle.SUCCESS)
-        self.copy_version_button.after(
-            850,
-            functools.partial(
-                self.copy_version_button.configure,
-                text=self.copy_version_text,
-                bootstyle=(bootstyle.DEFAULT, bootstyle.OUTLINE),  # pyright: ignore callIssue -- the type hints do not understand tuples
-            ),
-        )
+        success_text = f"{ttk_icons.Emoji.get('white heavy check mark')}   Copied!"
+        show_button_feedback(self.copy_version_button, command_result=True, success_text=success_text)
 
     async def on_loop(self) -> None:
         """Update UI elements."""
@@ -637,6 +772,30 @@ def create_theme_combobox(parent: tk.BaseWidget) -> ttk.Combobox:
     theme_combobox.bind("<<ComboboxSelected>>", handle_change_theme)
     ThemeChanger.add_handler(theme_combobox, functools.partial(on_theme_changed, theme_combobox))
     return theme_combobox
+
+
+def show_button_feedback(
+    button: ttk.Button,
+    command_result: bool,
+    success_text: str = "",
+    failure_text: str = "",
+) -> None:
+    """Attach feedback to a ttk.Button command that indicates the command's outcome."""
+    normal_text: str = button.cget("text")
+    full_style: str = button.cget("style")
+    normal_style = tuple(trait.lower() for trait in full_style.split(".")[:-1])
+
+    feedback_text = success_text if command_result else failure_text
+    feedback_style = bootstyle.SUCCESS if command_result else bootstyle.DANGER
+    button.configure(text=feedback_text, bootstyle=feedback_style)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+    button.after(
+        850,
+        functools.partial(
+            button.configure,
+            text=normal_text,
+            bootstyle=normal_style,  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+        ),
+    )
 
 
 def hex_string_for_style(style_name: str, theme_name: str = "") -> str:
