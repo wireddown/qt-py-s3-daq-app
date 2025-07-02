@@ -10,6 +10,7 @@ import multiprocessing
 import pathlib
 import textwrap
 import tkinter as tk
+from dataclasses import dataclass, field
 from enum import StrEnum
 from tkinter import filedialog, font
 from typing import Any, Callable, NamedTuple, Protocol
@@ -397,10 +398,30 @@ class SettingsWindow(gk.AsyncDialog):
 class RawDataProcessor:
     """A class that calculates derived data from raw sensor samples."""
 
+    class FormatProblem(StrEnum):
+        """Kinds of format or other content problems that make a calibration file unusable."""
+
+        AllOk = "All ok"
+        WrongFormat = "Wrong format"
+        NoSensors = "No sensors"
+        NoNodes = "No nodes"
+        NoChannels = "No channels"
+        WrongChannelFormat = "Wrong channel format"
+        WrongSensorFormat = "Wrong sensor format"
+        MissingNode = "Missing node"
+        MissingSensor = "Missing sensor"
+
+    @dataclass(frozen=True)
+    class ErrorInformation:
+        """A class that describes detected problems in a calibration file."""
+
+        file_message: str = "The active file"
+        information: dict["RawDataProcessor.FormatProblem", str] = field(default_factory=dict)
+
     class EventHandler(Protocol):
         """A protocol that represents a data processing event handler."""
 
-        def __call__(self, missing_node: str, missing_sensor: str) -> None:
+        def __call__(self, errors: "RawDataProcessor.ErrorInformation") -> None:
             """Handle the data processing event."""
 
     class Event:
@@ -418,10 +439,10 @@ class RawDataProcessor:
             """Stop receiving events."""
             self._subscribers.remove(callback)
 
-        def notify(self, missing_node: str = "", missing_sensor: str = "") -> None:
+        def notify(self, errors: "RawDataProcessor.ErrorInformation") -> None:
             """Send an event to the subscribers."""
             for subscriber in self._subscribers:
-                subscriber(missing_node, missing_sensor)
+                subscriber(errors)
 
     DEFAULT_SENSOR_PARAMETERS = {  # noqa: RUF012 -- dict is mutable but treated as a constant
         "lvdt": { "gain": 1.0, "offset": 0.0, "units": "cm" },
@@ -477,28 +498,41 @@ class RawDataProcessor:
         }
 
     @staticmethod
-    def check_calibration_file_contents(candidate: pathlib.Path) -> bool:
+    def check_calibration_file_contents(candidate: pathlib.Path) -> ErrorInformation:
         """Return True if the candidate file is valid."""
+        errors = RawDataProcessor.ErrorInformation(file_message=f"The file '{candidate.stem}'")
         try:
             toml_contents = toml.load(candidate)
         except toml.TomlDecodeError:
-            return False
-        if "sensors" not in toml_contents:
-            return False
-        if "nodes" not in toml_contents:
-            return False
+            errors.information[RawDataProcessor.FormatProblem.WrongFormat] = "is not valid TOML"
+            return errors
 
-        nodes_defined = True
-        for node in toml_contents["nodes"].values():
-            nodes_defined &= sorted(node.keys()) == sorted(RawDataProcessor.DEFAULT_NODE_PARAMETERS.keys())
-            for channel in node.values():
-                nodes_defined &= sorted(channel.keys()) == sorted(["gain", "offset", "sensor_id"])
+        defined_nodes = toml_contents.get("nodes", {})
+        if not defined_nodes:
+            errors.information[RawDataProcessor.FormatProblem.NoSensors] = "does not have any defined sensors"
+        defined_sensors = toml_contents.get("sensors", {})
+        if not defined_sensors:
+            errors.information[RawDataProcessor.FormatProblem.NoNodes] = "does not have any defined nodes"
 
-        sensors_defined = True
-        for sensor in toml_contents["sensors"].values():
-            sensors_defined &= sorted(sensor.keys()) == sorted(["gain", "offset", "units"])
+        for node_id, node in defined_nodes.items():
+            if not set(node.keys()).intersection(set(RawDataProcessor.DEFAULT_NODE_PARAMETERS.keys())):
+                errors.information[RawDataProcessor.FormatProblem.NoChannels] = f"has a node '{node_id}' which does not have any defined channels"
+                break
+            for channel_name, channel in node.items():
+                missing_entries = {"gain", "offset", "sensor_id"} - set(channel.keys())
+                if missing_entries:
+                    errors.information[RawDataProcessor.FormatProblem.WrongChannelFormat] = f"has a node '{node_id}' with channel '{channel_name}' that does not have values for {','.join(missing_entries)}"
+                    break
 
-        return nodes_defined and sensors_defined
+        for sensor_name, sensor in defined_sensors.items():
+            missing_entries = {"gain", "offset", "units"} - set(sensor.keys())
+            if missing_entries:
+                errors.information[RawDataProcessor.FormatProblem.WrongSensorFormat] = f"has a sensor '{sensor_name}' that does not have values for {','.join(missing_entries)}"
+                break
+
+        if not errors.information:
+            errors.information[RawDataProcessor.FormatProblem.AllOk] = "has nodes, channels, and sensors defined"
+        return errors
 
     def __init__(self) -> None:
         """Initialize a new RawDataProcessor instance."""
@@ -640,14 +674,18 @@ class RawDataProcessor:
         new_row.extend([data_timestamp, relative_timestamp])
         new_row.extend([node_id, node_id])
         if node_id not in self._sensor_node_parameters:
-            self.event.notify(missing_node=node_id)
+            errors = RawDataProcessor.ErrorInformation()
+            errors.information[RawDataProcessor.FormatProblem.MissingNode] = f"does not have a node entry for '{node_id}'"
+            self.event.notify(errors)
             matched_all_lookups = False
         node_parameters = self._sensor_node_parameters.get(node_id, RawDataProcessor.DEFAULT_NODE_PARAMETERS)
         for index, channel_name in enumerate(node_parameters):
             channel_parameters = node_parameters[channel_name]
             sensor_id = channel_parameters["sensor_id"]
             if sensor_id not in self._sensor_parameters:
-                self.event.notify(missing_sensor=sensor_id)
+                errors = RawDataProcessor.ErrorInformation()
+                errors.information[RawDataProcessor.FormatProblem.MissingSensor] = f"does not have a sensor entry for '{sensor_id}'"
+                self.event.notify(errors)
                 matched_all_lookups = False
             raw_sample = raw_data[index]
             match index:
@@ -713,7 +751,9 @@ class RawDataProcessor:
                         ]
                     )
         if matched_all_lookups:
-            self.event.notify()
+            errors = RawDataProcessor.ErrorInformation()
+            errors.information[RawDataProcessor.FormatProblem.AllOk] = "has all encountered nodes, channels, and sensors defined"
+            self.event.notify(errors)
         new_row_series = pd.Series(new_row, index=self.frame_columns)
         return new_row_series
 
@@ -1026,13 +1066,13 @@ class AppState:
         self._calibration_file_status = new_value
         self._tk_notifier.event_generate(AppState.Event.CalibrationFileStatusChanged)
 
-    def on_data_processing_event(self, missing_node: str, missing_sensor: str) -> None:
+    def on_data_processing_event(self, errors: RawDataProcessor.ErrorInformation) -> None:
         """Handle the data processing event."""
-        if missing_sensor:
+        if RawDataProcessor.FormatProblem.MissingSensor in errors.information:
             self._set_calibration_file_status(CalibrationFile.MissingSensor)
-        if missing_node:
+        if RawDataProcessor.FormatProblem.MissingNode in errors.information:
             self._set_calibration_file_status(CalibrationFile.MissingNode)
-        if not (missing_node or missing_sensor):
+        if RawDataProcessor.FormatProblem.AllOk in errors.information:
             self._set_calibration_file_status(CalibrationFile.Active)
 
     @property
@@ -1105,7 +1145,8 @@ class AppState:
             file = AppState.settings_file.with_name(f"{SoilSwell.CommandName.DefaultCalibrationFile}.toml")
         file = pathlib.Path(file)
         self._post_processor.clear_scaling_coefficients()
-        if not RawDataProcessor.check_calibration_file_contents(file):
+        errors = RawDataProcessor.check_calibration_file_contents(file)
+        if RawDataProcessor.FormatProblem.AllOk not in errors.information:
             self._set_calibration_file_status(CalibrationFile.Invalid)
             return
         self._set_calibration_file_status(CalibrationFile.Active)
@@ -1471,12 +1512,14 @@ class SoilSwell(gk.AsyncWindow):
             command=self.toggle_demo,
             label=SoilSwell.CommandName.Demo,
             variable=self.demo_variable,
+            underline=0,
         )
         self.help_menu.add_separator()
         self.help_menu.add_command(
             command=self.show_about,
             label=SoilSwell.CommandName.About,
             accelerator="F1",
+            underline=0,
         )
         self.root_window.bind("<F1>", lambda e: self.show_about())
 
