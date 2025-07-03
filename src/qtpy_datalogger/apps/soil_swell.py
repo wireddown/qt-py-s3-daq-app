@@ -1031,7 +1031,6 @@ class AppState:
             return
         self._calibration_file = new_value
         self.load_calibration()
-        self._tk_notifier.event_generate(AppState.Event.CalibrationFileChanged)
 
         if self.calibration_file_status == CalibrationFile.Invalid:
             self._calibration_file = SoilSwell.CommandName.DefaultCalibrationFile
@@ -1043,6 +1042,7 @@ class AppState:
             self._acquired_data = rescaled_data
             self._tk_notifier.event_generate(AppState.Event.NewDataProcessed)
 
+        self._tk_notifier.event_generate(AppState.Event.CalibrationFileChanged)
         if self.calibration_file == SoilSwell.CommandName.DefaultCalibrationFile:
             return
 
@@ -1262,6 +1262,7 @@ class SoilSwell(gk.AsyncWindow):
             BatteryLevel.Full: "The battery is full",
         }
         self.battery_level_tooltip = None
+        self.notification_window = None
         self.about_window = None
         self.tool_window = None
         self.settings_window = None
@@ -1419,7 +1420,7 @@ class SoilSwell(gk.AsyncWindow):
             underline=0,
         )
         self.calibration_menu.add_command(
-            label="status placeholder",
+            command=functools.partial(self.show_calibration_file_details, force=True),
         )
         self.calibration_menu.add_separator()
         self.calibration_menu.add_command(
@@ -1775,13 +1776,15 @@ class SoilSwell(gk.AsyncWindow):
     def on_calibration_file_changed(self, event_args: tk.Event) -> None:
         """Handle the CalibrationFileChanged event."""
         self.calibration_file_variable.set(self.state.calibration_file)
-        self.update_calibration_file_status()
+        self.show_calibration_file_details()
+        self.update_calibration_file_status_menu_entry()
 
     def on_calibration_file_status_changed(self, event_args: tk.Event) -> None:
         """Handle the CalibrationFileStatusChanged event."""
         if self.state.calibration_file_status != CalibrationFile.Active:
             self.calibration_file_variable.set(SoilSwell.CommandName.DefaultCalibrationFile)
-        self.update_calibration_file_status()
+        self.show_calibration_file_details()
+        self.update_calibration_file_status_menu_entry()
 
     def on_calibration_file_history_changed(self, event_args: tk.Event) -> None:
         """Handle the CalibrationFileHistoryChanged event."""
@@ -1812,7 +1815,7 @@ class SoilSwell(gk.AsyncWindow):
             )
         self.style_menu(self.calibration_menu)
 
-    def update_calibration_file_status(self) -> None:
+    def update_calibration_file_status_menu_entry(self) -> None:
         """Update the menu indicator for the active calibration file."""
         status_message = f"{self.state.calibration_file_status}: {pathlib.Path(self.state.calibration_file).stem}"
         match self.state.calibration_file_status:
@@ -1833,6 +1836,59 @@ class SoilSwell(gk.AsyncWindow):
                 "compound": tk.LEFT,
             },
         )
+
+    def show_calibration_file_details(self, force: bool = False) -> None:
+        """Show the details about the calibration file."""
+        if not force:
+            if self.state.calibration_file == SoilSwell.CommandName.DefaultCalibrationFile:
+                return
+            if self.state.calibration_file_status == CalibrationFile.Active:
+                if self.notification_window:
+                    self.notification_window.exit()
+                return
+
+        last_line = []
+        match self.state.calibration_file_status:
+            case CalibrationFile.Active:
+                headline = "The app is successfully scaling all data."
+                status_icon_name = "file-circle-check"
+                status_icon_fill = bootstyle.SUCCESS
+            case CalibrationFile.Invalid:
+                headline = "The app has reverted to default scaling."
+                status_icon_name = "file-circle-xmark"
+                status_icon_fill = bootstyle.DANGER
+                last_line.append("Create a new calibration file to see a reference example, update your file to match the format, and try again.")
+            case s if s in [CalibrationFile.MissingSensor, CalibrationFile.MissingNode]:
+                headline = "The app has reverted to default scaling."
+                status_icon_name = "file-circle-question"
+                status_icon_fill = bootstyle.WARNING
+            case _:
+                raise RuntimeError()
+        errors = self.state.calibration_file_errors
+        details = f"The file '{pathlib.Path(self.state.calibration_file).name}' {'; '.join(list(errors.information.values()))}."
+        message_configuration = {
+            "title": "Calibration file details",
+            "image_name": status_icon_name,
+            "image_fill": status_icon_fill,
+            "message_paragraphs": [
+                headline,
+                details,
+                *last_line,
+            ],
+        }
+
+        if self.notification_window:
+            self.notification_window.update(**message_configuration)
+        else:
+            self.notification_window = gk.ActionDialog(self.root_window)
+            self.notification_window.update(**message_configuration)
+            def finalize_notification_dialog(task: asyncio.Task) -> None:
+                self.background_tasks.discard(task)
+                self.notification_window = None
+
+            open_notification_dialog = asyncio.create_task(self.notification_window.show(gk.DialogBehavior.Modeless))
+            self.background_tasks.add(open_notification_dialog)
+            open_notification_dialog.add_done_callback(finalize_notification_dialog)
 
     def update_calibration_commands(self) -> None:
         """Update the calibration commands."""
