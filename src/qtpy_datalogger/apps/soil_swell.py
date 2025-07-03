@@ -1157,7 +1157,9 @@ class AppState:
         if RawDataProcessor.FormatProblem.AllOk not in errors.information:
             self._set_calibration_file_status(CalibrationFile.Invalid)
             return
-        self._set_calibration_file_status(CalibrationFile.Active)
+        if self.data.size == 0:
+            # Assume ok. With data, the app rescales which finalizes the calibration file status
+            self._set_calibration_file_status(CalibrationFile.Active)
         self._post_processor.load_scaling_coefficients_from_file(file)
 
     def toggle_demo(self) -> None:
