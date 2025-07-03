@@ -242,33 +242,10 @@ class ActionDialog(AsyncDialog):
         command: Callable
         style: str
 
-    def __init__(  # noqa PLR0913 -- allow many parameters for a framework class
-            self,
-            parent: ttk.Toplevel | ttk.Window,
-            title: str = "",
-            image_name: str = "",
-            image_fill: str = "",
-            message_paragraphs: list[str] | None = None,
-            action1: Action = Action.Ok,
-            action2: Action = Action.CopyAll,
-            action3: Action = Action.NoAction,
-        ) -> None:
+    def __init__(self, parent: ttk.Toplevel | ttk.Window,) -> None:
         """Initialize a new ActionDialog instance."""
         self.action_information = self.build_action_information()
-        if not image_name:
-            image_name = "o"
-        if not image_fill:
-            image_fill = StyleKey.Fg
-        self.message_image = icon_to_image(name=image_name, fill=hex_string_for_style(image_fill), scale_to_height=40)
-        if not message_paragraphs:
-            message_paragraphs = ["Click OK to close."]
-        self.message = "\n\n".join([click.wrap_text(message, width=64) for message in message_paragraphs])
-        if action1 == ActionDialog.Action.NoAction:
-            action1 = ActionDialog.Action.Ok
-        self.action1 = action1
-        self.action2 = action2
-        self.action3 = action3
-        super().__init__(parent, title)
+        super().__init__(parent, "")
 
     def build_action_information(self) -> dict[Action, Information]:
         """Create the action information for the dialog."""
@@ -303,27 +280,61 @@ class ActionDialog(AsyncDialog):
         main_frame.rowconfigure(1, weight=1)  # Image and message frame
         main_frame.rowconfigure(2, weight=1, minsize=20)  # Filler
         main_frame.rowconfigure(3, weight=1)  # Button frame
-        message_frame = ttk.Frame(main_frame)
-        message_frame.columnconfigure(0, weight=1)  # Message image
-        message_frame.columnconfigure(1, weight=1, minsize=200)  # Message text
-        message_frame.grid(column=0, row=1)
-        button_frame = ttk.Frame(main_frame)
-        button_frame.columnconfigure(0, weight=1)  # Filler
-        button_frame.columnconfigure(1, weight=1)  # Action 3
-        button_frame.columnconfigure(2, weight=1)  # Action 2
-        button_frame.columnconfigure(3, weight=1)  # Action 1
-        button_frame.grid(column=0, row=3, sticky=tk.E)
 
-        image_label = ttk.Label(message_frame, image=self.message_image, padding=4)
+        self.message_frame = ttk.Frame(main_frame)
+        self.message_frame.columnconfigure(0, weight=1)  # Message image
+        self.message_frame.columnconfigure(1, weight=1, minsize=200)  # Message text
+        self.message_frame.grid(column=0, row=1)
+
+        self.button_frame = ttk.Frame(main_frame)
+        self.button_frame.columnconfigure(0, weight=1)  # Filler
+        self.button_frame.columnconfigure(1, weight=1)  # Action 3
+        self.button_frame.columnconfigure(2, weight=1)  # Action 2
+        self.button_frame.columnconfigure(3, weight=1)  # Action 1
+        self.button_frame.grid(column=0, row=3, sticky=tk.E)
+
+    def update(
+            self,
+            title: str = "",
+            image_name: str = "",
+            image_fill: str = "",
+            message_paragraphs: list[str] | None = None,
+            action1: Action = Action.Ok,
+            action2: Action = Action.CopyAll,
+            action3: Action = Action.NoAction,
+        ) -> None:
+        """Update the UI with new information."""
+        self.root_window.title(title)
+        if not image_name:
+            image_name = "o"
+        if not image_fill:
+            image_fill = StyleKey.Fg
+        self.message_image = icon_to_image(name=image_name, fill=hex_string_for_style(image_fill), scale_to_height=40)
+        if not message_paragraphs:
+            message_paragraphs = ["Click OK to close."]
+        self.message = "\n\n".join([click.wrap_text(message, width=64) for message in message_paragraphs])
+        if action1 == ActionDialog.Action.NoAction:
+            action1 = ActionDialog.Action.Ok
+        self.action1 = action1
+        self.action2 = action2
+        self.action3 = action3
+
+        for widget in [
+            *self.message_frame.winfo_children(),
+            *self.button_frame.winfo_children(),
+        ]:
+            widget.destroy()
+
+        image_label = ttk.Label(self.message_frame, image=self.message_image, padding=4)
         image_label.grid(column=0, row=0, sticky=tk.N, padx=(12, 8), pady=(12, 0))
-        image_text = ttk.Label(message_frame, text=self.message)
+        image_text = ttk.Label(self.message_frame, text=self.message)
         image_text.grid(column=1, row=0, sticky=tk.W, padx=(8, 32), pady=(4, 0))
 
         for index, action in enumerate([self.action1, self.action2, self.action3]):
             if action == ActionDialog.Action.NoAction:
                 continue
             button = ttk.Button(
-                button_frame,
+                self.button_frame,
                 command=self.action_information[action].command,
                 text=self.action_information[action].text,
                 style=self.action_information[action].style,
