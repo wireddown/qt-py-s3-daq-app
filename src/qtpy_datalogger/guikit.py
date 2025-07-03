@@ -257,7 +257,7 @@ class ActionDialog(AsyncDialog):
             ),
             ActionDialog.Action.CopyAll: ActionDialog.Information(
                 text="Copy all",
-                command=self.exit, #  .copy_message,
+                command=self.copy_message,
                 style=bootstyle.OUTLINE,
             ),
             ActionDialog.Action.Cancel: ActionDialog.Information(
@@ -266,6 +266,16 @@ class ActionDialog(AsyncDialog):
                 style=(bootstyle.OUTLINE, bootstyle.WARNING),
             )
         }
+
+    def copy_message(self) -> None:
+        """Copy the full message to the clipboard."""
+        message_paragraphs = self.message.split("\n\n")
+        unwrapped_paragraphs = [paragraph.replace("\n", " ") for paragraph in message_paragraphs]
+        unwrapped_message = "\n\n".join(unwrapped_paragraphs)
+        self.parent.clipboard_clear()
+        self.parent.clipboard_append(unwrapped_message)
+        success_text = f"{ttk_icons.Emoji.get('white heavy check mark')}   Copied!"
+        show_button_feedback(self.copy_button, command_result=True, success_text=success_text)
 
     def create_user_interface(self) -> None:
         """Create the layout and widget event handlers."""
@@ -342,6 +352,9 @@ class ActionDialog(AsyncDialog):
             button.grid(column=3-index, row=0, sticky=tk.E, padx=(8, 0))
             if index == 0:
                 self.initial_focus = button
+            if action == ActionDialog.Action.CopyAll:
+                button.configure(width=12)
+                self.copy_button = button
 
     async def on_loop(self) -> None:
         """Update UI elements."""
@@ -474,16 +487,8 @@ class AboutDialog(AsyncDialog):
         }
         self.parent.clipboard_clear()
         self.parent.clipboard_append(json.dumps(formatted_version))
-        status_emoji = ttk_icons.Emoji.get("white heavy check mark")
-        self.copy_version_button.configure(text=f"{status_emoji}   Copied!", bootstyle=bootstyle.SUCCESS)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
-        self.copy_version_button.after(
-            850,
-            functools.partial(
-                self.copy_version_button.configure,
-                text=self.copy_version_text,
-                bootstyle=(bootstyle.DEFAULT, bootstyle.OUTLINE),  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
-            ),
-        )
+        success_text = f"{ttk_icons.Emoji.get('white heavy check mark')}   Copied!"
+        show_button_feedback(self.copy_version_button, command_result=True, success_text=success_text)
 
     async def on_loop(self) -> None:
         """Update UI elements."""
@@ -692,6 +697,30 @@ def create_dropdown_combobox(
     combobox.bind("<<ComboboxSelected>>", handle_selection)
     combobox.selection_clear()
     return combobox
+
+
+def show_button_feedback(
+    button: ttk.Button,
+    command_result: bool,
+    success_text: str = "",
+    failure_text: str = "",
+) -> None:
+    """Attach feedback to a ttk.Button command that indicates the command's outcome."""
+    normal_text: str = button.cget("text")
+    full_style: str = button.cget("style")
+    normal_style = tuple(trait.lower() for trait in full_style.split(".")[:-1])
+
+    feedback_text = success_text if command_result else failure_text
+    feedback_style = bootstyle.SUCCESS if command_result else bootstyle.DANGER
+    button.configure(text=feedback_text, bootstyle=feedback_style)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+    button.after(
+        850,
+        functools.partial(
+            button.configure,
+            text=normal_text,
+            bootstyle=normal_style,  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+        ),
+    )
 
 
 def hex_string_for_style(style_name: str, theme_name: str = "") -> str:
