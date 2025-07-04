@@ -111,7 +111,7 @@ class NumericInput:
             else:
                 return as_float
 
-        def check_float_in_range(sender: tk.Entry, limits: Range, candidate_value: str, operation: str) -> bool:
+        def check_float_in_range(sender: ttk.Spinbox, limits: Range, candidate_value: str, operation: str) -> bool:
             """Return True if candidate_value is a float and in range."""
             if value_is_indeterminate(candidate_value):
                 return True
@@ -125,7 +125,7 @@ class NumericInput:
             sender.configure(bootstyle=new_style)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
             return is_valid
 
-        def handle_new_value(sender: tk.Entry, variable_name: str, empty: str, operation: str) -> None:
+        def handle_new_value(sender: ttk.Spinbox, variable_name: str, empty: str, operation: str) -> None:
             """Process a new value that passed input validation."""
             new_value = sender.get()
             if value_is_indeterminate(new_value):
@@ -133,19 +133,17 @@ class NumericInput:
             as_float = float(new_value)
             self.value = as_float
 
-        def handle_entry_complete(fallback_value: float, decimal_places: int, event_args: tk.Event) -> None:
+        def handle_entry_complete(event_args: tk.Event) -> None:
             """Handle the Enter key and FocusOut events."""
             sender = event_args.widget
             if not isinstance(sender, ttk.Spinbox):
                 raise TypeError()
-            try:
-                sender.set(f"{float(sender.get()):.{decimal_places}f}")
-                self._input_control.event_generate(NumericInput.Event.ValueChanged)
-            except ValueError:
-                sender.set(f"{fallback_value:.{decimal_places}f}")
-            finally:
-                sender.icursor(tk.END)
-                sender.after(0, sender.selection_clear)
+            sender.icursor(tk.END)
+
+            # Widget events like MouseWheel fire before the widget receives the new value
+            # Allow the trace subroutine to execute and set the new value
+            sender.after(0, sender.selection_clear)
+            sender.after(0, self._input_control.event_generate, NumericInput.Event.ValueChanged)
 
         decimal_places_for_max = {
             100: 0,
@@ -167,11 +165,11 @@ class NumericInput:
         input_validator = parent.register(functools.partial(check_float_in_range, self._input_control, limits))
         self._input_variable.trace_add("write", functools.partial(handle_new_value, self._input_control))
         self._input_control.configure(validate=tk.ALL, validatecommand=(input_validator, "%P", "%V"))
-        self._input_control.bind("<<Increment>>", functools.partial(handle_entry_complete, default_value, decimal_places))
-        self._input_control.bind("<<Decrement>>", functools.partial(handle_entry_complete, default_value, decimal_places))
-        self._input_control.bind("<KeyPress-Return>", functools.partial(handle_entry_complete, default_value, decimal_places))
-        self._input_control.bind("<MouseWheel>", functools.partial(handle_entry_complete, default_value, decimal_places))
-        self._input_control.bind("<FocusOut>", functools.partial(handle_entry_complete, default_value, decimal_places))
+        self._input_control.bind("<<Increment>>", handle_entry_complete)
+        self._input_control.bind("<<Decrement>>", handle_entry_complete)
+        self._input_control.bind("<MouseWheel>", handle_entry_complete)
+        self._input_control.bind("<KeyPress-Return>", handle_entry_complete)
+        self._input_control.bind("<FocusOut>", handle_entry_complete)
 
     @property
     def widget(self) -> ttk.Spinbox:
@@ -185,7 +183,7 @@ class NumericInput:
 
     @value.setter
     def value(self, new_value: float) -> None:
-        """Set a new value and notify ValueChanged subscribers."""
+        """Set a new value."""
         if new_value == self._value:
             return
         self._value = new_value
