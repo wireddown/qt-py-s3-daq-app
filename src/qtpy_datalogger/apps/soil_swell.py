@@ -334,7 +334,7 @@ class SettingsWindow(gk.AsyncDialog):
         startup_label = ttk.Label(settings_frame, text="Startup", font=font.Font(family="Segoe UI", size=10, weight=font.BOLD))
         startup_label.grid(column=0, columnspan=2, row=0, pady=(0, 8), sticky=tk.W)
         def open_settings_folder() -> None:
-            click.launch(str(self.settings_file), locate=True)
+            gk.open_folder(self.settings_file)
 
         open_settings_folder_button = ttk.Button(settings_frame, command=open_settings_folder, text="Open settings folder", style=ttk.OUTLINE)
         open_settings_folder_button.grid(column=1, row=0, sticky=tk.E)
@@ -1207,6 +1207,7 @@ class SoilSwell(gk.AsyncWindow):
         """Names used for menus and commands in the app."""
 
         File = "File"
+        OpenLogFileFolder = "Open log file folder"
         SaveFullLog = "Save full log..."
         Exit = "Exit"
         Settings = "Settings"
@@ -1233,6 +1234,7 @@ class SoilSwell(gk.AsyncWindow):
         self.sample_rate_variable = tk.StringVar()
         self.calibration_file_variable = tk.StringVar()
         self.log_data_variable = tk.BooleanVar()
+        self.log_file_folder = pathlib.Path.home().joinpath("Documents/qtpy-datalogger")
         self.svg_images: dict[str, tk.Image] = {}
         self.menu_text_for_theme = {
             "cosmo": "  Cosmo",
@@ -1279,7 +1281,6 @@ class SoilSwell(gk.AsyncWindow):
         self.nodes_in_group : list[discovery.QTPyDevice] = []
         self.snsr_app_name = pathlib.Path(__file__).stem
 
-        # arrow-up-from-ground-water droplet
         app_icon = icon_to_image("arrow-up-from-ground-water", fill=app_icon_color, scale_to_height=256)
         self.root_window.iconphoto(True, app_icon)
         self.build_window_menu()
@@ -1387,6 +1388,11 @@ class SoilSwell(gk.AsyncWindow):
             underline=0,
         )
         self.file_menu.add_command(
+            command=self.open_log_file_folder,
+            label=SoilSwell.CommandName.OpenLogFileFolder,
+            underline=0,
+        )
+        self.file_menu.add_command(
             command=self.save_full_log,
             label=SoilSwell.CommandName.SaveFullLog,
             underline=0,
@@ -1396,6 +1402,7 @@ class SoilSwell(gk.AsyncWindow):
             command=functools.partial(self.safe_exit, tk.Event()),
             label=SoilSwell.CommandName.Exit,
             accelerator="Alt-F4",
+            underline=0,
         )
         self.root_window.bind("<Alt-F4>", self.safe_exit)
 
@@ -1728,6 +1735,11 @@ class SoilSwell(gk.AsyncWindow):
         if self.scanner_process and self.scanner_process.is_alive():
             self.scanner_process.terminate()
         self.state.acquire_active = Tristate.BoolFalse
+
+    def open_log_file_folder(self) -> None:
+        """Handle the 'Open log file folder' command."""
+        self.log_file_folder.mkdir(parents=True, exist_ok=True)
+        gk.open_folder(self.log_file_folder)
 
     def save_full_log(self) -> None:
         """Handle the 'Save full log' command."""
@@ -2239,9 +2251,8 @@ class SoilSwell(gk.AsyncWindow):
         if log_data_active:
             new_style = bootstyle.SUCCESS
             new_log_file_timestamp = self.state.most_recent_timestamp.astimezone().strftime("%Y.%m.%d_%H.%M.%S")
-            new_log_file_name = f"Centrifuge test_{new_log_file_timestamp}"
-            home_path = pathlib.Path.home()
-            new_log_file_path = home_path.joinpath(f"Documents\\qtpy-datalogger\\{new_log_file_name}.csv")
+            new_log_file_name = f"Centrifuge test {new_log_file_timestamp}"
+            new_log_file_path = self.log_file_folder.joinpath(f"{new_log_file_name}.csv")
             new_log_file_path.parent.mkdir(parents=True, exist_ok=True)
             new_log_file_path.touch()
             self.state.log_file_path = new_log_file_path
