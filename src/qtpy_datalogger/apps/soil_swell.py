@@ -6,6 +6,7 @@ import datetime
 import functools
 import importlib.resources
 import logging
+import math
 import multiprocessing
 import pathlib
 import textwrap
@@ -908,6 +909,8 @@ class AppState:
             return
         self._acquire_active = new_value
         self._tk_notifier.event_generate(AppState.Event.AcquireDataChanged)
+        self._tk_notifier.event_generate(AppState.Event.BatteryLevelChanged)
+        self._tk_notifier.event_generate(AppState.Event.BatteryVoltageChanged)
         if self.log_data_active:
             # Disable logging on stop (start is noop)
             self.log_data_active = False
@@ -961,7 +964,9 @@ class AppState:
     @property
     def battery_level(self) -> BatteryLevel:
         """Return the battery level."""
-        return self._battery_level
+        if self.acquire_active == Tristate.BoolTrue:
+            return self._battery_level
+        return BatteryLevel.Unknown
 
     @battery_level.setter
     def battery_level(self, new_value: BatteryLevel) -> None:
@@ -974,7 +979,9 @@ class AppState:
     @property
     def battery_voltage(self) -> float:
         """Return the most recently measured voltage for the sensor_node's battery."""
-        return self._battery_voltage
+        if self.acquire_active == Tristate.BoolTrue:
+            return self._battery_voltage
+        return math.nan
 
     @battery_voltage.setter
     def battery_voltage(self, new_value: float) -> None:
@@ -1235,14 +1242,6 @@ class SoilSwell(gk.AsyncWindow):
             "cyborg": "   Cyborg",
             "darkly": "   Darkly",
             "vapor": "  Debug",
-        }
-        self.icon_name_for_battery_level = {
-            BatteryLevel.Unset: "battery-empty",
-            BatteryLevel.Unknown: "battery-empty",
-            BatteryLevel.Low: "battery-quarter",
-            BatteryLevel.Half: "battery-half",
-            BatteryLevel.High: "battery-three-quarters",
-            BatteryLevel.Full: "battery-full",
         }
         BATTERY_COUNT = 1
         # https://www.powerstream.com/AA-tests.htm for 100 mA
@@ -1558,22 +1557,25 @@ class SoilSwell(gk.AsyncWindow):
 
     def refresh_battery_icons(self) -> None:
         """Create the icon images for the battery level indicator."""
-        full_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.Full], fill=gk.hex_string_for_style(bootstyle.SUCCESS), scale_to_height=24)
-        self.svg_images[self.icon_name_for_battery_level[BatteryLevel.Full]] = full_battery_icon
+        full_battery_icon = icon_to_image("battery-full", fill=gk.hex_string_for_style(bootstyle.SUCCESS), scale_to_height=24)
+        self.svg_images[BatteryLevel.Full] = full_battery_icon
 
-        high_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.High], fill=gk.hex_string_for_style(bootstyle.SUCCESS), scale_to_height=24)
-        self.svg_images[self.icon_name_for_battery_level[BatteryLevel.High]] = high_battery_icon
+        high_battery_icon = icon_to_image("battery-three-quarters", fill=gk.hex_string_for_style(bootstyle.SUCCESS), scale_to_height=24)
+        self.svg_images[BatteryLevel.High] = high_battery_icon
 
-        half_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.Half], fill=gk.hex_string_for_style(bootstyle.WARNING), scale_to_height=24)
-        self.svg_images[self.icon_name_for_battery_level[BatteryLevel.Half]] = half_battery_icon
+        half_battery_icon = icon_to_image("battery-half", fill=gk.hex_string_for_style(bootstyle.WARNING), scale_to_height=24)
+        self.svg_images[BatteryLevel.Half] = half_battery_icon
 
-        low_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.Low], fill=gk.hex_string_for_style(bootstyle.DANGER), scale_to_height=24)
-        self.svg_images[self.icon_name_for_battery_level[BatteryLevel.Low]] = low_battery_icon
+        low_battery_icon = icon_to_image("battery-quarter", fill=gk.hex_string_for_style(bootstyle.DANGER), scale_to_height=24)
+        self.svg_images[BatteryLevel.Low] = low_battery_icon
 
-        unknown_battery_icon = icon_to_image(self.icon_name_for_battery_level[BatteryLevel.Unknown], fill=gk.hex_string_for_style(bootstyle.SECONDARY), scale_to_height=24)
-        self.svg_images[self.icon_name_for_battery_level[BatteryLevel.Unknown]] = unknown_battery_icon
+        unknown_battery_icon = icon_to_image("battery-empty", fill=gk.hex_string_for_style(bootstyle.SECONDARY), scale_to_height=24)
+        self.svg_images[BatteryLevel.Unknown] = unknown_battery_icon
 
-        self.battery_level_indicator.configure(image=self.svg_images[self.icon_name_for_battery_level[self.state.battery_level]])
+        unset_battery_icon = icon_to_image("battery-empty", fill=gk.hex_string_for_style(bootstyle.SECONDARY), scale_to_height=24)
+        self.svg_images[BatteryLevel.Unset] = unset_battery_icon
+
+        self.battery_level_indicator.configure(image=self.svg_images[self.state.battery_level])
 
 
     def create_settings_panel(self) -> ttk.Frame:
@@ -2256,33 +2258,33 @@ class SoilSwell(gk.AsyncWindow):
     def on_battery_level_changed(self, event_args: tk.Event) -> None:
         """Handle the BatteryLevelChanged event."""
         battery_level = self.state.battery_level
-        battery_image = self.svg_images[self.icon_name_for_battery_level[battery_level]]
-        if battery_level == BatteryLevel.Unknown:
-            args = {
-                "image": battery_image,
-                "text": "?",
-            }
-        else:
-            args = {
-                "image": battery_image,
-                "text": "",
-            }
-        self.battery_level_indicator.configure(args)
-        if battery_level == BatteryLevel.Unset:
+        self.update_battery_level_indicator(battery_level)
+
+    def update_battery_level_indicator(self, new_battery_level: BatteryLevel) -> None:
+        """Update the battery level indicator."""
+        battery_image = self.svg_images[new_battery_level]
+        new_text = "?" if new_battery_level == BatteryLevel.Unknown else ""
+        self.battery_level_indicator.configure(text=new_text, image=battery_image)
+        if new_battery_level == BatteryLevel.Unset:
             high_time = 750
             def blink_low_battery() -> None:
-                low_battery_image = self.svg_images[self.icon_name_for_battery_level[BatteryLevel.Low]]
+                low_battery_image = self.svg_images[BatteryLevel.Low]
                 self.battery_level_indicator.configure({ "image": low_battery_image, "text": "" })
             self.root_window.after(high_time, blink_low_battery)
             self.battery_level_indicator.after(2 * high_time, self.on_battery_level_changed, tk.Event())
         if self.battery_level_tooltip:
             self.battery_level_tooltip.leave()
-        self.battery_level_tooltip = ttk_tooltip.ToolTip(self.battery_level_indicator, text=self.tooltip_message_for_battery_level[battery_level], bootstyle=bootstyle.DEFAULT)
+        self.battery_level_tooltip = ttk_tooltip.ToolTip(self.battery_level_indicator, text=self.tooltip_message_for_battery_level[new_battery_level], bootstyle=bootstyle.DEFAULT)
 
     def on_battery_voltage_changed(self, event_args: tk.Event) -> None:
         """Handle the BatteryVoltageChanged event."""
-        new_voltage = f"{self.state.battery_voltage:.3f}" if self.state.battery_voltage > 0 else "-.---"
-        self.battery_voltage_indicator.configure(text=f"{new_voltage} V")
+        new_voltage = self.state.battery_voltage
+        self.update_battery_voltage_indicator(new_voltage)
+
+    def update_battery_voltage_indicator(self, new_voltage: float) -> None:
+        """Update the battery voltage indicator."""
+        new_voltage_string = "-.---" if math.isnan(new_voltage) else f"{new_voltage:.3f}"
+        self.battery_voltage_indicator.configure(text=f"{new_voltage_string} V")
 
     def on_mouse_enter(self, event_args: tk.Event) -> None:
         """Handle the mouse Enter event."""
