@@ -1902,15 +1902,16 @@ class SoilSwell(gk.AsyncWindow):
             self.background_tasks.add(open_notification_dialog)
             open_notification_dialog.add_done_callback(finalize_notification_dialog)
 
-    def update_calibration_commands(self) -> None:
-        """Update the calibration commands."""
-        can_select = tk.DISABLED if self.state.log_data_active else tk.NORMAL
-        last_entry = self.calibration_menu.index(tk.END)
-        if last_entry is None:
+    def update_calibration_menu_commands(self) -> None:
+        """Enable or disable menu commands according to log_data_active."""
+        cannot_select_when_logging = tk.DISABLED if self.state.log_data_active else tk.NORMAL
+
+        last_calibration_entry = self.calibration_menu.index(tk.END)
+        if last_calibration_entry is None:
             raise RuntimeError()
-        selectable_entries = [index for index in range(last_entry + 1) if self.calibration_menu.type(index) != "separator"]
+        selectable_entries = [index for index in range(last_calibration_entry + 1) if self.calibration_menu.type(index) != "separator"]
         for index in selectable_entries[1:]:
-            self.calibration_menu.entryconfig(index, {"state": can_select})
+            self.calibration_menu.entryconfig(index, {"state": cannot_select_when_logging})
 
     def select_calibration_file(self, new_file: str) -> None:
         """Set a new value for the calibration file."""
@@ -2260,7 +2261,7 @@ class SoilSwell(gk.AsyncWindow):
         else:
             new_style = bootstyle.DEFAULT
             self.state.log_file_path = AppState.canceled_file
-        self.update_calibration_commands()
+        self.update_calibration_menu_commands()
         self.log_data_button.configure(bootstyle=new_style)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         self.log_data_variable.set(log_data_active)
 
@@ -2449,7 +2450,22 @@ class SoilSwell(gk.AsyncWindow):
     def on_new_data_processed(self, event_args: tk.Event) -> None:
         """Handle new processed data."""
         all_data = self.state.data
-        if len(all_data) == 0:
+        has_data = len(all_data) > 0
+
+        can_select_with_data = tk.NORMAL if has_data else tk.DISABLED
+        last_file_entry = self.file_menu.index(tk.END)
+        if last_file_entry is None:
+            raise RuntimeError()
+
+        toggled_commands = [SoilSwell.CommandName.SaveFullLog]
+        selectable_entries = [
+            index for index in range(last_file_entry + 1)
+            if self.file_menu.type(index) != "separator" and self.file_menu.entrycget(index, "label") in toggled_commands
+        ]
+        for index in selectable_entries:
+            self.file_menu.entryconfig(index, {"state": can_select_with_data})
+
+        if not has_data:
             self.position_axes.clear()
             self.displacement_axes.clear()
             self.g_level_axes.clear()
