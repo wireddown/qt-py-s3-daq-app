@@ -500,6 +500,21 @@ class AboutDialog(AsyncDialog):
         await asyncio.sleep(20e-3)
 
 
+class ThemeChanger:
+    """A class that changes Tk themes and emits a corresponding event."""
+
+    class Event(enum.StrEnum):
+        """An enumeration of events emitted by this class."""
+
+        BootstrapThemeChanged = "<<BootstrapThemeChanged>>"
+
+    @staticmethod
+    def use_bootstrap_theme(new_theme: str, owner: tk.Tk) -> None:
+        """Change the ttkbootstrap theme and notify BootstrapThemeChanged subscribers in the owner."""
+        ttk.Style().theme_use(new_theme)
+        owner.event_generate(ThemeChanger.Event.BootstrapThemeChanged)
+
+
 class DemoWithAnimation(AsyncWindow):
     """Compare synchronous vs asynchronous calls in Tk."""
 

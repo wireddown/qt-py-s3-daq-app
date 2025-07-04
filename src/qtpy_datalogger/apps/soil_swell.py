@@ -863,7 +863,7 @@ class AppState:
         if new_value == self._theme_name:
             return
         self._theme_name = new_value
-        ttk.Style().theme_use(new_value)
+        gk.ThemeChanger.use_bootstrap_theme(new_value, self._tk_notifier)
 
     @property
     def sensor_group(self) -> str:
@@ -1354,7 +1354,7 @@ class SoilSwell(gk.AsyncWindow):
         self.action_contents = self.create_action_panel()
         self.action_contents.grid(in_=action_panel, column=0, row=0, sticky=tk.NSEW)
 
-        self.root_window.bind("<<ThemeChanged>>", self.on_theme_changed)
+        self.root_window.bind(gk.ThemeChanger.Event.BootstrapThemeChanged, self.on_theme_changed)
         self.root_window.bind(AppState.Event.AcquireDataChanged, self.on_acquire_changed)
         self.root_window.bind(AppState.Event.CanAcquireDataChanged, self.on_can_acquire_changed)
         self.root_window.bind(AppState.Event.LogDataChanged, self.on_log_data_changed)
