@@ -263,7 +263,7 @@ class ActionDialog(AsyncDialog):
             ActionDialog.Action.Cancel: ActionDialog.Information(
                 text="Cancel",
                 command=self.exit,
-                style=(bootstyle.OUTLINE, bootstyle.WARNING),
+                style=(bootstyle.OUTLINE, bootstyle.WARNING),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
             )
         }
 
@@ -509,7 +509,7 @@ class ThemeChanger:
         BootstrapThemeChanged = "<<BootstrapThemeChanged>>"
 
     @staticmethod
-    def use_bootstrap_theme(new_theme: str, owner: tk.Tk) -> None:
+    def use_bootstrap_theme(new_theme: str, owner: tk.Misc) -> None:
         """Change the ttkbootstrap theme and notify BootstrapThemeChanged subscribers in the owner."""
         ttk.Style().theme_use(new_theme)
         owner.event_generate(ThemeChanger.Event.BootstrapThemeChanged)
@@ -685,12 +685,9 @@ def create_theme_combobox(parent: tk.BaseWidget) -> ttk.Combobox:
         if not isinstance(sending_combobox, ttk.Combobox):
             raise TypeError()
         theme_name = sending_combobox.get().lower()
-        style = ttk.Style.get_instance()
-        if not style:
-            raise ValueError()
         sending_combobox.configure(state=ttk.READONLY)
         sending_combobox.selection_clear()
-        style.theme_use(theme_name)
+        ThemeChanger.use_bootstrap_theme(theme_name, sending_combobox)
 
     theme_combobox.bind("<<ComboboxSelected>>", handle_change_theme)
     return theme_combobox
