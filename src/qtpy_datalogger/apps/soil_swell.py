@@ -1637,7 +1637,7 @@ class SoilSwell(gk.AsyncWindow):
         self.no_nodes_tooltip = ttk_tooltip.ToolTip(
             self.acquire_button,
             text="Connect to the sensor group and start taking measurements.",
-            bootstyle=bootstyle.DEFAULT
+            bootstyle=bootstyle.DEFAULT,
         )
 
         self.log_data_button = self.create_icon_button(
@@ -1648,6 +1648,11 @@ class SoilSwell(gk.AsyncWindow):
         )
         self.log_data_button.configure(command=functools.partial(self.handle_log_data, self.log_data_button))
         self.log_data_button.grid(column=0, row=1, padx=8, pady=8, sticky=tk.NSEW)
+        self.log_data_tooltip = ttk_tooltip.ToolTip(
+            self.log_data_button,
+            text="Start acquiring to log data.",
+            bootstyle=bootstyle.DEFAULT,
+        )
 
         self.reset_button = self.create_icon_button(
             panel,
@@ -2212,6 +2217,12 @@ class SoilSwell(gk.AsyncWindow):
                     text="Connect to the sensor group and start taking measurements.",
                     bootstyle=bootstyle.DEFAULT
                 )
+                self.log_data_tooltip.leave()
+                self.log_data_tooltip = ttk_tooltip.ToolTip(
+                    self.log_data_button,
+                    text="Start acquiring to log data.",
+                    bootstyle=bootstyle.DEFAULT,
+                )
                 if self.qtpy_controller:
                     async def disconnect_mqtt() -> None:
                         """Disconnect from the MQTT server."""
@@ -2232,6 +2243,12 @@ class SoilSwell(gk.AsyncWindow):
                     self.acquire_button,
                     text="Disconnect from the sensor group and stop taking measurements.",
                     bootstyle=bootstyle.DEFAULT
+                )
+                self.log_data_tooltip.leave()
+                self.log_data_tooltip = ttk_tooltip.ToolTip(
+                    self.log_data_button,
+                    text="Create a new log file and record measurements.",
+                    bootstyle=bootstyle.DEFAULT,
                 )
         self.acquire_button.configure(bootstyle=new_style)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
@@ -2258,9 +2275,22 @@ class SoilSwell(gk.AsyncWindow):
             new_log_file_path.touch()
             self.state.log_file_path = new_log_file_path
             self.append_row_to_log(self.data_processor.logged_columns)
+            self.log_data_tooltip.leave()
+            self.log_data_tooltip = ttk_tooltip.ToolTip(
+                self.log_data_button,
+                text=f"Logging measurements to '{self.state.log_file_path!s}'.",
+                bootstyle=bootstyle.DEFAULT,
+            )
         else:
             new_style = bootstyle.DEFAULT
             self.state.log_file_path = AppState.canceled_file
+            tooltip_message = "Create a new log file and record measurements." if self.state.acquire_active == Tristate.BoolTrue else "Start acquiring to log data."
+            self.log_data_tooltip.leave()
+            self.log_data_tooltip = ttk_tooltip.ToolTip(
+                self.log_data_button,
+                text=tooltip_message,
+                bootstyle=bootstyle.DEFAULT,
+            )
         self.update_calibration_menu_commands()
         self.log_data_button.configure(bootstyle=new_style)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
         self.log_data_variable.set(log_data_active)
