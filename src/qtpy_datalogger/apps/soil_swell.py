@@ -1921,7 +1921,8 @@ class SoilSwell(gk.AsyncWindow):
     def create_new_calibration_file(self) -> None:
         """Create a new calibration file from the default template."""
         home_folder = pathlib.Path.home()
-        file_name = f"Soil Swell sensor calibration for {self.state.sensor_group}.toml"
+        group_name = "DEMO" if self.state.demo_active else self.state.sensor_group
+        file_name = f"Soil Swell sensor calibration for {group_name}.toml"
         new_file = home_folder.joinpath(file_name)
         if new_file.exists():
             timestamp = datetime.datetime.now(tz=datetime.UTC).astimezone().strftime("%Y.%m.%d-%H.%M.%S")
