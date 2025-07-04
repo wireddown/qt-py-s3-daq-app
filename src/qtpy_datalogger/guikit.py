@@ -5,6 +5,8 @@ import enum
 import functools
 import json
 import logging
+import pathlib
+import subprocess
 import tkinter as tk
 import webbrowser
 from tkinter import font
@@ -749,6 +751,12 @@ def hex_string_for_style(style_name: str, theme_name: str = "") -> str:
         theme_name = style.theme.name
     palette = ttk_themes.STANDARD_THEMES[theme_name]["colors"]
     return palette[style_name]
+
+
+def open_folder(path: pathlib.Path) -> None:
+    """Open Windows Explorer to the specified folder."""
+    target = path if path.is_dir() else path.parent
+    subprocess.run(["powershell", "-Command", f"Invoke-Item '{target!s}'"], check=True)  # noqa: S603 S607 -- user input not accepted for this call
 
 
 def toggle_visual_debug(frame: tk.Widget) -> None:
