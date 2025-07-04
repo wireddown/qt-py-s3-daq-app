@@ -267,6 +267,10 @@ class ActionDialog(AsyncDialog):
             )
         }
 
+    def handle_ctrl_c(self, event_args: tk.Event) -> None:
+        """Handle the Ctrl-C keyboard event."""
+        self.copy_message()
+
     def copy_message(self) -> None:
         """Copy the full message to the clipboard."""
         message_paragraphs = self.message.split("\n\n")
@@ -355,6 +359,7 @@ class ActionDialog(AsyncDialog):
             if action == ActionDialog.Action.CopyAll:
                 button.configure(width=12)
                 self.copy_button = button
+                self.root_window.bind("<Control-c>", self.handle_ctrl_c)
 
     async def on_loop(self) -> None:
         """Update UI elements."""
