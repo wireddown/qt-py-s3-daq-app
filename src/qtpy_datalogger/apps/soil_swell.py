@@ -1372,10 +1372,6 @@ class SoilSwell(gk.AsyncWindow):
         self.handle_reset(sender=self.reset_button)
         self.root_window.update_idletasks()
 
-    # def on_show(self) -> None:
-    #     """Prepare for presentation."""
-    #     self.handle_reset(sender=self.reset_button)
-
     def build_window_menu(self) -> None:
         """Create the entries for the window menu bar."""
         self.menubar = tk.Menu(
@@ -2427,13 +2423,9 @@ class SoilSwell(gk.AsyncWindow):
         do_acquire_task_name = "do acquire"
         node_handling_command = do_acquire_task_name in [task.get_name() for task in self.background_tasks]
         if sample_interval_elapsed and not node_handling_command:
-            def measure_task_time(task: asyncio.Task) -> None:
-                completed_time = datetime.datetime.now(tz=datetime.UTC)
-                print(f"node command duration: {(completed_time - now).total_seconds() * 1000:.3f} ms")
-                self.background_tasks.discard(task)
             do_acquire_task = asyncio.create_task(self.do_acquire(), name=do_acquire_task_name)
             self.background_tasks.add(do_acquire_task)
-            do_acquire_task.add_done_callback(measure_task_time)
+            do_acquire_task.add_done_callback(self.background_tasks.discard)
 
     async def do_acquire(self) -> None:
         """Acquire data from the nodes in the group and return it."""
@@ -2475,11 +2467,10 @@ class SoilSwell(gk.AsyncWindow):
                     "xl3d_offset": XL3D_HARDWARE_OFFSET,
                 },
             )
-            read_input_result, sender_information = await self.qtpy_controller.get_matching_result(
+            read_input_result, _ = await self.qtpy_controller.get_matching_result(
                 node_id=node_id,
                 action=do_read_input,
             )
-            print(f"used/free/number: {sender_information.status.used_memory}/{sender_information.status.free_memory}/{do_read_input.message_id}")
 
             sensor_codes = read_input_result["output"]
             new_data = sensor_codes
