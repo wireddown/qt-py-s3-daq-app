@@ -666,7 +666,8 @@ class RawDataProcessor:
     def process_raw_data(self, first_row: pd.Series | None, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.Series:
         """Scale the raw data to Volts and physical units and return a Series of the new row."""
         first_timestamp = first_row.loc["timestamp"] if first_row is not None else data_timestamp
-        relative_timestamp = (data_timestamp - first_timestamp).seconds / 60
+        time_span = data_timestamp - first_timestamp
+        relative_timestamp = time_span.total_seconds() / 60
 
         matched_all_lookups = True
         new_row = []
