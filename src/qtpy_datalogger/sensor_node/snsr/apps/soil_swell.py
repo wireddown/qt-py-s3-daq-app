@@ -9,6 +9,7 @@ import board
 import busio
 
 from snsr.node.classes import ActionInformation
+from snsr.settings import settings
 
 
 def handle_message(received_action: ActionInformation) -> ActionInformation:
@@ -21,6 +22,8 @@ def handle_message(received_action: ActionInformation) -> ActionInformation:
 
         adc_codes = do_analog_scan(channels=[], count=samples_to_average)
         xyz_codes = do_accelerometer_read(hardware_offset=xl3d_offset, count=samples_to_average // 2)
+        # adc_codes = [10000.0 + index * 1000 for index in range(8)]
+        # xyz_codes = (0, 0, 21)
         sensor_readings = adc_codes
         sensor_readings.append(xyz_codes[-1])
 
@@ -50,12 +53,12 @@ def do_analog_scan(channels: list[str], count: int) -> list[float]:
 
 def do_accelerometer_read(hardware_offset: tuple[int, int, int], count: int) -> tuple[float, float, float]:
     """Read the acceleration from the I2C g_level sensor 'count' times and return a tuple of averaged codes."""
-    results = (-1000.0, -1000.0, -1000.0)
-    with ReserveStemma() as i2c:
-        if not i2c:
-            return results
-        accelerometer = initialize_accelerometer(i2c, hardware_offset)
-        results = xl3d_take_n(accelerometer, count)
+    # results = (-1000.0, -1000.0, -1000.0)
+    # with ReserveStemma() as i2c:
+    #     if not i2c:
+    #         return results
+    #    accelerometer = initialize_accelerometer(i2c, hardware_offset)
+    results = xl3d_take_n(settings.stemma_xl3d, count)
     return results
 
 

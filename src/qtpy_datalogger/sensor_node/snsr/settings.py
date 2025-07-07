@@ -1,5 +1,9 @@
 """Global settings used by the sensor_node runtime."""
 
+import adafruit_adxl37x
+import board
+
+
 class Settings:
     """A singleton that holds the global settings used by the sensor_node runtime."""
 
@@ -11,6 +15,7 @@ class Settings:
             cls._instance = super().__new__(cls)
             cls._instance._initialize_from_env()
             cls._instance._initialize_dynamic_settings()
+            cls._instance._xl3d_initialized = False
         return cls._instance
 
     def _initialize_from_env(self) -> None:
@@ -62,6 +67,17 @@ class Settings:
     def boot_time(self, new_boot_time: float) -> None:
         """Set a new value for the node's boot time."""
         self._boot_time = new_boot_time
+
+    @property
+    def stemma_xl3d(self) -> adafruit_adxl37x.ADXL375:
+        """Return the accelerometer on the StemmaQT port."""
+        if not self._xl3d_initialized:
+            self._stemma = board.STEMMA_I2C()  # Singleton, lock-free atomic facade
+            self._stemma_xl3d = adafruit_adxl37x.ADXL375(self._stemma)
+            self._stemma_xl3d.range = adafruit_adxl37x.Range.RANGE_200_G
+            self._stemma_xl3d.offset = (0, 0, 0)
+            self._xl3d_initialized = True
+        return self._stemma_xl3d
 
 
 settings = Settings()
