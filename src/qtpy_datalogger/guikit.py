@@ -1,8 +1,10 @@
 """Shared classes and helpers for creating GUIs."""
 
 import asyncio
+import enum
 import logging
 import tkinter as tk
+from collections.abc import Callable
 
 import ttkbootstrap as ttk
 import ttkbootstrap.icons as ttk_icons
@@ -103,6 +105,28 @@ class AsyncWindow:
     def exit(self) -> None:
         """Close the UI and exit."""
         self.should_run_loop = False
+
+
+class ThemeChanger:
+    """A class that changes Tk themes and emits a corresponding event."""
+
+    class Event(enum.StrEnum):
+        """An enumeration of events emitted by this class."""
+
+        BootstrapThemeChanged = "<<BootstrapThemeChanged>>"
+
+    @staticmethod
+    def add_handler(owner: tk.Misc, command: Callable[[tk.Event], None]) -> str:
+        """Subscribe command as a handler for the BootstrapThemeChanged event and return a unique ID for the binding."""
+        # **Must** bind to the root window, emit to the root window, add to the handler list
+        # - See https://stackoverflow.com/a/31798918
+        return owner.winfo_toplevel().bind(ThemeChanger.Event.BootstrapThemeChanged, command, add="+")
+
+    @staticmethod
+    def use_bootstrap_theme(new_theme: str, owner: tk.Misc) -> None:
+        """Change the ttkbootstrap theme and notify BootstrapThemeChanged subscribers."""
+        ttk.Style().theme_use(new_theme)
+        owner.winfo_toplevel().event_generate(ThemeChanger.Event.BootstrapThemeChanged)
 
 
 class DemoWithAnimation(AsyncWindow):
@@ -232,12 +256,9 @@ def create_theme_combobox(parent: tk.BaseWidget) -> ttk.Combobox:
         if not isinstance(sending_combobox, ttk.Combobox):
             raise TypeError()
         theme_name = sending_combobox.get().lower()
-        style = ttk.Style.get_instance()
-        if not style:
-            raise ValueError()
         sending_combobox.configure(state=bootstyle.READONLY)
         sending_combobox.selection_clear()
-        style.theme_use(theme_name)
+        ThemeChanger.use_bootstrap_theme(theme_name, sending_combobox)
 
     theme_combobox.bind("<<ComboboxSelected>>", handle_change_theme)
     return theme_combobox
