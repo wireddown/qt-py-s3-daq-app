@@ -83,9 +83,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.svg_images = {}
 
         # Theme
-        style = ttk.Style()
-        style.theme_use("cosmo")
-        colors = style.colors
+        guikit.ThemeChanger.use_bootstrap_theme("cosmo", self.root_window)
 
         # Window title bar
         package = importlib.resources.files(qtpy_datalogger)
@@ -162,7 +160,7 @@ class ScannerApp(guikit.AsyncWindow):
             results_frame,
             coldata=result_columns,
             height=9,  # Unit is lines of text
-            stripecolor=(colors.light, None),  # pyright: ignore reportAttributeAccessIssue -- the type hint for bootstrap omits its own additions
+            stripecolor=(guikit.hex_string_for_style(bootstyle.LIGHT), None),  # pyright: ignore reportAttributeAccessIssue -- the type hint for bootstrap omits its own additions
         )
         self.scan_results_table.view.configure(selectmode=tk.BROWSE)
         self.scan_results_table.view.bind("<<TreeviewSelect>>", self.on_row_selected)

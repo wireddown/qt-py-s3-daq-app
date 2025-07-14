@@ -72,7 +72,7 @@ class AppState:
         if new_value == self._theme_name:
             return
         self._theme_name = new_value
-        ttk.Style().theme_use(new_value)
+        guikit.ThemeChanger.use_bootstrap_theme(new_value, self._tk_notifier.winfo_toplevel())
 
     @property
     def data_file(self) -> pathlib.Path:
@@ -362,9 +362,6 @@ class DataViewer(guikit.AsyncWindow):
         toolbar_frame = ttkbootstrap_matplotlib.create_styled_plot_toolbar(toolbar_row, self.canvas_figure)
         toolbar_frame.grid(column=1, row=0, sticky=(tk.EW, tk.N), padx=(8, 0))  # pyright: ignore reportArgumentType -- the type hint for library uses strings
 
-        # matplotlib elements must be created before setting the theme or the button icons initialize with poor color contrast
-        self.state.active_theme = "flatly"
-
         self.canvas_cover = ttk.Frame(main, name="canvas_cover", style=bootstyle.LIGHT)
         self.canvas_cover.grid(column=0, row=0, sticky=tk.NSEW)
         self.canvas_cover.columnconfigure(0, weight=1)
@@ -397,20 +394,14 @@ class DataViewer(guikit.AsyncWindow):
         demo_button.grid(column=0, row=2, sticky=tk.N, pady=(0, 16))
         demo_button.configure(command=functools.partial(self.open_demo, demo_button))
 
-        self.root_window.bind(
-            AppState.Event.DataFileChanged,
-            lambda e: self.on_data_file_changed(e),
-        )
-        self.root_window.bind(
-            AppState.Event.ReplayActiveChanged,
-            lambda e: self.on_replay_active_changed(e),
-        )
-        self.root_window.bind(
-            "<<ThemeChanged>>",
-            lambda e: self.on_theme_changed(e),
-        )
+        self.root_window.bind(AppState.Event.DataFileChanged, self.on_data_file_changed)
+        self.root_window.bind(AppState.Event.ReplayActiveChanged, self.on_replay_active_changed)
+        guikit.ThemeChanger.add_handler(self.root_window, self.on_theme_changed)
 
         self.reload_file(sender=main)
+
+        # matplotlib elements must be created before setting the theme or the button icons initialize with poor color contrast
+        self.state.active_theme = "flatly"
 
     def build_window_menu(self) -> None:
         """Create the entries for the window menu bar."""

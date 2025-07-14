@@ -1,5 +1,6 @@
 """Functions for applying ttkbootstrap styling to matplotlib visuals."""
 
+import functools
 import logging
 import tkinter as tk
 from enum import StrEnum
@@ -16,6 +17,8 @@ from matplotlib.backends.backend_tkagg import (
 from matplotlib.figure import Figure
 from matplotlib.legend import Legend
 from ttkbootstrap import constants as bootstyle
+
+from qtpy_datalogger.guikit import ThemeChanger
 
 logger = logging.getLogger(__name__)
 
@@ -40,12 +43,12 @@ def create_styled_plot_canvas(
     figure: Figure,
     canvas_frame: ttk.Frame,
 ) -> FigureCanvasTkAgg:
-    """Return a FigureCanvasTkAgg from matplotlib that responds to the ttkbootstrap '<<ThemeChanged>>' event."""
+    """Return a FigureCanvasTkAgg from matplotlib that responds to guikit.ThemeChanger.Event.BootstrapThemeChanged."""
     canvas = FigureCanvasTkAgg(figure, canvas_frame)
-    setattr(canvas.get_tk_widget(), ReservedName.EmbeddedFigure, canvas)
-    canvas.get_tk_widget().grid(column=0, row=0, sticky=tk.NSEW)
-    canvas.get_tk_widget().bind("<Expose>", handle_theme_changed)
-    canvas.get_tk_widget().bind("<<ThemeChanged>>", handle_theme_changed)
+    canvas_widget = canvas.get_tk_widget()
+    setattr(canvas_widget, ReservedName.EmbeddedFigure, canvas)
+    canvas_widget.grid(column=0, row=0, sticky=tk.NSEW)
+    ThemeChanger.add_handler(canvas_frame, functools.partial(handle_theme_changed, canvas_widget))
     return canvas
 
 
@@ -56,7 +59,7 @@ def create_styled_plot_toolbar(
     toolbar_width: int = 500,
     border_thickness: int = 3,
 ) -> tk.Frame:
-    """Return a tk.Frame that contains a NavigationToolbar from matplotlib and responds to the ttkbootstrap '<<ThemeChanged>>' event."""
+    """Return a tk.Frame that contains a NavigationToolbar from matplotlib and responds to guikit.ThemeChanger.Event.BootstrapThemeChanged."""
     canvas_aspect = matching_canvas.get_width_height()
     toolbar_width = max(toolbar_width, canvas_aspect[0])  # Any narrower and the updates flicker
     toolbar_height = 50  # Any shorter and the updates flicker
@@ -67,8 +70,7 @@ def create_styled_plot_toolbar(
     toolbar_border.columnconfigure(0, weight=0, minsize=final_width)
     toolbar_border.rowconfigure(0, weight=0, minsize=final_height)
     toolbar_border.grid_propagate(False)  # Lock the height and width by ignoring child size requests
-    toolbar_border.bind("<Expose>", handle_theme_changed)
-    toolbar_border.bind("<<ThemeChanged>>", handle_theme_changed)
+    ThemeChanger.add_handler(toolbar_border, functools.partial(handle_theme_changed, toolbar_border))
 
     toolbar_frame = tk.Frame(toolbar_border, name="toolbar_frame")
     toolbar_frame.grid(column=0, row=0)
@@ -93,23 +95,18 @@ def create_styled_plot_toolbar(
     return toolbar_border
 
 
-def handle_theme_changed(event_args: tk.Event) -> None:
-    """Handle the ttkbootstrap virtual event named <<ThemeChanged>>."""
-    sender = event_args.widget
-    sender_class = type(sender)
-    sender_is_figure = issubclass(sender_class, tk.Canvas)
-    sender_is_toolbar = issubclass(sender_class, tk.Frame)
-
+def handle_theme_changed(themed_widget: tk.Misc, event_args: tk.Event) -> None:
+    """Handle the virtual event ThemeChanger.Event.BootstrapThemeChanged."""
     style = ttk.Style.get_instance()
     if not (style and style.theme):
         raise ValueError()
 
     default_theme = ttk_themes.STANDARD_THEMES[bootstyle.DEFAULT_THEME]
     requested_theme = ttk_themes.STANDARD_THEMES.get(style.theme.name, default_theme)
-    if sender_is_figure:
-        apply_figure_style(sender, requested_theme)
-    elif sender_is_toolbar:
-        apply_toolbar_style(sender, requested_theme)
+    if isinstance(themed_widget, tk.Canvas):
+        apply_figure_style(themed_widget, requested_theme)
+    elif isinstance(themed_widget, tk.Frame):
+        apply_toolbar_style(themed_widget, requested_theme)
     else:
         raise TypeError()
 

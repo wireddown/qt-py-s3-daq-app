@@ -511,10 +511,17 @@ class ThemeChanger:
         BootstrapThemeChanged = "<<BootstrapThemeChanged>>"
 
     @staticmethod
+    def add_handler(owner: tk.Misc, command: Callable[[tk.Event], None]) -> str:
+        """Subscribe command as a handler for the BootstrapThemeChanged event and return a unique ID for the binding."""
+        # **Must** bind to the root window, emit to the root window, add to the handler list
+        # - See https://stackoverflow.com/a/31798918
+        return owner.winfo_toplevel().bind(ThemeChanger.Event.BootstrapThemeChanged, command, add="+")
+
+    @staticmethod
     def use_bootstrap_theme(new_theme: str, owner: tk.Misc) -> None:
-        """Change the ttkbootstrap theme and notify BootstrapThemeChanged subscribers in the owner."""
+        """Change the ttkbootstrap theme and notify BootstrapThemeChanged subscribers."""
         ttk.Style().theme_use(new_theme)
-        owner.event_generate(ThemeChanger.Event.BootstrapThemeChanged)
+        owner.winfo_toplevel().event_generate(ThemeChanger.Event.BootstrapThemeChanged)
 
 
 class DemoWithAnimation(AsyncWindow):

@@ -117,14 +117,12 @@ class PlottingApp(guikit.AsyncWindow):
         toolbar_frame = ttkbootstrap_matplotlib.create_styled_plot_toolbar(toolbar_row, self.canvas)
         toolbar_frame.grid(column=1, row=0, sticky=tk.EW)
 
-    def on_show(self) -> None:
-        """Initialize UI before entering main loop."""
         theme_name = "cosmo"
         style = ttk.Style.get_instance()
         if not style:
             raise ValueError()
         self.theme_combobox.set(theme_name.capitalize())
-        style.theme_use(theme_name)
+        guikit.ThemeChanger.use_bootstrap_theme(theme_name, self.root_window)
 
     async def on_loop(self) -> None:
         """Update the UI with new information."""

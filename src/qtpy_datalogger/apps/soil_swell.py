@@ -1353,7 +1353,7 @@ class SoilSwell(gk.AsyncWindow):
         self.action_contents = self.create_action_panel()
         self.action_contents.grid(in_=action_panel, column=0, row=0, sticky=tk.NSEW)
 
-        self.root_window.bind(gk.ThemeChanger.Event.BootstrapThemeChanged, self.on_theme_changed)
+        gk.ThemeChanger.add_handler(self.root_window, self.on_theme_changed)
         self.root_window.bind(AppState.Event.AcquireDataChanged, self.on_acquire_changed)
         self.root_window.bind(AppState.Event.CanAcquireDataChanged, self.on_can_acquire_changed)
         self.root_window.bind(AppState.Event.LogDataChanged, self.on_log_data_changed)
