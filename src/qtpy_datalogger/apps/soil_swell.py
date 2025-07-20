@@ -2537,6 +2537,18 @@ class SoilSwell(gk.AsyncWindow):
 
         for (data_frame, axes) in [(position_frame, self.position_axes), (displacement_frame, self.displacement_axes), (g_level_frame, self.g_level_axes)]:
             update_axes_plots(time_coordinates, data_frame, axes)
+        if not self.position_axes.get_legend():
+            handles, labels = self.position_axes.get_legend_handles_labels()
+            self.position_axes.legend(
+                handles=handles,
+                labels=[entry.split("_")[0].upper().replace("T", "T ") for entry in labels],
+                loc="upper left",
+                draggable=True,
+            )
+            all_artists = self.canvas_figure.figure.get_children()
+            self.position_axes.set_zorder(len(all_artists) + 1)
+            requested_theme = ttk_themes.STANDARD_THEMES[self.state.active_theme]
+            ttkbootstrap_matplotlib.apply_legend_style(self.position_axes.get_legend(), requested_theme)
         self.canvas_figure.draw_idle()
 
         if self.state.log_data_active:
