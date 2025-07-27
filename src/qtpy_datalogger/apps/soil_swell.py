@@ -663,7 +663,7 @@ class RawDataProcessor:
                         ]
                     )
 
-    def process_raw_data(self, first_row: pd.Series | None, data_timestamp: datetime.datetime, node_id: str, raw_data: list) -> pd.Series:
+    def process_raw_data(self, first_row: pd.Series | None, data_timestamp: datetime.datetime, node_id: str, raw_data: dict[str, float]) -> pd.Series:
         """Scale the raw data to Volts and physical units and return a Series of the new row."""
         first_timestamp = first_row.loc["timestamp"] if first_row is not None else data_timestamp
         time_span = data_timestamp - first_timestamp
@@ -687,7 +687,7 @@ class RawDataProcessor:
                 errors.information[RawDataProcessor.FormatProblem.MissingSensor] = f"does not have a sensor entry for '{sensor_id}'"
                 self.event.notify(errors)
                 matched_all_lookups = False
-            raw_sample = raw_data[index]
+            raw_sample = list(raw_data.values())[index]
             match index:
                 case i if 0 <= i <= 5:
                     default_sensor_parameters = RawDataProcessor.DEFAULT_SENSOR_PARAMETERS["lvdt"]
@@ -757,7 +757,7 @@ class RawDataProcessor:
         new_row_series = pd.Series(new_row, index=self.frame_columns)
         return new_row_series
 
-    def rescale_all(self, data: pd.DataFrame) -> pd.DataFrame:
+    def rescale_all(self, data: pd.DataFrame, channels: list[str]) -> pd.DataFrame:
         """Rescale all data from the raw codes and return the updated DataFrame."""
         data_columns = [f"{channel_name}_average_code" for channel_name in RawDataProcessor.DEFAULT_NODE_PARAMETERS]
         original_columns = ["timestamp", self._relative_time_column, "node_id"]
@@ -770,7 +770,7 @@ class RawDataProcessor:
             data_timestamp = row["timestamp"]
             node_id = row["node_id"]
             raw_data = row[data_columns].to_list()
-            rescaled_row = self.process_raw_data(first_row=first_row, data_timestamp=data_timestamp, node_id=node_id, raw_data=raw_data)
+            rescaled_row = self.process_raw_data(first_row=first_row, data_timestamp=data_timestamp, node_id=node_id, raw_data=dict(zip(channels, raw_data)))
             new_data = pd.concat([new_data, rescaled_row.to_frame().T], ignore_index=True)
             if row_index == 0:
                 first_row = new_data.iloc[0]
@@ -831,6 +831,7 @@ class AppState:
     def __init__(self, tk_root: tk.Tk, post_processor: RawDataProcessor) -> None:
         """Initialize a new AppState instance."""
         self._tk_notifier = tk_root
+        self._channels = []
         self._post_processor = post_processor
         self._persisted_settings = {}
         self._theme_name = ""
@@ -882,6 +883,18 @@ class AppState:
     def can_change_group(self) -> bool:
         """Return True when the app can change the sensor group name."""
         return self._acquire_active != Tristate.BoolTrue
+
+    @property
+    def channels(self) -> list[str]:
+        """Return the list of acquired sensor node channels."""
+        return self._channels
+
+    @channels.setter
+    def channels(self, new_value: list[str]) -> None:
+        """Set a new value for the acquired sensor channels."""
+        if new_value == self._channels:
+            return
+        self._channels = new_value
 
     @property
     def sample_rate(self) -> SampleRate:
@@ -1043,7 +1056,7 @@ class AppState:
             self.load_calibration()
 
         if self.data.size > 0:
-            rescaled_data = self._post_processor.rescale_all(self.data.copy())
+            rescaled_data = self._post_processor.rescale_all(self.data.copy(), self.channels)
             self._acquired_data = rescaled_data
             self._tk_notifier.event_generate(AppState.Event.NewDataProcessed)
 
@@ -1193,7 +1206,7 @@ class AppState:
             first_row_series,
             self.most_recent_timestamp,
             node_id,
-            new_data,
+            dict(zip(self.channels, new_data)),
         )
         self.data = pd.concat([self.data, new_frame_row.to_frame().T], ignore_index=True)
 
@@ -1371,6 +1384,7 @@ class SoilSwell(gk.AsyncWindow):
 
         self.update_window_title(SoilSwell.app_name)
         self.handle_reset(sender=self.reset_button)
+        self.state.channels = ["A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7", "StemmaQT"]
         self.root_window.update_idletasks()
 
     def build_window_menu(self) -> None:
@@ -2463,7 +2477,7 @@ class SoilSwell(gk.AsyncWindow):
                 node_id=node_id,
                 command_name=f"{self.snsr_app_name} scan",
                 parameters={
-                    "channels": ["A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7", "StemmaQT"],
+                    "channels": self.state.channels,
                     "samples_to_average": 50,
                     "xl3d_offset": XL3D_HARDWARE_OFFSET,
                 },
