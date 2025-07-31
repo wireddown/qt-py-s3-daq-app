@@ -444,7 +444,7 @@ class RawDataProcessor:
                 subscriber(errors)
 
     DEFAULT_SENSOR_PARAMETERS = {  # noqa: RUF012 -- dict is mutable but treated as a constant
-        "lvdt": { "gain": 1.0, "offset": 0.0, "units": "cm" },
+        "lvdt": { "gain": 1.0, "offset": 0.0, "units": "cm", "vref": 3.3},
         "thrm_mcp9700": { "gain": 1.0, "offset": 0.0, "units": "degC"},
         "battery_sense": { "gain": 1.0, "offset": 0.0, "units": "V"},
         "xl3d_adxl375": { "gain": 49e-3, "offset": 0, "units": "g" },
@@ -473,7 +473,8 @@ class RawDataProcessor:
             #   Example:  [sensors.lvdt_10cm_1]
             #   The value of {sensor_identifier} must be used in the 'sensor_id' for a node's channel to apply scaling to that channel
             #   The same {sensor_identifier} may used on multiple channels to apply the same scaling to each
-            #   The scaling is linear and converts the innate measurement from the channel to the sensor's physical units:  physical = {gain} * volts + {offset}
+            #   The scaling is linear and converts the innate measurement from the channel to the sensor's physical units:  physical = {offset} + {gain} * volts
+            #   Optional: specify "vref" as a constant like 3.3 or a node channel name like "A7" for ratiometric sensors:   physical = {offset} + {gain} * volts / {vref}
 
             # Node collection
             #   Name format:  [nodes.{node_identifier}.{node_channel}]
@@ -481,7 +482,7 @@ class RawDataProcessor:
             #   The {node_identifier} must match the 'Node ID' reported by the QT Py Scanner app
             #   To use a sensor node, 8 analog input channels and the accelerometer channel must be specified
             #     {node_channel} values:  A0  A1  A2  A3  A4  A5  A6  A7  StemmaQT
-            #   The scaling is linear and converts the raw codes from the channel to its innate measurement:  measurement = {gain} * code + {offset}
+            #   The scaling is linear and converts the raw codes from the channel to its innate measurement:  measurement = {offset} + {gain} * code
 
             """
         )
@@ -669,6 +670,7 @@ class RawDataProcessor:
         time_span = data_timestamp - first_timestamp
         relative_timestamp = time_span.total_seconds() / 60
 
+        matched_node_lookup = True
         matched_all_lookups = True
         new_row = []
         new_row.extend([data_timestamp, relative_timestamp])
@@ -677,79 +679,107 @@ class RawDataProcessor:
             errors = RawDataProcessor.ErrorInformation()
             errors.information[RawDataProcessor.FormatProblem.MissingNode] = f"does not have a node entry for '{node_id}'"
             self.event.notify(errors)
+            matched_node_lookup = False
             matched_all_lookups = False
         node_parameters = self._sensor_node_parameters.get(node_id, RawDataProcessor.DEFAULT_NODE_PARAMETERS)
-        for index, channel_name in enumerate(node_parameters):
-            channel_parameters = node_parameters[channel_name]
+
+        scaled_data = {}
+        for channel_name, raw_sample in raw_data.items():
+            # Visit all configured channels once
+            channel_parameters = node_parameters[channel_name]  # channel_name may not be in node_parameters
             sensor_id = channel_parameters["sensor_id"]
             if sensor_id not in self._sensor_parameters:
                 errors = RawDataProcessor.ErrorInformation()
                 errors.information[RawDataProcessor.FormatProblem.MissingSensor] = f"does not have a sensor entry for '{sensor_id}'"
                 self.event.notify(errors)
                 matched_all_lookups = False
-            raw_sample = list(raw_data.values())[index]
-            match index:
-                case i if 0 <= i <= 5:
-                    default_sensor_parameters = RawDataProcessor.DEFAULT_SENSOR_PARAMETERS["lvdt"]
-                    sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
-                    scaled_sample = raw_sample * channel_parameters["gain"] + channel_parameters["offset"]
-                    physical_measurement = scaled_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
-                    first_measurement = first_row.loc[self.lvdt_position_columns[index]] if first_row is not None else physical_measurement
-                    new_row.extend(
-                        [
-                            raw_sample,
-                            scaled_sample,
-                            physical_measurement,
-                            physical_measurement - first_measurement,
-                        ]
-                    )
-                case 6:
-                    default_sensor_parameters = RawDataProcessor.DEFAULT_SENSOR_PARAMETERS["thrm_mcp9700"]
-                    sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
-                    scaled_sample = raw_sample * channel_parameters["gain"] + channel_parameters["offset"]
-                    physical_measurement = scaled_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
-                    new_row.extend(
-                        [
-                            raw_sample,
-                            scaled_sample,
-                            physical_measurement,
-                        ]
-                    )
-                case 7:
-                    default_sensor_parameters = RawDataProcessor.DEFAULT_SENSOR_PARAMETERS["battery_sense"]
-                    sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
-                    scaled_sample = raw_sample * channel_parameters["gain"] + channel_parameters["offset"]
-                    physical_measurement = scaled_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
-                    new_row.extend(
-                        [
-                            raw_sample,
-                            scaled_sample,
-                            physical_measurement,
-                        ]
-                    )
-                case 8:
-                    default_sensor_parameters = RawDataProcessor.DEFAULT_SENSOR_PARAMETERS["xl3d_adxl375"]
-                    sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
-                    physical_measurement = raw_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
-                    new_row.extend(
-                        [
-                            raw_sample,
-                            physical_measurement,
-                        ]
-                    )
-                case _:
-                    # If a sensor reaches this code path, then the column headers likely won't match
-                    unknown_sensor_parameters = { "gain": 1.0, "offset": 0.0, "units": "unknown_units" }
-                    sensor_parameters = self._sensor_parameters.get(sensor_id, unknown_sensor_parameters)
-                    scaled_sample = raw_sample * channel_parameters["gain"] * channel_parameters["offset"]
-                    physical_measurement = scaled_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
-                    new_row.extend(
-                        [
-                            raw_sample,
-                            scaled_sample,
-                            physical_measurement,
-                        ]
-                    )
+            scaled_data[channel_name] = []
+
+            # Calculate volts for analog channels
+            if not channel_name.startswith("A"):
+                continue
+            adc_gain = channel_parameters["gain"]
+            adc_offset = channel_parameters["offset"]
+            channel_volts = raw_sample * adc_gain + adc_offset
+            scaled_data[channel_name].append(channel_volts)
+
+        # Calculate physical measurements
+        for index, (channel_name, raw_sample) in enumerate(raw_data.items()):
+            channel_parameters = node_parameters[channel_name]
+            sensor_id = channel_parameters["sensor_id"]
+            if channel_name in ["A0", "A1", "A2", "A3", "A4", "A5"]:
+                default_sensor_parameters = RawDataProcessor.DEFAULT_SENSOR_PARAMETERS["lvdt"]
+                sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
+                if not matched_node_lookup:
+                    sensor_parameters = default_sensor_parameters
+                channel_reference = 1.0
+                if "vref" in sensor_parameters:
+                    vref = sensor_parameters["vref"]
+                    if isinstance(vref, (float, int)):
+                        channel_reference = vref
+                    elif isinstance(vref, str):
+                        if vref not in raw_data:
+                            # Emit event instead
+                            message = f"Unknown vref named '{vref}' for channel '{channel_name}'"
+                            raise ValueError(message)
+                        channel_reference = scaled_data[vref][0]
+                    else:
+                        raise TypeError(type(vref))
+                scaled_sample = scaled_data[channel_name][0]
+                percent_full_scale = 1.00 if channel_reference == 0.0 else scaled_sample / channel_reference
+                physical_measurement = percent_full_scale * sensor_parameters["gain"] + sensor_parameters["offset"]
+                first_measurement = first_row.loc[self.lvdt_position_columns[index]] if first_row is not None else physical_measurement
+                scaled_data[channel_name].extend(
+                    [
+                        physical_measurement,
+                        physical_measurement - first_measurement,
+                    ]
+                )
+            elif channel_name == "A6":
+                default_sensor_parameters = RawDataProcessor.DEFAULT_SENSOR_PARAMETERS["thrm_mcp9700"]
+                sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
+                if not matched_node_lookup:
+                    sensor_parameters = default_sensor_parameters
+                scaled_sample = scaled_data[channel_name][0]
+                physical_measurement = scaled_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
+                scaled_data[channel_name].append(physical_measurement)
+            elif channel_name == "A7":
+                default_sensor_parameters = RawDataProcessor.DEFAULT_SENSOR_PARAMETERS["battery_sense"]
+                sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
+                if not matched_node_lookup:
+                    sensor_parameters = default_sensor_parameters
+                scaled_sample = scaled_data[channel_name][0]
+                physical_measurement = scaled_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
+                scaled_data[channel_name].append(physical_measurement)
+            elif channel_name == "StemmaQT":
+                default_sensor_parameters = RawDataProcessor.DEFAULT_SENSOR_PARAMETERS["xl3d_adxl375"]
+                sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
+                if not matched_node_lookup:
+                    sensor_parameters = default_sensor_parameters
+                physical_measurement = raw_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
+                scaled_data[channel_name].append(physical_measurement)
+            else:
+                # If a sensor reaches this code path, then the column headers likely won't match
+                unknown_sensor_parameters = { "gain": 1.0, "offset": 0.0, "units": "unknown_units" }
+                sensor_parameters = self._sensor_parameters.get(sensor_id, unknown_sensor_parameters)
+                scaled_sample = raw_sample * channel_parameters["gain"] + channel_parameters["offset"]
+                physical_measurement = scaled_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
+                scaled_data[channel_name].extend(
+                    [
+                        scaled_sample,
+                        physical_measurement,
+                    ]
+                )
+
+        # Build the record
+        for channel_name in node_parameters:
+            new_row.extend(
+                [
+                    raw_data[channel_name],
+                    *scaled_data[channel_name],
+                ]
+            )
+
         if matched_all_lookups:
             errors = RawDataProcessor.ErrorInformation()
             errors.information[RawDataProcessor.FormatProblem.AllOk] = "has definitions for all nodes, channels, and sensors that the app has encountered"
