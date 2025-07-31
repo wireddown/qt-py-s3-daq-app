@@ -84,3 +84,38 @@ def get_new_descriptor(  # noqa: PLR0913 -- allow more than 5 parameters for thi
         notice=notice,
     )
     return descriptor
+
+
+def get_neopixel():
+    from board import NEOPIXEL
+    from neopixel import GRB, NeoPixel
+
+    pixel = NeoPixel(
+        pin=NEOPIXEL, n=1, brightness=0.2, auto_write=False, pixel_order=GRB
+    )
+    return pixel
+
+
+def blink_neopixel(pixel) -> None:
+    from time import sleep
+
+    pixel.fill((150, 0, 0))
+    pixel.show()
+    sleep(0.2)
+    pixel.fill((231, 245, 39))
+    pixel.show()
+    sleep(0.2)
+
+    pixel.fill((150, 0, 0))
+    pixel.show()
+    sleep(0.2)
+    pixel.fill((231, 245, 39))
+    pixel.show()
+    sleep(0.2)
+
+    pixel.fill((150, 0, 0))
+    pixel.show()
+    sleep(0.2)
+    pixel.fill((231, 245, 39))
+    pixel.show()
+    sleep(0.2)

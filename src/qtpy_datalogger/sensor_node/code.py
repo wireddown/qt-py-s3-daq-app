@@ -5,7 +5,7 @@ from time import monotonic, sleep
 from traceback import print_exception
 
 from microcontroller import cpu
-from snsr.core import get_memory_info, paint_uart_line, read_one_uart_line
+from snsr.core import get_memory_info, get_neopixel, blink_neopixel, paint_uart_line, read_one_uart_line
 from snsr.rxtx import connect_and_subscribe, connect_to_wifi, create_mqtt_client, unsubscribe_and_disconnect
 from snsr.settings import settings
 from supervisor import runtime
@@ -19,7 +19,9 @@ mqtt_topics = [
     f"qtpy/v1/{settings.node_group}/{node_identifier}/command",
 ]
 
-def main_loop() -> None:
+pixel = get_neopixel()
+
+def main_loop() -> str:
     """Run the main node loop."""
     radio = connect_to_wifi()
     mqtt_client = create_mqtt_client(radio, settings.node_group, node_identifier)
@@ -43,6 +45,7 @@ def main_loop() -> None:
             print(f"Received '{response}' with {used_kb} / {free_kb}  (used/free)")  # noqa: T201 -- use direct IO for user REPL
 
     unsubscribe_and_disconnect(mqtt_client, mqtt_topics)
+    return response
 
 
 most_recent_error = type(None)
@@ -50,8 +53,14 @@ error_count = 0
 while True:
     print("Entering root loop")  # noqa: T201 -- use direct IO for user REPL
     try:
-        main_loop()
+        pixel.fill((0, 0, 0))
+        pixel.show()
+        result = main_loop()
+        if result.lower() in ["exit", "quit"]:
+            print("Exiting to REPL...")  # noqa: T201 -- use direct IO for user REPL
+            break
     except Exception as e:
+        blink_neopixel(pixel)
         print()  # noqa: T201 -- use direct IO for user REPL
         print(f"Encountered {type(e)} {e.args}")  # noqa: T201 -- use direct IO for user REPL
         print_exception(e)
