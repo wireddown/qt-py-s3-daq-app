@@ -11,6 +11,7 @@ import multiprocessing
 import pathlib
 import textwrap
 import tkinter as tk
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 from tkinter import filedialog, font
@@ -447,7 +448,7 @@ class RawDataProcessor:
         "lvdt": { "gain": 1.0, "offset": 0.0, "units": "cm", "vref": 3.3},
         "thrm_mcp9700": { "gain": 1.0, "offset": 0.0, "units": "degC"},
         "battery_sense": { "gain": 1.0, "offset": 0.0, "units": "V"},
-        "xl3d_adxl375": { "gain": 49e-3, "offset": 0, "units": "g" },
+        "xl3d_adxl375": { "gain": 49e-3, "offset": 0.0, "units": "g", "xcoeff": 0.0, "ycoeff": 0.0, "zcoeff": 1.0 },
     }
 
     DEFAULT_NODE_PARAMETERS = {  # noqa: RUF012 -- dict is mutable but treated as a constant
@@ -473,8 +474,15 @@ class RawDataProcessor:
             #   Example:  [sensors.lvdt_10cm_1]
             #   The value of {sensor_identifier} must be used in the 'sensor_id' for a node's channel to apply scaling to that channel
             #   The same {sensor_identifier} may used on multiple channels to apply the same scaling to each
-            #   The scaling is linear and converts the innate measurement from the channel to the sensor's physical units:  physical = {offset} + {gain} * volts
-            #   Optional: specify "vref" as a constant like 3.3 or a node channel name like "A7" for ratiometric sensors:   physical = {offset} + {gain} * volts / {vref}
+            #   The scaling is linear and converts the innate measurement from the channel to the sensor's physical units:   physical = {offset} + {gain} * volts
+            #   Analog channels
+            #     Optional: specify "vref" as a constant like 3.3 or a node channel name like "A7" for ratiometric sensors:  physical = {offset} + {gain} * volts / {vref}
+            #   StemmaQT
+            #     3-axis accelerometer: specify constants for "xcoeff" "ycoeff" "zcoeff" to scale for a 3-axis accelerometer
+            #       physical_{xyz} = {offset} + {gain} * code_{xyz}
+            #     By default, the scaling applies all coefficients. To measure one axis, set the gain for the other two to 0.0
+            #       result = ({xcoeff} * physical_x) + ({ycoeff} * physical_y) + ({zcoeff} * physical_z)
+            #     Specify "measurement" with "xy-rotate" to enable rotational calculations:  result = average(({xcoeff} * physical_x) + ({ycoeff} * physical_y))
 
             # Node collection
             #   Name format:  [nodes.{node_identifier}.{node_channel}]
@@ -482,7 +490,10 @@ class RawDataProcessor:
             #   The {node_identifier} must match the 'Node ID' reported by the QT Py Scanner app
             #   To use a sensor node, 8 analog input channels and the accelerometer channel must be specified
             #     {node_channel} values:  A0  A1  A2  A3  A4  A5  A6  A7  StemmaQT
-            #   The scaling is linear and converts the raw codes from the channel to its innate measurement:  measurement = {offset} + {gain} * code
+            #     The scaling is linear and converts the raw codes from the channel to its innate measurement:  measurement = {offset} + {gain} * code
+            #   StemmaQT
+            #     Most digital sensors return encoded physical units and do not use a reference value or channel
+            #     For these sensors, specify 1.0 for "gain", 0.0 for "offset" and reference a "sensor_id" with values for the specific sensor's scaling
 
             """
         )
@@ -664,7 +675,7 @@ class RawDataProcessor:
                         ]
                     )
 
-    def process_raw_data(self, first_row: pd.Series | None, data_timestamp: datetime.datetime, node_id: str, raw_data: dict[str, float]) -> pd.Series:
+    def process_raw_data(self, first_row: pd.Series | None, data_timestamp: datetime.datetime, node_id: str, raw_data: dict[str, float | Sequence]) -> pd.Series:
         """Scale the raw data to Volts and physical units and return a Series of the new row."""
         first_timestamp = first_row.loc["timestamp"] if first_row is not None else data_timestamp
         time_span = data_timestamp - first_timestamp
@@ -756,7 +767,24 @@ class RawDataProcessor:
                 sensor_parameters = self._sensor_parameters.get(sensor_id, default_sensor_parameters)
                 if not matched_node_lookup:
                     sensor_parameters = default_sensor_parameters
-                physical_measurement = raw_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
+                xl3d_sample = raw_sample if isinstance(raw_sample, Sequence) else (0.0, 0.0, float(raw_sample))
+                axis_g_levels = []
+                axis_coeffs = (sensor_parameters.get("xcoeff", 0.0), sensor_parameters.get("ycoeff", 0.0), sensor_parameters.get("zcoeff", 1.0))
+                for axis_sample, axis_coeff in zip(xl3d_sample, axis_coeffs):
+                    axis_g = axis_sample * sensor_parameters["gain"] + sensor_parameters["offset"]
+                    axis_g_levels.append(axis_g * axis_coeff)
+                physical_measurement = -1000.0
+                measurement = sensor_parameters.get("measurement", "1-axis")
+                match measurement:
+                    case "1-axis":
+                        physical_measurement = sum(axis_g_levels)
+                    case "xy-rotate":
+                        physical_measurement = (abs(axis_g_levels[0]) + abs(axis_g_levels[1])) / 2.0
+                        error = abs(axis_g_levels[0]) - abs(axis_g_levels[1])
+                        print(f"rotational g  = {physical_measurement:.3f} g")
+                        print(f"g uncertainty = {error:.3f} g")
+                        if physical_measurement != 0.0:
+                            print(f"  (relative)  = {error / physical_measurement * 100:.3f} %")
                 scaled_data[channel_name].append(physical_measurement)
             else:
                 # If a sensor reaches this code path, then the column headers likely won't match

@@ -22,8 +22,8 @@ def handle_message(received_action: ActionInformation) -> ActionInformation:
 
         adc_codes = do_analog_scan(channels=[], count=samples_to_average)
         xyz_codes = do_accelerometer_read(hardware_offset=xl3d_offset, count=samples_to_average // 2)
-        sensor_readings = adc_codes
-        sensor_readings.append(xyz_codes[-1])
+        sensor_readings: list = adc_codes
+        sensor_readings.append(xyz_codes)
 
         response_action = ActionInformation(
             command=received_action.command,
