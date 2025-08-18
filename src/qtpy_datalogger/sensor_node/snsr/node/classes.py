@@ -10,6 +10,8 @@ Classes used by hosts and nodes to send and receive MQTT messages.
 This module uses simple and explicit syntax to support CircuitPython clients.
 """
 
+import time
+import psutil
 
 class StatusInformation:
     """A class that describes the status of a node in a sensor_node group."""
@@ -19,12 +21,14 @@ class StatusInformation:
         used_memory: str,
         free_memory: str,
         cpu_temperature: str,
+        uptime = time.monotonic()  # Time since the node booted (in seconds)
     ) -> None:
         """Initialize a new StatusInformation with the specified values."""
         self.information = {
             "used_memory": used_memory,
             "free_memory": free_memory,
             "cpu_temperature": cpu_temperature,
+            "uptime": uptime  # Add uptime to the dictionary
         }
 
     @staticmethod
@@ -50,6 +54,26 @@ class StatusInformation:
     def cpu_temperature(self) -> str:
         """The cpu_temperature of the node."""
         return self.information["cpu_temperature"]
+    @property
+    def uptime(self) -> str:  #new uptime property
+        """The uptime of the node."""
+        return self.information["uptime"]
+    def get_uptime(self) -> str:
+        """Returns the uptime depending on whether it's host or node."""
+        if self.is_host():
+            return str(time.time() - psutil.boot_time())  # For host, using time.time() and psutil.boot_time
+        else:
+            return str(time.monotonic() - self.boot_time)  # For node, using time.monotonic()
+
+    def is_host(self):
+        """Determine if the current object is for the host or node."""
+        # You can implement a method to check if it's a host or node
+        # For simplicity, here we assume it's a host if `psutil` is available
+        try:
+            psutil.boot_time()
+            return True  # It's a host
+        except Exception:
+            return False  # It's a node (without psutil)
 
 
 class NoticeInformation:
