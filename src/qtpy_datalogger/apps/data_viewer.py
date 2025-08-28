@@ -806,12 +806,19 @@ class DataViewer(guikit.AsyncWindow):
     def update_plot_axes(self) -> list[str]:
         """Reconfigure the plot for the new data and return the names of the measurement series."""
         time_coordinates, data_series = self.get_data()
-        for name, series in data_series.items():
+        for index, (name, series) in enumerate(data_series.items()):
+            needs_title = False
+            try:
+                float(name)
+                needs_title = True
+            except ValueError:
+                pass
+            plot_name = f"Data series {index}" if needs_title else name
             measurements = series.tolist()
             self.plot_axes.plot(
                 time_coordinates,
                 measurements,
-                label=name,
+                label=plot_name,
             )
         self.plot_axes.set_xlabel("Time")
         self.plot_axes.set_ylabel("Measurement")
@@ -836,9 +843,16 @@ class DataViewer(guikit.AsyncWindow):
         # Assume table format, with time in first column and data in subsequent columns
         data_file_df = self.state.get_data()
         time_index = data_file_df[data_file_df.columns[0]]
-        time_coordinates = time_index.to_list()
-        series_names = data_file_df.columns[1:]
-        measurement_series = data_file_df[series_names]
+        if not isinstance(time_index.dtype, pd.Float64Dtype):
+            time_stamps = pd.to_datetime(time_index)
+            first_time = time_stamps[0]
+            time_differences = time_stamps - first_time
+            time_coordinates = time_differences.dt.total_seconds() / 60
+            time_coordinates = time_coordinates.to_list()
+        else:
+            time_coordinates = time_index.to_list()
+
+        measurement_series = data_file_df[data_file_df.columns[1:]]
         return time_coordinates, measurement_series  # pyright: ignore reportReturnType
 
 
