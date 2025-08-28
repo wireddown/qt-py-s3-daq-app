@@ -18,6 +18,7 @@ from enum import StrEnum
 from tkinter import filedialog, font
 
 import matplotlib.figure as mpl_figure
+import numpy as np
 import pandas as pd
 import ttkbootstrap as ttk
 import ttkbootstrap.dialogs as ttk_dialogs
@@ -815,12 +816,20 @@ class DataViewer(guikit.AsyncWindow):
     def update_plot_axes(self) -> list[str]:
         """Reconfigure the plot for the new data and return the names of the measurement series."""
         time_coordinates, data_series = self.get_data()
-        for name, series in data_series.items():
+        for index, (name, series) in enumerate(data_series.items()):
+            needs_title = False
+            try:
+                float(name)  # pyright: ignore reportArgumentType -- we're type checking at run time
+                needs_title = True
+            except ValueError:
+                pass
+            # BUG: when needs_title is True, this code drops the first sample from each series
+            plot_name = f"Data series {index}" if needs_title else name
             measurements = series.tolist()
             self.plot_axes.plot(
                 time_coordinates,
                 measurements,
-                label=name,
+                label=plot_name,
             )
         self.plot_axes.set_xlabel("Time")
         self.plot_axes.set_ylabel("Measurement")
@@ -845,9 +854,17 @@ class DataViewer(guikit.AsyncWindow):
         # Assume table format, with time in first column and data in subsequent columns
         data_file_df = self.state.get_data()
         time_index = data_file_df[data_file_df.columns[0]]
-        time_coordinates = time_index.to_list()
-        series_names = data_file_df.columns[1:]
-        measurement_series = data_file_df[series_names]
+        time_dtypes = [float, int, np.dtypes.Float64DType, np.dtypes.Int64DType]
+        if type(time_index.dtype) not in time_dtypes:
+            time_stamps = pd.to_datetime(time_index)
+            first_time = time_stamps[0]
+            time_differences = time_stamps - first_time
+            time_coordinates = time_differences.dt.total_seconds() / 60
+            time_coordinates = time_coordinates.to_list()
+        else:
+            time_coordinates = time_index.to_list()
+
+        measurement_series = data_file_df[data_file_df.columns[1:]]
         return time_coordinates, measurement_series  # pyright: ignore reportReturnType
 
 
