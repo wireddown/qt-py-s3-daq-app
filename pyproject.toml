@@ -37,7 +37,7 @@ circuitpython-stubs = "==9.2.1"
 adafruit-circuitpython-neopixel = "^6.3.16"
 adafruit-circuitpython-adxl37x = "^1.2.4"
 adafruit-circuitpython-minimqtt = "^8.0.0"
-adafruit-circuitpython-connectionmanager = "^3.1.4"
+adafruit-circuitpython-connectionmanager = "^3.1.5"
 
 [tool.poe.poetry_hooks]
 pre_build = "prebuild_tasks"
