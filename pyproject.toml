@@ -30,7 +30,7 @@ tkfontawesome = "^0.3.2"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
 ruff = "^0.11.12"
-pyright = "^1.1.398"
+pyright = "^1.1.404"
 
 [tool.poetry.group.circup.dependencies]
 circuitpython-stubs = "==9.2.1"
