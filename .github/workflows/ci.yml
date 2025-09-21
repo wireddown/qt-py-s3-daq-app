@@ -1,4 +1,4 @@
-name: Run Tests and Analyzers
+name: 'CI: Tests and Analyzers'
 
 on:
   workflow_dispatch:
