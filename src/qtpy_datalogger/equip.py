@@ -520,7 +520,8 @@ def _handle_list_builtin_modules(board_id: str) -> str:
 
     # We define these as functions to reclaim their memory usage from parsing the HTML contents, which can be very large
     def fetch_find_extract_builtin_modules_for_board_id(reference_url: str, board_id: str) -> tuple[str, list[str]]:
-        live_html_bytes = urllib.request.urlopen(reference_url).read()  # noqa: S310 -- URL is hardcoded to https
+        page_request = urllib.request.Request(reference_url, headers={"User-agent": "Mozilla/5.0"})  # noqa: S310 -- URL is hardcoded to https
+        live_html_bytes = urllib.request.urlopen(page_request).read()  # noqa: S310 -- URL is hardcoded to https
         live_html = live_html_bytes.decode("UTF-8")
         soup = bs4.BeautifulSoup(live_html, "html.parser")
         page_title = soup.title.text.split("-")[0].strip()  # pyright: ignore
@@ -548,7 +549,8 @@ def _handle_list_builtin_modules(board_id: str) -> str:
         return reference_version, builtin_module_names
 
     def fetch_find_extract_standard_library_modules(reference_url: str) -> list[str]:
-        live_html_bytes = urllib.request.urlopen(reference_url).read()  # noqa: S310 -- URL is hardcoded to https
+        page_request = urllib.request.Request(reference_url, headers={"User-agent": "Mozilla/5.0"})  # noqa: S310 -- URL is hardcoded to https
+        live_html_bytes = urllib.request.urlopen(page_request).read()  # noqa: S310 -- URL is hardcoded to https
         live_html = live_html_bytes.decode("UTF-8")
         soup = bs4.BeautifulSoup(live_html, "html.parser")
         the_stdlib_section = soup.find(id="python-standard-libraries")
