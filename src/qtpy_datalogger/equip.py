@@ -569,7 +569,7 @@ def _handle_list_builtin_modules(board_id: str) -> str:
 
     full_contents = {
         "reference": reference_version,
-        "urls": [Links.Board_Support_Matrix, standard_library_page],
+        "urls": [Links.Board_Support_Matrix.value, standard_library_page],
         "standard_library": stdlib_module_names,
         board_id: builtin_module_names,
     }
