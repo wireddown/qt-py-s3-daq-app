@@ -81,4 +81,5 @@ def test_list_builtin_modules(tmp_path: pathlib.Path) -> None:
     assert output_file.exists()
     all_lines = output_file.read_text().splitlines()
     assert all_lines[0].startswith('reference = "Adafruit CircuitPython')
+    assert all_lines[1].startswith('urls = [ "https://docs.circuitpython.org/')
     assert all_lines[-1].startswith('"Adafruit QT Py ESP32-S3 no psram" = [ "_asyncio",')
