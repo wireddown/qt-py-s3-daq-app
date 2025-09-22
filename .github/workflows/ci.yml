@@ -92,7 +92,7 @@ jobs:
 
     - name: Create result report
       id: result-report
-      uses: dorny/test-reporter@v1.9.1
+      uses: dorny/test-reporter@v2.1.1
       with:
         name: Results for Python ${{ matrix.python_version }} on ${{ runner.os }}
         path: junit/*.xml
