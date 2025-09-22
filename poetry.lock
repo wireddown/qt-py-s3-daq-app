@@ -86,14 +86,14 @@ Adafruit-Blinka = "*"
 
 [[package]]
 name = "adafruit-circuitpython-minimqtt"
-version = "8.0.1"
+version = "8.0.2"
 description = "MQTT client library for CircuitPython"
 optional = false
 python-versions = "*"
 groups = ["circup"]
 files = [
-    {file = "adafruit_circuitpython_minimqtt-8.0.1-py3-none-any.whl", hash = "sha256:925f0f106799ec83e6cdcd09d17a0ec5bee272ef07a7531fb23251a3fab7f78b"},
-    {file = "adafruit_circuitpython_minimqtt-8.0.1.tar.gz", hash = "sha256:410292c1516fd6825d490876b1fd55f53c4d1422c62a8d068d504831ea679ae4"},
+    {file = "adafruit_circuitpython_minimqtt-8.0.2-py3-none-any.whl", hash = "sha256:d9a9b56262090b8014d9c251b2bea31a227c9877c474b45bff71ad73e1de63d1"},
+    {file = "adafruit_circuitpython_minimqtt-8.0.2.tar.gz", hash = "sha256:e97a224808fc145e9f9a7b0eebe08698790f14e5b1a656498982ce3225346443"},
 ]
 
 [package.dependencies]
@@ -1733,4 +1733,4 @@ tests = ["pytest"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "08d5d86dd35c133c2c8fbd8563b68bed65739fc46fbf9bfd2c772b0db219f288"
+content-hash = "79474f5619e3f8df259699e334a2062a0e0ac585a5f73578ae4f7771b999bd81"
