@@ -542,14 +542,14 @@ files = [
 
 [[package]]
 name = "findimports"
-version = "2.5.2"
+version = "2.6.0"
 description = "Python module import analysis tool"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "findimports-2.5.2-py3-none-any.whl", hash = "sha256:538e1794fbb286b3886a2c40dda213cab405a52e63c271f64b8913427dade0bf"},
-    {file = "findimports-2.5.2.tar.gz", hash = "sha256:d4532cb9714e7772854f941b1cdb09cb5d377838b0f6f926940097778bcf818e"},
+    {file = "findimports-2.6.0-py3-none-any.whl", hash = "sha256:9fbd065a2fae27362f4d490bd36d313e429f5a218ad44f86d84ae1ac7a5e2ea4"},
+    {file = "findimports-2.6.0.tar.gz", hash = "sha256:f42eba531b641a3205d756e7f7f2b71351dbcfc8c0039a4c9e1fec1d1def1519"},
 ]
 
 [[package]]
@@ -1733,4 +1733,4 @@ tests = ["pytest"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "469b2e0f9466e635c472f99c1921f15c31b8c51b10166df7fdad604b5ad02801"
+content-hash = "46bb10a6479dda423c0b20e786f1568a8405dd9c83137c3dfe6f21ad6d5e6b50"
