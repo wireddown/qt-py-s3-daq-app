@@ -445,7 +445,7 @@ class RawDataProcessor:
                 subscriber(errors)
 
     DEFAULT_SENSOR_PARAMETERS = {  # noqa: RUF012 -- dict is mutable but treated as a constant
-        "lvdt": { "gain": 1.0, "offset": 0.0, "units": "cm", "vref": 3.3},
+        "lvdt": { "gain": 1.0, "offset": 0.0, "units": "cm"},
         "thrm_mcp9700": { "gain": 1.0, "offset": 0.0, "units": "degC"},
         "battery_sense": { "gain": 1.0, "offset": 0.0, "units": "V"},
         "xl3d_adxl375": { "gain": 49e-3, "offset": 0.0, "units": "g", "xcoeff": 0.0, "ycoeff": 0.0, "zcoeff": 1.0 },
