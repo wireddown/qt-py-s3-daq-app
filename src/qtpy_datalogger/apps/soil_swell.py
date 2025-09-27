@@ -1358,7 +1358,7 @@ class SoilSwell(gk.AsyncWindow):
         self.build_window_menu()
 
         figure_dpi = 112
-        self.root_window.minsize(width=1035, height=592)
+        self.root_window.minsize(width=1035, height=816)
         self.root_window.columnconfigure(0, weight=1)
         self.root_window.rowconfigure(0, weight=1)
 
@@ -1373,13 +1373,14 @@ class SoilSwell(gk.AsyncWindow):
         self.graph_frame.grid(column=0, row=0, sticky=tk.NSEW, padx=(16, 0), pady=16)
         self.graph_frame.columnconfigure(0, weight=1)
         self.graph_frame.rowconfigure(0, weight=1)
-        plot_figure = mpl_figure.Figure(figsize=(7, 5), dpi=figure_dpi)
+        initial_aspect_ratio = (7, 7)
+        plot_figure = mpl_figure.Figure(figsize=initial_aspect_ratio, dpi=figure_dpi)
         self.canvas_figure = ttkbootstrap_matplotlib.create_styled_plot_canvas(plot_figure, self.graph_frame)
         self.canvas_figure.mpl_connect("button_press_event", self.on_graph_mouse_down)
         self.canvas_figure.mpl_connect("pick_event", self.on_graph_pick)
         plot_figure.subplots_adjust(
             left=0.12,
-            bottom=0.10,
+            bottom=0.07,
             right=0.95,
             top=0.97,
         )
