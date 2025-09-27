@@ -1339,6 +1339,7 @@ class SoilSwell(gk.AsyncWindow):
         self.scanner_process = None
         self.position_axis_limits = (-0.1, 2.6)
         self.displacement_axis_limits = (-2.6, 2.6)
+        self.velocity_axis_limits = (-5000.0, 5000.0)
         self.g_level_axis_limits = (-1, 255)
         self.time_axis_limits = (-1, 60000)
 
@@ -1384,13 +1385,14 @@ class SoilSwell(gk.AsyncWindow):
         )
 
         all_subplots = plot_figure.subplots(
-            nrows=3,
+            nrows=4,
             ncols=1,
             sharex=True,
         )
         self.position_axes: mpl_axes.Axes = all_subplots[0]
         self.displacement_axes: mpl_axes.Axes = all_subplots[1]
-        self.g_level_axes: mpl_axes.Axes = all_subplots[2]
+        self.velocity_axes: mpl_axes.Axes = all_subplots[2]
+        self.g_level_axes: mpl_axes.Axes = all_subplots[3]
         self.configure_all_axes()
 
         self.tool_frame = ttk.Frame(main, name="tool_panel")
@@ -1778,6 +1780,10 @@ class SoilSwell(gk.AsyncWindow):
         self.displacement_axes.set_ylim(ymin=-2.6, ymax=2.6)
         self.displacement_axes.yaxis.set_major_formatter("{x:.2f}")
 
+        self.velocity_label = self.velocity_axes.set_ylabel("Velocity (um/s)", picker=True)
+        self.velocity_axes.set_ylim(ymin=-5, ymax=5)
+        self.velocity_axes.yaxis.set_major_formatter("{x:.2e}")
+
         self.g_level_label = self.g_level_axes.set_ylabel("Acceleration (g)", picker=True)
         self.g_level_axes.set_ylim(ymin=-1, ymax=255)
         self.g_level_axes.set_xlim(xmin=-1, xmax=200)
@@ -2140,6 +2146,10 @@ class SoilSwell(gk.AsyncWindow):
             axes = self.displacement_axes
             axis = "yaxis"
             limits = self.displacement_axis_limits
+        elif clicked is self.velocity_axes:
+            axes = self.velocity_axes
+            axis = "yaxis"
+            limits = self.velocity_axis_limits
         elif clicked is self.g_level_axes:
             axes = self.g_level_axes
             axis = "yaxis"
@@ -2168,6 +2178,10 @@ class SoilSwell(gk.AsyncWindow):
             axes = self.displacement_axes
             axis = "yaxis"
             limits = self.displacement_axis_limits
+        elif event_args.artist is self.velocity_label:
+            axes = self.velocity_axes
+            axis = "yaxis"
+            limits = self.velocity_axis_limits
         elif event_args.artist is self.g_level_label:
             axes = self.g_level_axes
             axis = "yaxis"
@@ -2570,6 +2584,7 @@ class SoilSwell(gk.AsyncWindow):
         if not has_data:
             self.position_axes.clear()
             self.displacement_axes.clear()
+            self.velocity_axes.clear()
             self.g_level_axes.clear()
             self.configure_all_axes()
             requested_theme = ttk_themes.STANDARD_THEMES[self.state.active_theme]
