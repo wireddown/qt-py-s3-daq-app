@@ -2625,6 +2625,7 @@ class SoilSwell(gk.AsyncWindow):
 
         position_frame = all_data[self.data_processor.lvdt_position_columns]
         displacement_frame = all_data[self.data_processor.lvdt_displacement_columns]
+        velocity_frame = all_data[self.data_processor.lvdt_velocity_columns]
         temperature_frame = all_data[[self.data_processor.temperature_column]]
         battery_frame = all_data[[self.data_processor.battery_column]]
         g_level_frame = all_data[[self.data_processor.g_level_column]]
@@ -2635,7 +2636,12 @@ class SoilSwell(gk.AsyncWindow):
         self.state.battery_voltage = battery_voltage
         self.state.battery_level = new_battery_level
 
-        for (data_frame, axes) in [(position_frame, self.position_axes), (displacement_frame, self.displacement_axes), (g_level_frame, self.g_level_axes)]:
+        for (data_frame, axes) in [
+            (position_frame, self.position_axes),
+            (displacement_frame, self.displacement_axes),
+            (velocity_frame, self.velocity_axes),
+            (g_level_frame, self.g_level_axes)
+        ]:
             update_axes_plots(time_coordinates, data_frame, axes)
         if not self.position_axes.get_legend():
             handles, labels = self.position_axes.get_legend_handles_labels()
