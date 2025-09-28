@@ -558,6 +558,7 @@ class RawDataProcessor:
         self._frame_columns = []
         self._lvdt_position_columns = []
         self._lvdt_displacement_columns = []
+        self._lvdt_velocity_columns = []
         self._relative_time_column = "relative_time_minutes"
         self._build_column_information()
 
@@ -587,6 +588,11 @@ class RawDataProcessor:
         return self._lvdt_displacement_columns
 
     @property
+    def lvdt_velocity_columns(self) -> list[str]:
+        """Return the names of the columns that hold the LVDT velocity measurements."""
+        return self._lvdt_velocity_columns
+
+    @property
     def temperature_column(self) -> str:
         """Return the name of the column that holds the temperature."""
         return self._temperature_column
@@ -607,6 +613,7 @@ class RawDataProcessor:
         return [
             self.relative_time_column,
             *self.lvdt_position_columns,
+            *self.lvdt_velocity_columns,
             self.g_level_column,
         ]
 
@@ -632,14 +639,17 @@ class RawDataProcessor:
                     sensor_units = sensor_parameters["units"]
                     lvdt_position_column = f"lvdt{index+1}_position_{sensor_units}"  # 6 LVDTs, index them starting at 1
                     lvdt_displacement_column = f"lvdt{index+1}_displacement_{sensor_units}"
+                    lvdt_velocity_column = f"lvdt{index+1}_velocity_um_per_second"
                     self._lvdt_position_columns.append(lvdt_position_column)
                     self._lvdt_displacement_columns.append(lvdt_displacement_column)
+                    self._lvdt_velocity_columns.append(lvdt_velocity_column)
                     self._frame_columns.extend(
                         [
                             f"{channel_name}_average_code",
                             f"{channel_name}_volts",
                             lvdt_position_column,
                             lvdt_displacement_column,
+                            lvdt_velocity_column,
                         ]
                     )
                 case 6:
@@ -740,10 +750,12 @@ class RawDataProcessor:
                 percent_full_scale = 1.00 if channel_reference == 0.0 else scaled_sample / channel_reference
                 physical_measurement = percent_full_scale * sensor_parameters["gain"] + sensor_parameters["offset"]
                 first_measurement = first_row.loc[self.lvdt_position_columns[index]] if first_row is not None else physical_measurement
+                velocity_measurement = 0.0
                 scaled_data[channel_name].extend(
                     [
                         physical_measurement,
                         physical_measurement - first_measurement,
+                        velocity_measurement,
                     ]
                 )
             elif channel_name == "A6":
