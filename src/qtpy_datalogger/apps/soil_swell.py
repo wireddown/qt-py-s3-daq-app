@@ -685,7 +685,7 @@ class RawDataProcessor:
                         ]
                     )
 
-    def process_raw_data(self, first_row: pd.Series | None, data_timestamp: datetime.datetime, node_id: str, raw_data: dict[str, float | Sequence]) -> pd.Series:
+    def process_raw_data(self, first_row: pd.Series | None, previous_rows: pd.DataFrame | None, data_timestamp: datetime.datetime, node_id: str, raw_data: dict[str, float | Sequence]) -> pd.Series:
         """Scale the raw data to Volts and physical units and return a Series of the new row."""
         first_timestamp = first_row.loc["timestamp"] if first_row is not None else data_timestamp
         time_span = data_timestamp - first_timestamp
@@ -827,7 +827,7 @@ class RawDataProcessor:
         new_row_series = pd.Series(new_row, index=self.frame_columns)
         return new_row_series
 
-    def rescale_all(self, data: pd.DataFrame, channels: list[str]) -> pd.DataFrame:
+    def rescale_all(self, data: pd.DataFrame, channels: list[str], trend_depth: int) -> pd.DataFrame:
         """Rescale all data from the raw codes and return the updated DataFrame."""
         data_columns = [f"{channel_name}_average_code" for channel_name in RawDataProcessor.DEFAULT_NODE_PARAMETERS]
         original_columns = ["timestamp", self._relative_time_column, "node_id"]
@@ -837,10 +837,11 @@ class RawDataProcessor:
         first_row = None
         new_data = pd.DataFrame(columns=self.frame_columns)
         for row_index, row in original_data.iterrows():
+            previous_rows = new_data.iloc[max(0, row_index-trend_depth):row_index].copy()
             data_timestamp = row["timestamp"]
             node_id = row["node_id"]
             raw_data = row[data_columns].to_list()
-            rescaled_row = self.process_raw_data(first_row=first_row, data_timestamp=data_timestamp, node_id=node_id, raw_data=dict(zip(channels, raw_data)))
+            rescaled_row = self.process_raw_data(first_row=first_row, previous_rows=previous_rows, data_timestamp=data_timestamp, node_id=node_id, raw_data=dict(zip(channels, raw_data)))
             new_data = pd.concat([new_data, rescaled_row.to_frame().T], ignore_index=True)
             if row_index == 0:
                 first_row = new_data.iloc[0]
@@ -913,6 +914,7 @@ class AppState:
         self._battery_level = BatteryLevel.Unset
         self._most_recent_timestamp = datetime.datetime.min.replace(tzinfo=datetime.UTC)
         self._acquired_data = pd.DataFrame()
+        self._data_trend_depth = 10
         self._demo_active = False
         self._log_file_path = AppState.canceled_file
         self._index_when_log_enabled = -1
@@ -1126,7 +1128,7 @@ class AppState:
             self.load_calibration()
 
         if self.data.size > 0:
-            rescaled_data = self._post_processor.rescale_all(self.data.copy(), self.channels)
+            rescaled_data = self._post_processor.rescale_all(self.data.copy(), self.channels, self._data_trend_depth)
             self._acquired_data = rescaled_data
             self._tk_notifier.event_generate(AppState.Event.NewDataProcessed)
 
@@ -1271,9 +1273,11 @@ class AppState:
     def process_new_data(self, node_id: str, new_data: list[float]) -> None:
         """Take the new_data and process it for plotting and logging."""
         first_row_series = self.data.iloc[0] if self.data.size > 0 else None
+        previous_rows = self.data.iloc[-self._data_trend_depth:].copy()
         self._most_recent_timestamp = datetime.datetime.now(tz=datetime.UTC)
         new_frame_row = self._post_processor.process_raw_data(
             first_row_series,
+            previous_rows,
             self.most_recent_timestamp,
             node_id,
             dict(zip(self.channels, new_data)),
