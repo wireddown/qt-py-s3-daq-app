@@ -27,7 +27,7 @@ jobs:
     - name: Install poetry
       run: |
         echo '# :checkered_flag: Run Tests and Analyzers _(run ${{ github.run_number }} attempt ${{ github.run_attempt }})_' >> $env:GITHUB_STEP_SUMMARY
-        pipx install poetry
+        pipx install poetry==1.8.4
         poetry about
         poetry config --list
 
