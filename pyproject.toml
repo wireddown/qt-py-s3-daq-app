@@ -17,19 +17,19 @@ click = "^8.2.1"
 pyserial = "^3.5"
 wmi = "^1.5.1"
 circup = "^2.2.2"
-findimports = "^2.5.2"
+findimports = "^2.6.0"
 packaging = "^25.0"
-beautifulsoup4 = "^4.13.4"
+beautifulsoup4 = "^4.14.2"
 gmqtt = "^0.7.0"
 psutil = "^7.0.0"
 ttkbootstrap = "^1.14.2"
 matplotlib = "^3.10.1"
-pandas = "^2.3.1"
+pandas = "^2.3.3"
 tkfontawesome = "^0.3.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
-ruff = "^0.11.12"
+ruff = "^0.13.2"
 pyright = "^1.1.398"
 
 [tool.poetry.group.circup.dependencies]
@@ -136,9 +136,13 @@ ignore = [
 "tests/**.py" = [
     "INP001",
     "S101",
+    "PLC0415",
 ]
 "src/qtpy_datalogger/apps/empty.py" = [
     "F401",
+]
+"src/qtpy_datalogger/sensor_node/**.py" = [
+    "PLC0415",
 ]
 
 [build-system]

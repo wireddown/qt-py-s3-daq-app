@@ -122,7 +122,7 @@ class SnsrNotice(NamedTuple):
 
         if __package__:
             # We're installed
-            import importlib.metadata
+            import importlib.metadata  # noqa: PLC0415 -- must use dynamic import at runtime
 
             my_version = importlib.metadata.version(str(__package__))
 

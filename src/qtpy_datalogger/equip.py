@@ -624,8 +624,11 @@ def _handle_list_builtin_modules(board_id: str) -> str:
         live_html_bytes = urllib.request.urlopen(page_request).read()  # noqa: S310 -- URL is hardcoded to https
         live_html = live_html_bytes.decode("UTF-8")
         soup = bs4.BeautifulSoup(live_html, "html.parser")
-        page_title = soup.title.text.split("-")[0].strip()  # pyright: ignore
-        reference_version = soup.title.text.split("—")[-1].strip()  # pyright: ignore
+        if not soup.title:
+            logger.error(f"Missing page title for {reference_url}")
+            raise SystemExit(ExitCode.Board_Lookup_Failure)
+        page_title = soup.title.text.split("-")[0].strip()
+        reference_version = soup.title.text.split("—")[-1].strip()
         logger.info(f"Loaded '{page_title}' from '{reference_version}'")
 
         def row_matches_board_id(tag: bs4.Tag) -> bool:
@@ -638,14 +641,17 @@ def _handle_list_builtin_modules(board_id: str) -> str:
             return tag.td.p.text == board_id
 
         the_table = soup.find("table", class_="support-matrix-table")
-        the_row = the_table.find(name=row_matches_board_id)  # pyright: ignore
+        if not the_table:
+            logger.error(f"Cannot find 'support-matrix-table' on {reference_url}")
+            raise SystemExit(ExitCode.Board_Lookup_Failure)
+        the_row = the_table.find(name=row_matches_board_id)
         if not the_row:
             logger.error(f"Cannot find CircuitPython board with name '{board_id}'!")
             logger.error(f"Confirm spelling from '{reference_url}'")
             raise SystemExit(ExitCode.Board_Lookup_Failure)
-        row_cells = the_row.find_all("td")  # pyright: ignore
+        row_cells = the_row.find_all("td")
         modules_cell = row_cells[-1]
-        builtin_module_names = [entry.text for entry in modules_cell.find_all("span", class_="pre")]  # pyright: ignore
+        builtin_module_names = [entry.text for entry in modules_cell.find_all("span", class_="pre")]
         return reference_version, builtin_module_names
 
     def fetch_find_extract_standard_library_modules(reference_url: str) -> list[str]:
@@ -654,7 +660,10 @@ def _handle_list_builtin_modules(board_id: str) -> str:
         live_html = live_html_bytes.decode("UTF-8")
         soup = bs4.BeautifulSoup(live_html, "html.parser")
         the_stdlib_section = soup.find(id="python-standard-libraries")
-        list_items = the_stdlib_section.select("li a span")  # pyright: ignore
+        if not the_stdlib_section:
+            logger.error(f"Cannot find 'python-standard-libraries' on {reference_url}")
+            raise SystemExit(ExitCode.Board_Lookup_Failure)
+        list_items = the_stdlib_section.select("li a span")
         stdlib_module_names = [entry.text for entry in list_items]
         return stdlib_module_names
 

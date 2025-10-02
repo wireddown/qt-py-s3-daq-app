@@ -2,7 +2,8 @@
 
 A data acquisition application using the [Adafruit QT Py S3] and [CircuitPython].
 
-[![CI: Tests and Analyzers]](https://github.com/wireddown/qt-py-s3-daq-app/actions/workflows/ci.yml?query=branch%3Amain) [![Dependabot Updates]](https://github.com/wireddown/qt-py-s3-daq-app/actions/workflows/dependabot/dependabot-updates)
+[![CI: Tests and Analyzers](https://github.com/wireddown/qt-py-s3-daq-app/actions/workflows/ci.yml/badge.svg)](https://github.com/wireddown/qt-py-s3-daq-app/actions/workflows/ci.yml)
+[![Dependabot Updates]](https://github.com/wireddown/qt-py-s3-daq-app/actions/workflows/dependabot/dependabot-updates)
 
 ## Structure
 

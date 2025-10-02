@@ -361,7 +361,7 @@ def open_session_on_node(group_id: str, node_id: str) -> None:
 async def query_nodes_from_mqtt_async(group_id: str) -> dict[str, dict[DetailKey, str]]:
     """Use a new QTPyController to scan the network for sensor_nodes."""
     broker_host = "localhost"
-    mac_address = hex(uuid.getnode())[2:]
+    mac_address = f"{uuid.getnode():x}"
     ip_address = socket.gethostbyname(socket.gethostname())
     controller = QTPyController(
         broker_host=broker_host,
@@ -380,7 +380,7 @@ async def query_nodes_from_mqtt_async(group_id: str) -> dict[str, dict[DetailKey
 async def _open_session_on_node(group_id: str, node_id: str) -> None:
     """Use a new QTPyController to open a terminal session on the specified node_id."""
     broker_host = "localhost"
-    mac_address = hex(uuid.getnode())[2:]
+    mac_address = f"{uuid.getnode():x}"
     ip_address = socket.gethostbyname(socket.gethostname())
     controller = QTPyController(
         broker_host=broker_host,

@@ -206,7 +206,7 @@ def _analyze_mqtt_broker(broker_information: MqttBrokerInformation) -> list[tupl
 
 def _query_mqtt_broker_information_from_wmi() -> MqttBrokerInformation | None:
     """Query the system for information about the MQTT broker service, configuration, and relevant firewall rules."""
-    from wmi import WMI
+    from wmi import WMI  # noqa: PLC0415 -- dynamic import at runtime for Windows
 
     host_pc = WMI()
     matching_services = sorted(host_pc.Win32_Service(Name="mosquitto"))
@@ -240,7 +240,7 @@ def _query_mqtt_broker_information_from_wmi() -> MqttBrokerInformation | None:
 
 def _restart_mqtt_broker_with_wmi(broker_information: MqttBrokerInformation) -> bool:
     """Stop and restart the mosquitto MQTT service and return True if the server changed states."""
-    from wmi import WMI
+    from wmi import WMI  # noqa: PLC0415 -- dynamic import at runtime for Windows
 
     did_anything = False
     host_pc = WMI()
