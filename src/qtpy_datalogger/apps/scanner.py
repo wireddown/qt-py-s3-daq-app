@@ -432,7 +432,7 @@ class ScannerApp(guikit.AsyncWindow):
             controller = network.QTPyController(
                 broker_host="localhost",
                 group_id=qtpy_device.mqtt_group_id,
-                mac_address=hex(uuid.getnode())[2:],
+                mac_address=f"{uuid.getnode():x}",
                 ip_address=socket.gethostbyname(socket.gethostname()),
             )
             await controller.connect_and_subscribe()

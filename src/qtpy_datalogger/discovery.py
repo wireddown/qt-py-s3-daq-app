@@ -363,7 +363,7 @@ def _query_ports_from_serial() -> dict[str, dict[DetailKey, str]]:
     - serial_number
     """
     # Other approaches include WMI's Win32_SerialPort
-    from serial.tools.list_ports_windows import comports
+    from serial.tools.list_ports_windows import comports  # noqa: PLC0415 -- dynamic import at runtime for Windows
 
     discovered_comports = {
         comport.device: {
@@ -405,7 +405,7 @@ def _query_volumes_from_wmi() -> dict[str, dict[DetailKey, str]]:
     #   Use wmi_property DeviceID to retrieve the identifier for the physical disk
     #   Use wmi_property Caption to retrieve its description
     # Other approaches include making Windows dll calls
-    from wmi import WMI
+    from wmi import WMI  # noqa: PLC0415 -- dynamic import at runtime for Windows
 
     host_pc = WMI()
 
