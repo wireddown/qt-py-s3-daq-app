@@ -136,9 +136,13 @@ ignore = [
 "tests/**.py" = [
     "INP001",
     "S101",
+    "PLC0415",
 ]
 "src/qtpy_datalogger/apps/empty.py" = [
     "F401",
+]
+"src/qtpy_datalogger/sensor_node/**.py" = [
+    "PLC0415",
 ]
 
 [build-system]
