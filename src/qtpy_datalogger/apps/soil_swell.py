@@ -750,7 +750,23 @@ class RawDataProcessor:
                 percent_full_scale = 1.00 if channel_reference == 0.0 else scaled_sample / channel_reference
                 physical_measurement = percent_full_scale * sensor_parameters["gain"] + sensor_parameters["offset"]
                 first_measurement = first_row.loc[self.lvdt_position_columns[index]] if first_row is not None else physical_measurement
-                velocity_measurement = 0.0
+                if (
+                    previous_rows is not None
+                    and len(previous_rows.index) > 0
+                    and self.lvdt_position_columns[index] in previous_rows
+                ):
+                    previous_timestamp = previous_rows.at[previous_rows.index[-1], "timestamp"]
+                    previous_measurement = previous_rows.at[previous_rows.index[-1], self.lvdt_position_columns[index]]
+                else:
+                    previous_timestamp = data_timestamp
+                    previous_measurement = physical_measurement
+                if previous_timestamp == data_timestamp:
+                    velocity_measurement = 0.0
+                else:
+                    velocity_measurement = (physical_measurement - previous_measurement) / (data_timestamp - previous_timestamp).total_seconds()
+                    # Scaling coefficients yield cm, convert to um
+                    velocity_measurement *= 10e4
+                print(f"{channel_name} velocity {velocity_measurement:.3f}")
                 scaled_data[channel_name].extend(
                     [
                         physical_measurement,
