@@ -23,7 +23,7 @@ beautifulsoup4 = "^4.14.2"
 gmqtt = "^0.7.0"
 psutil = "^7.0.0"
 ttkbootstrap = "^1.14.2"
-matplotlib = "^3.10.1"
+matplotlib = "^3.10.7"
 pandas = "^2.3.3"
 tkfontawesome = "^0.3.2"
 
