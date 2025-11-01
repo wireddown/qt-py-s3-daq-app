@@ -765,8 +765,8 @@ class RawDataProcessor:
                 else:
                     velocity_measurement = (physical_measurement - previous_measurement) / (data_timestamp - previous_timestamp).total_seconds()
                     # Scaling coefficients yield cm, convert to um
-                    velocity_measurement *= 10e4
-                print(f"{channel_name} velocity {velocity_measurement:.3f}")
+                    velocity_measurement *= 10e3
+
                 scaled_data[channel_name].extend(
                     [
                         physical_measurement,
