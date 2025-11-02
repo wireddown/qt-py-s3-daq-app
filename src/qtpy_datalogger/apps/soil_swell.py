@@ -559,6 +559,7 @@ class RawDataProcessor:
         self._lvdt_position_columns = []
         self._lvdt_displacement_columns = []
         self._lvdt_velocity_columns = []
+        self._lvdt_average_velocity_columns = []
         self._relative_time_column = "relative_time_minutes"
         self._build_column_information()
 
@@ -593,6 +594,11 @@ class RawDataProcessor:
         return self._lvdt_velocity_columns
 
     @property
+    def lvdt_average_velocity_columns(self) -> list[str]:
+        """Return the names of the columns that hold the LVDT average velocity measurements."""
+        return self._lvdt_average_velocity_columns
+
+    @property
     def temperature_column(self) -> str:
         """Return the name of the column that holds the temperature."""
         return self._temperature_column
@@ -613,7 +619,7 @@ class RawDataProcessor:
         return [
             self.relative_time_column,
             *self.lvdt_position_columns,
-            *self.lvdt_velocity_columns,
+            *self.lvdt_average_velocity_columns,
             self.g_level_column,
         ]
 
@@ -640,9 +646,11 @@ class RawDataProcessor:
                     lvdt_position_column = f"lvdt{index+1}_position_{sensor_units}"  # 6 LVDTs, index them starting at 1
                     lvdt_displacement_column = f"lvdt{index+1}_displacement_{sensor_units}"
                     lvdt_velocity_column = f"lvdt{index+1}_velocity_um_per_second"
+                    lvdt_average_velocity_column = f"lvdt{index+1}_average_velocity_um_per_second"
                     self._lvdt_position_columns.append(lvdt_position_column)
                     self._lvdt_displacement_columns.append(lvdt_displacement_column)
                     self._lvdt_velocity_columns.append(lvdt_velocity_column)
+                    self._lvdt_average_velocity_columns.append(lvdt_average_velocity_column)
                     self._frame_columns.extend(
                         [
                             f"{channel_name}_average_code",
@@ -650,6 +658,7 @@ class RawDataProcessor:
                             lvdt_position_column,
                             lvdt_displacement_column,
                             lvdt_velocity_column,
+                            lvdt_average_velocity_column,
                         ]
                     )
                 case 6:
@@ -762,16 +771,21 @@ class RawDataProcessor:
                     previous_measurement = physical_measurement
                 if previous_timestamp == data_timestamp:
                     velocity_measurement = 0.0
+                    velocity_average = 0.0
                 else:
                     velocity_measurement = (physical_measurement - previous_measurement) / (data_timestamp - previous_timestamp).total_seconds()
                     # Scaling coefficients yield cm, convert to um
                     velocity_measurement *= 10e3
-
+                    previous_velocities = previous_rows[(data_timestamp - previous_rows["timestamp"] < pd.Timedelta(minutes=10))]
+                    previous_count = len(previous_velocities[self.lvdt_velocity_columns[index]])
+                    previous_total = previous_velocities[self.lvdt_velocity_columns[index]].sum()
+                    velocity_average = (velocity_measurement + previous_total) / (1 + previous_count)
                 scaled_data[channel_name].extend(
                     [
                         physical_measurement,
                         physical_measurement - first_measurement,
                         velocity_measurement,
+                        velocity_average,
                     ]
                 )
             elif channel_name == "A6":
@@ -1813,7 +1827,7 @@ class SoilSwell(gk.AsyncWindow):
         self.displacement_axes.set_ylim(ymin=-2.6, ymax=2.6)
         self.displacement_axes.yaxis.set_major_formatter("{x:.2f}")
 
-        self.velocity_label = self.velocity_axes.set_ylabel("Velocity (um/s)", picker=True)
+        self.velocity_label = self.velocity_axes.set_ylabel("Average velocity (μm/s)", picker=True)
         self.velocity_axes.set_ylim(ymin=-5, ymax=5)
         self.velocity_axes.yaxis.set_major_formatter("{x:.2e}")
 
@@ -2645,7 +2659,7 @@ class SoilSwell(gk.AsyncWindow):
 
         position_frame = all_data[self.data_processor.lvdt_position_columns]
         displacement_frame = all_data[self.data_processor.lvdt_displacement_columns]
-        velocity_frame = all_data[self.data_processor.lvdt_velocity_columns]
+        velocity_frame = all_data[self.data_processor.lvdt_average_velocity_columns]
         temperature_frame = all_data[[self.data_processor.temperature_column]]
         battery_frame = all_data[[self.data_processor.battery_column]]
         g_level_frame = all_data[[self.data_processor.g_level_column]]
