@@ -18,6 +18,7 @@ from enum import StrEnum
 from tkinter import filedialog, font
 
 import matplotlib.figure as mpl_figure
+import numpy as np
 import pandas as pd
 import ttkbootstrap as ttk
 import ttkbootstrap.dialogs as ttk_dialogs
@@ -843,7 +844,8 @@ class DataViewer(guikit.AsyncWindow):
         # Assume table format, with time in first column and data in subsequent columns
         data_file_df = self.state.get_data()
         time_index = data_file_df[data_file_df.columns[0]]
-        if not isinstance(time_index.dtype, pd.Float64Dtype):
+        time_dtypes = [float, np.dtypes.Float64DType]
+        if time_index.dtype not in time_dtypes:
             time_stamps = pd.to_datetime(time_index)
             first_time = time_stamps[0]
             time_differences = time_stamps - first_time
