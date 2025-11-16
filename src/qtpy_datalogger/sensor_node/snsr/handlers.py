@@ -29,6 +29,10 @@ def handle_broadcast_message(client: minimqtt.MQTT, message: str) -> None:
     action = action_payload.action
     if action.command == "identify":
         handle_identify(client, action)
+        return
+
+    # Fallback: forward to node as a command
+    handle_command_message(client, message)
 
 
 def handle_identify(client: minimqtt.MQTT, action: ActionInformation) -> None:
