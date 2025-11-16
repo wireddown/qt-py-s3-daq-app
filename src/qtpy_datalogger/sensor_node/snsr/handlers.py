@@ -49,6 +49,7 @@ def handle_identify(client: minimqtt.MQTT, action: ActionInformation) -> None:
 def handle_command_message(client: minimqtt.MQTT, message: str) -> None:
     """Respond to a message sent to the command topic for the node."""
     from json import dumps, loads
+    from time import sleep
 
     if not message:
         return
@@ -61,16 +62,23 @@ def handle_command_message(client: minimqtt.MQTT, message: str) -> None:
     action_information = action_payload.action
 
     result_information = try_handle_qtpycmd_message(action_information)
+    snsr_app_name = ""
+    app_context = {}
     if not result_information:
         snsr_app_name = action_information.command.split(" ")[0]
+        app_context = apps.get_context(snsr_app_name)
         handle_message = apps.get_handler(snsr_app_name)
-        result_information = handle_message(action_information)
+        result_information = handle_message(action_information, app_context)
 
     descriptor_topic = get_descriptor_topic(node_context["node_group"], node_context["node_identifier"])
     sender = build_sender_information(descriptor_topic)
     result_payload = ActionPayload(action=result_information, sender=sender)
     result_topic = get_result_topic(node_context["node_group"], node_context["node_identifier"])
     client.publish(result_topic, dumps(result_payload.as_dict()))
+    sleep(0.2)  # Allow the backend to send the message
+
+    did_handle_message = apps.get_handler_completion(snsr_app_name)
+    did_handle_message(action_information, app_context)
 
 
 def try_handle_qtpycmd_message(action_information: ActionInformation) -> ActionInformation | None:

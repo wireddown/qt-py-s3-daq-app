@@ -3,7 +3,7 @@
 from snsr.node.classes import ActionInformation
 
 
-def handle_message(received_action: ActionInformation) -> ActionInformation:
+def handle_message(received_action: ActionInformation, context: dict) -> ActionInformation:
     """Handle a received action from the controlling host."""
     response_action = ActionInformation(
         command=received_action.command,
@@ -14,3 +14,7 @@ def handle_message(received_action: ActionInformation) -> ActionInformation:
         message_id=received_action.message_id,
     )
     return response_action
+
+
+def did_handle_message(received_action: ActionInformation, context: dict) -> None:
+    """Update the node after handling a message."""

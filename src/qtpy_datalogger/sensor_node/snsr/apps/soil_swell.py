@@ -9,10 +9,11 @@ import board
 import busio
 
 from snsr.node.classes import ActionInformation
+from snsr.core import sleep_and_restart
 from snsr.settings import settings
 
 
-def handle_message(received_action: ActionInformation) -> ActionInformation:
+def handle_message(received_action: ActionInformation, context: dict) -> ActionInformation:
     """Handle a received action from the controlling host."""
     command = received_action.command.split(" ")[1]
     if command == "scan":
@@ -36,7 +37,20 @@ def handle_message(received_action: ActionInformation) -> ActionInformation:
         return response_action
     from . import echo
 
-    return echo.handle_message(received_action)
+    return echo.handle_message(received_action, context)
+
+
+def did_handle_message(received_action: ActionInformation, context: dict) -> None:
+    """Update the node after handling a message."""
+    command = received_action.command.split(" ")[1]
+    if command == "scan":
+        parameters = received_action.parameters
+        interval_seconds = parameters.get("interval_seconds", 0.1)
+        context["next_scan_time_monotonic"] = time.monotonic() + interval_seconds
+        if interval_seconds < 60:
+            return
+        sleep_seconds = interval_seconds - 14.82  # Measured boot time
+        sleep_and_restart(sleep_seconds)
 
 
 def do_analog_scan(channels: list[str], count: int) -> list[float]:

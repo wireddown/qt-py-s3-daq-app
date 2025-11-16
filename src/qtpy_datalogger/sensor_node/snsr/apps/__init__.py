@@ -29,3 +29,16 @@ def get_handler(snsr_app_name: str) -> object:
     from . import echo
 
     return echo.handle_message
+
+
+def get_handler_completion(snsr_app_name: str) -> object:
+    """Return the completion that matches snsr_app_name."""
+    if snsr_app_name == "soil_swell":
+        from .soil_swell import did_handle_message
+
+        return did_handle_message
+
+    # Fallback to echo app handler
+    from . import echo
+
+    return echo.did_handle_message
