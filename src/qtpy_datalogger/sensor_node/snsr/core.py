@@ -119,3 +119,13 @@ def blink_neopixel(pixel) -> None:
     pixel.fill((231, 245, 39))
     pixel.show()
     sleep(0.2)
+
+
+def sleep_and_restart(seconds: float) -> None:
+    """Enter deep sleep for the specified time and restart the node."""
+    from time import monotonic
+
+    import alarm
+
+    time_alarm = alarm.time.TimeAlarm(monotonic_time=monotonic() + seconds)
+    alarm.exit_and_deep_sleep_until_alarms(time_alarm)
