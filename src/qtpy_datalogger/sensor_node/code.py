@@ -5,6 +5,7 @@ from time import monotonic, sleep
 from traceback import print_exception
 
 from microcontroller import cpu
+from snsr import apps
 from snsr.core import get_memory_info, get_neopixel, blink_neopixel, paint_uart_line, read_one_uart_line
 from snsr.rxtx import connect_and_subscribe, connect_to_wifi, create_mqtt_client, unsubscribe_and_disconnect
 from snsr.settings import settings
@@ -32,6 +33,10 @@ def main_loop() -> str:
         uptime = monotonic() - settings.boot_time
         paint_uart_line(f"  {uptime:>12.3f}    Poll UART     [ Poll MQTT ]     ")
         mqtt_client.loop()
+        for app_name in settings.apps:
+            app_context = apps.get_context(app_name)
+            app_main = apps.get_main(app_name)
+            app_main(mqtt_client, app_context)
 
         uptime = monotonic() - settings.boot_time
         paint_uart_line(f"  {uptime:>12.3f}  [ Poll UART ]     Poll MQTT       ")

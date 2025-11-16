@@ -18,6 +18,19 @@ def get_context(snsr_app_name: str) -> dict:
     return context
 
 
+def get_main(snsr_app_name: str) -> object:
+    """Return the main function that matches snsr_app_name."""
+    if snsr_app_name == "soil_swell":
+        from .soil_swell import main
+
+        return main
+
+    # Fallback to echo app handler
+    from . import echo
+
+    return echo.main
+
+
 def get_handler(snsr_app_name: str) -> object:
     """Return the handler that matches snsr_app_name."""
     if snsr_app_name == "soil_swell":

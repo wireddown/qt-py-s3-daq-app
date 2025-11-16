@@ -4,13 +4,23 @@ import struct
 import time
 
 import adafruit_adxl37x
+import adafruit_minimqtt.adafruit_minimqtt as minimqtt
 import analogio
 import board
 import busio
 
-from snsr.node.classes import ActionInformation
 from snsr.core import sleep_and_restart
+from snsr.node.classes import ActionInformation
 from snsr.settings import settings
+
+
+def main(client: minimqtt.MQTT, context: dict) -> None:
+    """Update the app's state from the main loop."""
+    if "next_scan_time_monotonic" not in context:
+        return
+    if time.monotonic() > context["next_scan_time_monotonic"]:
+        client.unsubscribe(f"qtpy/v1/{settings.node_group}/broadcast")
+        client.subscribe(f"qtpy/v1/{settings.node_group}/broadcast")
 
 
 def handle_message(received_action: ActionInformation, context: dict) -> ActionInformation:
