@@ -32,6 +32,7 @@ class Settings:
         """Initialize the read-write settings."""
         self._selected_app = "echo"
         self._boot_time = -1.0
+        self._apps = {}
 
     @property
     def wifi_ssid(self) -> str:
@@ -67,6 +68,11 @@ class Settings:
     def boot_time(self, new_boot_time: float) -> None:
         """Set a new value for the node's boot time."""
         self._boot_time = new_boot_time
+
+    @property
+    def apps(self) -> dict[str, dict[str, object]]:
+        """Return a dictionary of apps and their runtime contexts."""
+        return self._apps
 
     @property
     def stemma_xl3d(self) -> adafruit_adxl37x.ADXL375:
