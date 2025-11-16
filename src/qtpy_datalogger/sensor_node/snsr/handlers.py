@@ -19,7 +19,12 @@ def handle_broadcast_message(client: minimqtt.MQTT, message: str) -> None:
     """Respond to a message sent to the broadcast topic for the node's group."""
     from json import loads
 
-    action_payload_information = loads(message)
+    if not message:
+        return
+    try:
+        action_payload_information = loads(message)
+    except ValueError:
+        return
     action_payload = ActionPayload.from_dict(action_payload_information)
     action = action_payload.action
     if action.command == "identify":
@@ -41,8 +46,13 @@ def handle_command_message(client: minimqtt.MQTT, message: str) -> None:
     """Respond to a message sent to the command topic for the node."""
     from json import dumps, loads
 
-    context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
-    action_payload_information = loads(message)
+    if not message:
+        return
+    try:
+        action_payload_information = loads(message)
+    except ValueError:
+        return
+    node_context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
     action_payload = ActionPayload.from_dict(action_payload_information)
     action_information = action_payload.action
 
@@ -52,10 +62,10 @@ def handle_command_message(client: minimqtt.MQTT, message: str) -> None:
         handle_message = apps.get_handler(snsr_app_name)
         result_information = handle_message(action_information)
 
-    descriptor_topic = get_descriptor_topic(context["node_group"], context["node_identifier"])
+    descriptor_topic = get_descriptor_topic(node_context["node_group"], node_context["node_identifier"])
     sender = build_sender_information(descriptor_topic)
     result_payload = ActionPayload(action=result_information, sender=sender)
-    result_topic = get_result_topic(context["node_group"], context["node_identifier"])
+    result_topic = get_result_topic(node_context["node_group"], node_context["node_identifier"])
     client.publish(result_topic, dumps(result_payload.as_dict()))
 
 
