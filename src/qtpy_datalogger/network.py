@@ -218,7 +218,7 @@ class QTPyController:
                     payload = node_classes.ActionPayload.from_dict(response)
                     sending_node = node_mqtt.node_from_topic(payload.sender.descriptor_topic)
                     result_id = payload.action.message_id
-                    if sending_node == node_id and result_id == action_id:
+                    if node_id in (sending_node, "+") and result_id == action_id:
                         logger.debug(f"Matched result '{payload.action.parameters}'")
                         parameters_and_sender = (payload.action.parameters, payload.sender)
                     else:
@@ -229,6 +229,18 @@ class QTPyController:
         for other_message in other_messages:
             self._requeue_or_discard(other_message)
         return parameters_and_sender
+
+    def post_retained_group_action(self, action: node_classes.ActionInformation) -> None:
+        """Publish an action to the group's broadcast topic and retain it."""
+        action_payload = node_classes.ActionPayload(
+            action=action,
+            sender=_build_sender_information(self.descriptor_topic),
+        )
+        self.client.publish(self.broadcast_topic, json.dumps(action_payload.as_dict()), retain=True)
+
+    def clear_retained_group_action(self) -> None:
+        """Remove the retained action on the group's broadcast topic."""
+        self.client.publish(self.broadcast_topic, "", retain=True)
 
     async def disconnect(self) -> None:
         """Disconnect from the MQTT broker."""
