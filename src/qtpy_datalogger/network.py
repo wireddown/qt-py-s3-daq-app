@@ -177,7 +177,7 @@ class QTPyController:
         }
         return node_information
 
-    async def send_action(self, node_id: str, command_name: str, parameters: dict) -> node_classes.ActionInformation:
+    def send_action(self, node_id: str, command_name: str, parameters: dict) -> node_classes.ActionInformation:
         """
         Send a command with the specified parameters to the node in the group with node_id and return the sent ActionInformation.
 
@@ -400,7 +400,7 @@ async def _open_session_on_node(group_id: str, node_id: str) -> None:
         custom_parameters = {
             "input": user_input,
         }
-        sent_action = await controller.send_action(node_id, command_name, custom_parameters)
+        sent_action = controller.send_action(node_id, command_name, custom_parameters)
 
         response_complete = False
         while not response_complete:
