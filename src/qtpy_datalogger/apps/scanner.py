@@ -445,7 +445,7 @@ class ScannerApp(guikit.AsyncWindow):
             received_emoji = ttk_icons.Emoji.get("leftwards black arrow")
             status_emoji = ttk_icons.Emoji.get("white large square")
             self.append_text_to_log(f"{sent_emoji} {message}\n")
-            sent_action = await controller.send_action(qtpy_device.node_id, command_name, custom_parameters)
+            sent_action = controller.send_action(qtpy_device.node_id, command_name, custom_parameters)
             response_complete = False
             new_status_message = "Communication successful."
             new_status_style = bootstyle.SUCCESS

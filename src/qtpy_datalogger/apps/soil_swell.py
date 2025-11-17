@@ -2481,7 +2481,7 @@ class SoilSwell(gk.AsyncWindow):
             raise RuntimeError()
         node = self.nodes_in_group[0]
         node_id = node.node_id
-        get_apps_command = await self.qtpy_controller.send_action(
+        get_apps_command = self.qtpy_controller.send_action(
             node_id=node_id,
             command_name="custom",
             parameters={
@@ -2592,7 +2592,7 @@ class SoilSwell(gk.AsyncWindow):
 
             node = self.nodes_in_group[0]
             node_id = node.node_id
-            do_read_input = await self.qtpy_controller.send_action(
+            do_read_input = self.qtpy_controller.send_action(
                 node_id=node_id,
                 command_name=f"{self.snsr_app_name} scan",
                 parameters={
