@@ -4,7 +4,6 @@ import struct
 import time
 
 import adafruit_adxl37x
-import adafruit_minimqtt.adafruit_minimqtt as minimqtt
 import analogio
 import board
 import busio
@@ -14,16 +13,7 @@ from snsr.node.classes import ActionInformation
 from snsr.settings import settings
 
 
-def main(client: minimqtt.MQTT, context: dict) -> None:
-    """Update the app's state from the main loop."""
-    if "next_scan_time_monotonic" not in context:
-        return
-    if time.monotonic() > context["next_scan_time_monotonic"]:
-        client.unsubscribe(f"qtpy/v1/{settings.node_group}/broadcast")
-        client.subscribe(f"qtpy/v1/{settings.node_group}/broadcast")
-
-
-def handle_message(received_action: ActionInformation, context: dict) -> ActionInformation:
+def handle_message(received_action: ActionInformation) -> ActionInformation:
     """Handle a received action from the controlling host."""
     command = received_action.command.split(" ")[1]
     if command == "scan":
@@ -47,19 +37,20 @@ def handle_message(received_action: ActionInformation, context: dict) -> ActionI
         return response_action
     from . import echo
 
-    return echo.handle_message(received_action, context)
+    return echo.handle_message(received_action)
 
 
-def did_handle_message(received_action: ActionInformation, context: dict) -> None:
+def did_handle_message(received_action: ActionInformation) -> None:
     """Update the node after handling a message."""
     command = received_action.command.split(" ")[1]
     if command == "scan":
         parameters = received_action.parameters
-        interval_seconds = parameters.get("interval_seconds", 0.1)
-        context["next_scan_time_monotonic"] = time.monotonic() + interval_seconds
-        if interval_seconds < 60:
+        if "interval_seconds" not in parameters:
             return
-        sleep_seconds = interval_seconds - 14.82  # Measured boot time
+        interval_seconds = parameters["interval_seconds"]
+        if interval_seconds < 20:
+            return
+        sleep_seconds = interval_seconds - 10.94  # Measured boot time
         sleep_and_restart(sleep_seconds)
 
 

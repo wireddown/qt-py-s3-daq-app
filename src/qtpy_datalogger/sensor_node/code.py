@@ -28,18 +28,19 @@ def main_loop() -> str:
 
     response = ""
     while response.lower() not in ["exit", "quit"]:
-        uptime = monotonic() - settings.boot_time
-        paint_uart_line(f"  {uptime:>12.3f}    Poll UART     [ Poll MQTT ]     ")
-        mqtt_client.loop()
-        for app_name in settings.apps:
-            app_context = apps.get_context(app_name)
-            app_main = apps.get_main(app_name)
-            app_main(mqtt_client, app_context)
+        if runtime.usb_connected and runtime.serial_connected:
+            uptime = monotonic() - settings.boot_time
+            paint_uart_line(f"  {uptime:>12.3f}    Poll UART     [ Poll MQTT ]     ")
+        did_receive = mqtt_client.loop(timeout=1.0)  # Smallest supported timeout
+        if not (did_receive or runtime.serial_connected):
+            sleep(4)  # Conserve battery by not constantly polling the network
 
-        uptime = monotonic() - settings.boot_time
-        paint_uart_line(f"  {uptime:>12.3f}  [ Poll UART ]     Poll MQTT       ")
-        sleep(0.2)
-        if runtime.usb_connected and runtime.serial_connected and runtime.serial_bytes_available > 0:
+        if runtime.usb_connected and runtime.serial_connected:
+            uptime = monotonic() - settings.boot_time
+            paint_uart_line(f"  {uptime:>12.3f}  [ Poll UART ]     Poll MQTT       ")
+            sleep(0.2)
+            if not runtime.serial_bytes_available:
+                continue
             print()  # noqa: T201 -- use direct IO for user REPL
             response = read_one_uart_line()
             if not response:

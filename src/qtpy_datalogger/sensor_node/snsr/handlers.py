@@ -63,12 +63,10 @@ def handle_command_message(client: minimqtt.MQTT, message: str) -> None:
 
     result_information = try_handle_qtpycmd_message(action_information)
     snsr_app_name = ""
-    app_context = {}
     if not result_information:
         snsr_app_name = action_information.command.split(" ")[0]
-        app_context = apps.get_context(snsr_app_name)
         handle_message = apps.get_handler(snsr_app_name)
-        result_information = handle_message(action_information, app_context)
+        result_information = handle_message(action_information)
 
     descriptor_topic = get_descriptor_topic(node_context["node_group"], node_context["node_identifier"])
     sender = build_sender_information(descriptor_topic)
@@ -78,7 +76,7 @@ def handle_command_message(client: minimqtt.MQTT, message: str) -> None:
     sleep(0.2)  # Allow the backend to send the message
 
     did_handle_message = apps.get_handler_completion(snsr_app_name)
-    did_handle_message(action_information, app_context)
+    did_handle_message(action_information)
 
 
 def try_handle_qtpycmd_message(action_information: ActionInformation) -> ActionInformation | None:

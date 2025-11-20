@@ -10,27 +10,6 @@ def get_catalog() -> list[str]:
     return apps
 
 
-def get_context(snsr_app_name: str) -> dict:
-    """Return the runtime context that matches snsr_app_name."""
-    from snsr.settings import settings
-
-    context = settings.apps.setdefault(snsr_app_name, {})
-    return context
-
-
-def get_main(snsr_app_name: str) -> object:
-    """Return the main function that matches snsr_app_name."""
-    if snsr_app_name == "soil_swell":
-        from .soil_swell import main
-
-        return main
-
-    # Fallback to echo app handler
-    from . import echo
-
-    return echo.main
-
-
 def get_handler(snsr_app_name: str) -> object:
     """Return the handler that matches snsr_app_name."""
     if snsr_app_name == "soil_swell":
