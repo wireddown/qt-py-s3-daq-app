@@ -32,6 +32,8 @@ from ttkbootstrap import constants as bootstyle
 import qtpy_datalogger.apps.scanner
 from qtpy_datalogger import datatypes, discovery, network, ttkbootstrap_matplotlib
 from qtpy_datalogger import guikit as gk
+from qtpy_datalogger.sensor_node.snsr.node import classes as node_classes
+from qtpy_datalogger.sensor_node.snsr.node import mqtt as node_mqtt
 
 logger = logging.getLogger(pathlib.Path(__file__).stem)
 
@@ -1393,6 +1395,8 @@ class SoilSwell(gk.AsyncWindow):
         self.data_processor = RawDataProcessor()
         self.state = AppState(self.root_window, self.data_processor)
         self.background_tasks: set[asyncio.Task] = set()
+        self.retained_acquire_action: node_classes.ActionInformation | None = None
+        self.polling_for_acquire_action = False
 
         # The MQTT connection
         self.qtpy_controller: network.QTPyController | None = None
@@ -1842,6 +1846,7 @@ class SoilSwell(gk.AsyncWindow):
         await asyncio.sleep(1e-6)
 
         self.poll_acquire()
+        await self.poll_messages()
 
         done_tasks = [task for task in self.background_tasks if task.done()]
         for done_task in done_tasks:
@@ -2276,6 +2281,8 @@ class SoilSwell(gk.AsyncWindow):
         """Handle the SampleRateChanged event."""
         new_rate = self.state.sample_rate
         self.sample_rate_variable.set(new_rate)
+        if self.state.acquire_active == Tristate.BoolTrue:
+            self.post_acquire_action(new_rate)
 
     def handle_acquire(self, sender: tk.Widget) -> None:
         """Handle the Acquire command."""
@@ -2311,31 +2318,34 @@ class SoilSwell(gk.AsyncWindow):
                     except ConnectionRefusedError:
                         await self.on_server_offline()
                         return
-                    nodes_in_group = await self.qtpy_controller.scan_for_nodes()
-                    if not nodes_in_group:
-                        await self.on_no_nodes_in_group()
-                        return
-                    self.nodes_in_group.clear()
-                    self.nodes_in_group = [
-                        discovery.QTPyDevice(
-                            com_id="",
-                            com_port="",
-                            device_description=sensor_node[datatypes.DetailKey.device_description],
-                            drive_label="",
-                            drive_root="",
-                            ip_address=sensor_node[datatypes.DetailKey.ip_address],
-                            mqtt_group_id=sensor_node[datatypes.DetailKey.mqtt_group_id],
-                            node_id=sensor_node[datatypes.DetailKey.node_id],
-                            python_implementation=sensor_node[datatypes.DetailKey.python_implementation],
-                            serial_number=sensor_node[datatypes.DetailKey.serial_number],
-                            snsr_version=sensor_node[datatypes.DetailKey.snsr_version],
-                        )
-                        for sensor_node in nodes_in_group.values()
-                    ]
-                    nodes_support_app = await self.confirm_app_support()
-                    if not nodes_support_app:
-                        await self.on_app_unsupported()
-                        return
+                    # Remove this to allow for sleeping nodes
+                    # nodes_in_group = await self.qtpy_controller.scan_for_nodes()
+                    # if not nodes_in_group:
+                    #     await self.on_no_nodes_in_group()
+                    #     return
+                    # self.nodes_in_group.clear()
+                    # self.nodes_in_group = [
+                    #     discovery.QTPyDevice(
+                    #         com_id="",
+                    #         com_port="",
+                    #         device_description=sensor_node[datatypes.DetailKey.device_description],
+                    #         drive_label="",
+                    #         drive_root="",
+                    #         ip_address=sensor_node[datatypes.DetailKey.ip_address],
+                    #         mqtt_group_id=sensor_node[datatypes.DetailKey.mqtt_group_id],
+                    #         node_id=sensor_node[datatypes.DetailKey.node_id],
+                    #         python_implementation=sensor_node[datatypes.DetailKey.python_implementation],
+                    #         serial_number=sensor_node[datatypes.DetailKey.serial_number],
+                    #         snsr_version=sensor_node[datatypes.DetailKey.snsr_version],
+                    #     )
+                    #     for sensor_node in nodes_in_group.values()
+                    # ]
+                    # Remove this to allow for sleeping nodes
+                    # nodes_support_app = await self.confirm_app_support()
+                    # if not nodes_support_app:
+                    #     await self.on_app_unsupported()
+                    #     return
+                    self.post_acquire_action(self.state.sample_rate)
                     self.state.acquire_active = Tristate.BoolTrue
 
                 try_start_task = asyncio.create_task(try_start_acquire(), name="try start new acquisition")
@@ -2361,6 +2371,9 @@ class SoilSwell(gk.AsyncWindow):
                         """Disconnect from the MQTT server."""
                         if not self.qtpy_controller:
                             raise RuntimeError()
+                        self.qtpy_controller.clear_retained_group_action()
+                        self.retained_acquire_action = None
+                        self.polling_for_acquire_action = False
                         await self.qtpy_controller.disconnect()
                         self.qtpy_controller = None
                         self.nodes_in_group.clear()
@@ -2542,9 +2555,53 @@ class SoilSwell(gk.AsyncWindow):
             bootstyle=bootstyle.DANGER,
         )
 
+    def post_acquire_action(self, sample_rate: SampleRate) -> None:
+        """Post a new acquire action message to the group."""
+        if not self.qtpy_controller:
+            return
+        sample_intervals = {
+            SampleRate.Live: datetime.timedelta(seconds=0.1),
+            SampleRate.Fast: datetime.timedelta(seconds=15),
+            SampleRate.Normal: datetime.timedelta(seconds=60),
+            SampleRate.Slow: datetime.timedelta(minutes=3),
+        }
+        interval_seconds = sample_intervals[sample_rate].total_seconds()
+        action = node_classes.ActionInformation(
+            command=f"{self.snsr_app_name} scan",
+            parameters={
+                "channels": self.state.channels,
+                "samples_to_average": 50,
+                "xl3d_offset": (0, 0, 0),
+                "interval_seconds": interval_seconds,
+            },
+            message_id="retained-acquire",
+        )
+        self.retained_acquire_action = action
+        self.polling_for_acquire_action = True
+        self.qtpy_controller.post_retained_group_action(action)
+
+    async def poll_messages(self) -> None:
+        """Check the MQTT message queue for new messages and dispatch their handlers."""
+        if not (self.qtpy_controller and self.retained_acquire_action):
+            return
+        try:
+            result, sender = await self.qtpy_controller.get_matching_result(
+                node_id="+",
+                action=self.retained_acquire_action,
+                timeout=0,
+            )
+        except TimeoutError:
+            return
+        if sender.descriptor_topic == self.qtpy_controller.descriptor_topic:
+            return
+        node_id = node_mqtt.node_from_topic(sender.descriptor_topic)
+        sensor_codes = result["output"]
+        self.state.process_new_data(node_id, sensor_codes)
+        self.polling_for_acquire_action = False
+
     def poll_acquire(self) -> None:
         """Check conditions for acquisition and take a new scan accordingly."""
-        if self.state.acquire_active != Tristate.BoolTrue:
+        if self.state.acquire_active != Tristate.BoolTrue or self.polling_for_acquire_action:
             return
         now = datetime.datetime.now(tz=datetime.UTC)
         sample_intervals = {
@@ -2554,12 +2611,14 @@ class SoilSwell(gk.AsyncWindow):
             SampleRate.Slow: datetime.timedelta(minutes=3),
         }
         sample_interval_elapsed = self.state.most_recent_timestamp + sample_intervals[self.state.sample_rate] < now
-        do_acquire_task_name = "do acquire"
-        node_handling_command = do_acquire_task_name in [task.get_name() for task in self.background_tasks]
-        if sample_interval_elapsed and not node_handling_command:
-            do_acquire_task = asyncio.create_task(self.do_acquire(), name=do_acquire_task_name)
-            self.background_tasks.add(do_acquire_task)
-            do_acquire_task.add_done_callback(self.background_tasks.discard)
+        # do_acquire_task_name = "do acquire"
+        # node_handling_command = do_acquire_task_name in [task.get_name() for task in self.background_tasks]
+        # if sample_interval_elapsed and not node_handling_command:
+            # do_acquire_task = asyncio.create_task(self.do_acquire(), name=do_acquire_task_name)
+            # self.background_tasks.add(do_acquire_task)
+            # do_acquire_task.add_done_callback(self.background_tasks.discard)
+        if sample_interval_elapsed and sample_intervals[self.state.sample_rate].total_seconds() < 20:
+            self.post_acquire_action(self.state.sample_rate)
 
     async def do_acquire(self) -> None:
         """Acquire data from the nodes in the group and return it."""
