@@ -946,7 +946,7 @@ class AppState:
         self._battery_level = BatteryLevel.Unset
         self._most_recent_timestamp = datetime.datetime.min.replace(tzinfo=datetime.UTC)
         self._acquired_data = pd.DataFrame()
-        self._data_trend_depth = 10
+        self._data_trend_depth = 100
         self._demo_active = False
         self._log_file_path = AppState.canceled_file
         self._index_when_log_enabled = -1
