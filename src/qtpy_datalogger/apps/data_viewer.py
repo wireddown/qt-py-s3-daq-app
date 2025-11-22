@@ -845,7 +845,7 @@ class DataViewer(guikit.AsyncWindow):
         data_file_df = self.state.get_data()
         time_index = data_file_df[data_file_df.columns[0]]
         time_dtypes = [float, np.dtypes.Float64DType]
-        if time_index.dtype not in time_dtypes:
+        if type(time_index.dtype) not in time_dtypes:
             time_stamps = pd.to_datetime(time_index)
             first_time = time_stamps[0]
             time_differences = time_stamps - first_time
