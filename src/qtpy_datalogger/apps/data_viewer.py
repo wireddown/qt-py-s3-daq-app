@@ -864,7 +864,7 @@ class DataViewer(guikit.AsyncWindow):
         else:
             time_coordinates = time_index.to_list()
 
-        measurement_series = data_file_df[data_file_df.columns[1:]]
+        measurement_series = data_file_df[data_file_df.columns[1:]].select_dtypes(include=np.number)
         return time_coordinates, measurement_series  # pyright: ignore reportReturnType
 
 
