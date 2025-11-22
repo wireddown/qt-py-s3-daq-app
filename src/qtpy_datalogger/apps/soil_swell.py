@@ -1897,7 +1897,7 @@ class SoilSwell(gk.AsyncWindow):
             return
 
         file_path = file_path.with_suffix(".csv")
-        self.state.data.to_csv(file_path)
+        self.state.data.to_csv(file_path, index=False)
 
     def open_settings_dialog(self, event_args: tk.Event) -> None:
         """Handle the Settings::AppSettings menu command."""
