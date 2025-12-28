@@ -7,6 +7,7 @@ import adafruit_adxl37x
 import analogio
 import board
 import busio
+import digitalio
 
 from snsr.core import sleep_and_restart
 from snsr.node.classes import ActionInformation
@@ -20,9 +21,15 @@ def handle_message(received_action: ActionInformation) -> ActionInformation:
         parameters = received_action.parameters
         samples_to_average = parameters.get("samples_to_average", 50)
         xl3d_offset = parameters.get("xl3d_offset", (0, 0, 0))
+        lvdt_power = parameters.get("lvdt_power", "always_on")
+        if isinstance(lvdt_power, list):
+            for power_pin in [settings.get_dio_pin(pin_name) for pin_name in lvdt_power]:
+                power_pin.switch_to_output(value=True, drive_mode=digitalio.DriveMode.PUSH_PULL)
 
-        adc_codes = do_analog_scan(channels=[], count=samples_to_average)
+        # Read accelerometer first to let LVDT power settle
         xyz_codes = do_accelerometer_read(hardware_offset=xl3d_offset, count=samples_to_average // 2)
+        adc_codes = do_analog_scan(channels=[], count=samples_to_average)
+
         sensor_readings: list = adc_codes
         sensor_readings.append(xyz_codes)
 
@@ -49,6 +56,10 @@ def did_handle_message(received_action: ActionInformation) -> None:
             return
         interval_seconds = parameters["interval_seconds"]
         if interval_seconds < 20:
+            lvdt_power = parameters.get("lvdt_power", "always_on")
+            if isinstance(lvdt_power, list):
+                for pin_name in lvdt_power:
+                    settings.release_dio_pin(pin_name)
             return
         sleep_seconds = interval_seconds - 10.94  # Measured boot time
         sleep_and_restart(sleep_seconds)

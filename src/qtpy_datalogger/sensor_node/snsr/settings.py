@@ -2,6 +2,7 @@
 
 import adafruit_adxl37x
 import board
+import digitalio
 
 
 class Settings:
@@ -16,6 +17,7 @@ class Settings:
             cls._instance._initialize_from_env()
             cls._instance._initialize_dynamic_settings()
             cls._instance._xl3d_initialized = False
+            cls._instance._dio_pins = {}
         return cls._instance
 
     def _initialize_from_env(self) -> None:
@@ -78,6 +80,19 @@ class Settings:
             self._stemma_xl3d.offset = (0, 0, 0)
             self._xl3d_initialized = True
         return self._stemma_xl3d
+
+    def get_dio_pin(self, pin_name: str) -> digitalio.DigitalInOut:
+        """Initialize the pin instance that matches the board's pin_name."""
+        if pin_name not in self._dio_pins:
+            self._dio_pins[pin_name] = digitalio.DigitalInOut(getattr(board, pin_name))
+        return self._dio_pins[pin_name]
+
+    def release_dio_pin(self, pin_name: str) -> None:
+        """De-initialize the pin instance that matches the board's pin_name."""
+        if pin_name not in self._dio_pins:
+            return
+        self._dio_pins[pin_name].deinit()
+        del self._dio_pins[pin_name]
 
 
 settings = Settings()

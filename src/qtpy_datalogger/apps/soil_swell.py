@@ -2573,6 +2573,7 @@ class SoilSwell(gk.AsyncWindow):
                 "samples_to_average": 50,
                 "xl3d_offset": (0, 0, 0),
                 "interval_seconds": interval_seconds,
+                "lvdt_power": ("D35", "D36", "D37"),
             },
             message_id="retained-acquire",
         )
