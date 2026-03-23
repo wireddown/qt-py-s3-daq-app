@@ -112,7 +112,7 @@ jobs:
 
     - name: Upload source package
       id: upload-source-package
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
         name: qtpy_datalogger-py${{ matrix.python_version }}-${{ runner.os }}-source
         path: dist/*.tar.gz
@@ -120,7 +120,7 @@ jobs:
 
     - name: Upload wheel package
       id: upload-wheel-package
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
         name: qtpy_datalogger-py${{ matrix.python_version }}-${{ runner.os }}-wheel
         path: dist/*.whl
