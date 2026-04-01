@@ -38,14 +38,14 @@ adafruit-circuitpython-busdevice = "*"
 
 [[package]]
 name = "adafruit-circuitpython-adxl37x"
-version = "1.2.4"
+version = "1.2.6"
 description = "A CircuitPython driver for the ADXL37x family of accelerometers"
 optional = false
 python-versions = "*"
 groups = ["circup"]
 files = [
-    {file = "adafruit_circuitpython_adxl37x-1.2.4-py3-none-any.whl", hash = "sha256:21210587c8ed2f848f485fdff1e798d6cf847c3085534e74d32ca8df803b46c8"},
-    {file = "adafruit_circuitpython_adxl37x-1.2.4.tar.gz", hash = "sha256:6bbc11cfadf4bbf1f1108e0e838b4a02c0225c774b1db3cc52a9fcdd8c027799"},
+    {file = "adafruit_circuitpython_adxl37x-1.2.6-py3-none-any.whl", hash = "sha256:79cabe4f49a7ee127514e1709bbf40db4704ebaca7832842426012a95aa51907"},
+    {file = "adafruit_circuitpython_adxl37x-1.2.6.tar.gz", hash = "sha256:8fca7de70a2687b1310b44fb71c9c676095bf61b549860d5fc9649b7ee824c79"},
 ]
 
 [package.dependencies]
@@ -1787,4 +1787,4 @@ tests = ["pytest"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "8017a1a750eb229bed6bf1b18b38e224d38173e92a345c1b5f884ed9ade31cd9"
+content-hash = "815a9be5d52657a75462f9c4ce1a7834afdf63927adaac5a79f25650cf2b255f"
