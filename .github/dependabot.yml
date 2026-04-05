@@ -11,5 +11,8 @@ updates:
     directory: '/'
     schedule:
       interval: 'monthly'
+    cooldown:
+      default-days: 10
     ignore:
-      - dependency-name: "circuitpython-stubs"
+      - dependency-name: 'adafruit-circuitpython-*'
+      - dependency-name: 'circuitpython-stubs'
