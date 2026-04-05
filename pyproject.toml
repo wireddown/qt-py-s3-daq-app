@@ -60,8 +60,10 @@ _generate_notice = "poetry run qtpy-datalogger --verbose --generate-notice ./src
 prebuild_tasks.sequence = ["_generate_notice"]
 prebuild_tasks.help = "[automated] Run the hooks attached to 'poetry build'."
 
-[tool.pytest.ini_options]
-addopts = "--showlocals"
+[tool.pytest]
+addopts = [
+    "--showlocals",
+]
 
 [tool.pyright]
 venvPath = ".venv"
