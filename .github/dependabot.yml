@@ -14,6 +14,6 @@ updates:
     cooldown:
       default-days: 10
     ignore:
-      - dependency-name: "circuitpython-stubs"
-      - dependency-name: "adafruit-circuitpython-adxl37x"
-      - dependency-name: "adafruit-circuitpython-connectionmanager"
+      - dependency-name: 'adafruit-circuitpython-adxl37x'
+      - dependency-name: 'adafruit-circuitpython-connectionmanager'
+      - dependency-name: 'circuitpython-stubs'
