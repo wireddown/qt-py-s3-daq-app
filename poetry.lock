@@ -71,14 +71,14 @@ adafruit-circuitpython-typing = "*"
 
 [[package]]
 name = "adafruit-circuitpython-connectionmanager"
-version = "3.1.4"
+version = "3.1.7"
 description = "A urllib3.poolmanager/urllib3.connectionpool-like library for managing sockets and connections"
 optional = false
 python-versions = "*"
 groups = ["circup"]
 files = [
-    {file = "adafruit_circuitpython_connectionmanager-3.1.4-py3-none-any.whl", hash = "sha256:3b2434edd07c1efed96c799c7883163aa2641823a8609dda77fd8fb4ae3602ca"},
-    {file = "adafruit_circuitpython_connectionmanager-3.1.4.tar.gz", hash = "sha256:b9b3d79a243abee9dd1ddfd0b4d1a7e658635dcd728ba05e00131d9bffdffa8e"},
+    {file = "adafruit_circuitpython_connectionmanager-3.1.7-py3-none-any.whl", hash = "sha256:157e67d927fdee4fdc41ed54e573c86f9b9b2ff4a9ef052b67976a7e7a18bb66"},
+    {file = "adafruit_circuitpython_connectionmanager-3.1.7.tar.gz", hash = "sha256:6da7f2707bfc89e45ceb4f949c330bbe1986dbf79a48f937e021c35d1d969eee"},
 ]
 
 [package.dependencies]
@@ -1798,4 +1798,4 @@ tests = ["pytest"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "352e0dca7e090660d0397e8a0fd0f560c667ee4ed58b460da878e7c29a522a3c"
+content-hash = "bbb9d94422b710e59f0f6d496d4733da50fc5772160f7c84c523f0f5dedf0cad"
