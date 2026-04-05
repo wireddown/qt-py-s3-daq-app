@@ -1362,15 +1362,16 @@ class SoilSwell(gk.AsyncWindow):
             "darkly": "   Darkly",
             "vapor": "  Debug",
         }
-        BATTERY_COUNT = 1
-        # https://www.powerstream.com/AA-tests.htm for 100 mA
-        self.battery_level_for_voltage = {
-            1.40 * BATTERY_COUNT: BatteryLevel.Full,
-            1.30 * BATTERY_COUNT: BatteryLevel.High,
-            1.22 * BATTERY_COUNT: BatteryLevel.Half,
-            1.00 * BATTERY_COUNT: BatteryLevel.Low,
-            -1.0: BatteryLevel.Unset,
+        # Experimental data shows for 4x 1.35V cells (5.4V @full-batt) then 2.1V @sense (4.2V @drained-batt) should be used for Low
+        # - the app uses the **scaled battery voltage** to select the battery level
+        self.battery_level_for_lower_bound_voltage = {
+            2.51: BatteryLevel.Full,
+            2.31: BatteryLevel.High,
+            2.11: BatteryLevel.Half,
+            0.01: BatteryLevel.Low,
+            -1e3: BatteryLevel.Unset,
         }
+
         self.tooltip_message_for_battery_level = {
             BatteryLevel.Unset: "The battery doesn't have a level",
             BatteryLevel.Unknown: "The battery's level is unknown",
@@ -2726,7 +2727,7 @@ class SoilSwell(gk.AsyncWindow):
 
         # Consider using a running average of N samples to mimic hysteresis
         battery_voltage = battery_frame.to_numpy()[-1][0]
-        new_battery_level = get_first_in_range(battery_voltage, self.battery_level_for_voltage)
+        new_battery_level = get_first_in_range(battery_voltage, self.battery_level_for_lower_bound_voltage)
         self.state.battery_voltage = battery_voltage
         self.state.battery_level = new_battery_level
 
