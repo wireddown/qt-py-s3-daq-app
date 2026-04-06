@@ -178,7 +178,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.selected_node_combobox = ttk.Combobox(
             selection_status_frame,
             width=20,
-            state=ttk.READONLY,
+            state=bootstyle.READONLY,
         )
         self.selected_node_combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected)
         self.selected_node_combobox.pack(side=tk.LEFT, padx=(8, 0))
@@ -282,7 +282,7 @@ class ScannerApp(guikit.AsyncWindow):
         if selected_device:
             selected_resource_name = selected_device.node_id if selected_device.node_id else selected_device.com_port
         self.selected_node_combobox.set(selected_resource_name)
-        self.selected_node_combobox.configure(state=ttk.READONLY)
+        self.selected_node_combobox.configure(state=bootstyle.READONLY)
         self.selected_node_combobox.selection_clear()
 
         self.refresh_send_message_button()
@@ -339,12 +339,12 @@ class ScannerApp(guikit.AsyncWindow):
                     node_resource_names.append(resource_name)
             self.selected_node_combobox.configure(state=tk.NORMAL)  # Set to enabled to update its state
             self.selected_node_combobox["values"] = sorted([*none_choice, *node_resource_names])
-            self.selected_node_combobox.configure(state=ttk.READONLY)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+            self.selected_node_combobox.configure(state=bootstyle.READONLY)
         else:
             self.selected_node_combobox.configure(state=tk.NORMAL)  # Set to enabled to update its state
             self.selected_node_combobox["values"] = none_choice
             self.selected_node_combobox.current(0)
-            self.selected_node_combobox.configure(state=tk.DISABLED, bootstyle=bootstyle.DEFAULT)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+            self.selected_node_combobox.configure(state=tk.DISABLED, bootstyle=bootstyle.DEFAULT)
         self.selected_node_combobox.selection_clear()  # Deselect the text in the combobox
 
     def refresh_send_message_button(self) -> None:

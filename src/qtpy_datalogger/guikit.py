@@ -222,7 +222,7 @@ def create_theme_combobox(parent: tk.BaseWidget) -> ttk.Combobox:
         values=sorted_by_kind,
     )
     theme_combobox.set(active_theme.name.capitalize())
-    theme_combobox.configure(state=ttk.READONLY)
+    theme_combobox.configure(state=bootstyle.READONLY)
     theme_combobox.selection_clear()
 
     def handle_change_theme(event_args: tk.Event) -> None:
@@ -232,7 +232,7 @@ def create_theme_combobox(parent: tk.BaseWidget) -> ttk.Combobox:
         style = ttk.Style.get_instance()
         if not style:
             raise ValueError()
-        sending_combobox.configure(state=ttk.READONLY)
+        sending_combobox.configure(state=bootstyle.READONLY)
         sending_combobox.selection_clear()
         style.theme_use(theme_name)
 
