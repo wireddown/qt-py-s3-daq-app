@@ -123,7 +123,7 @@ class AboutDialog(ttk_dialogs.Dialog):
         """Initialize a new AboutDialog instance."""
         super().__init__(parent, title, alert=False)
 
-    def create_body(self, master: tk.Widget) -> None:  # noqa: PLR0915 -- allow long function to create the UI
+    def create_body(self, master: tk.Misc) -> None:  # noqa: PLR0915 -- allow long function to create the UI
         """Create the UI for the dialog."""
         master.columnconfigure(0, weight=1)
         master.rowconfigure(0, weight=1)
@@ -198,7 +198,7 @@ class AboutDialog(ttk_dialogs.Dialog):
         )
         source_button.grid(column=5, row=5, sticky=tk.W, pady=(22, 0))
 
-    def create_buttonbox(self, master: tk.Widget) -> None:
+    def create_buttonbox(self, master: tk.Misc) -> None:
         """Create the bottom row of buttons."""
         if not self._toplevel:
             raise RuntimeError()
@@ -233,13 +233,13 @@ class AboutDialog(ttk_dialogs.Dialog):
         self._toplevel.clipboard_clear()
         self._toplevel.clipboard_append(json.dumps(formatted_version))
         status_emoji = ttk_icons.Emoji.get("white heavy check mark")
-        self.copy_version_button.configure(text=f"{status_emoji}   Copied!", bootstyle=bootstyle.SUCCESS)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+        self.copy_version_button.configure(text=f"{status_emoji}   Copied!", bootstyle=bootstyle.SUCCESS)
         self.copy_version_button.after(
             850,
             functools.partial(
                 self.copy_version_button.configure,
                 text=DataViewer.CommandName.CopyVersion,
-                bootstyle=(bootstyle.DEFAULT, bootstyle.OUTLINE),  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+                bootstyle=(bootstyle.DEFAULT, bootstyle.OUTLINE),
             ),
         )
 
@@ -553,7 +553,7 @@ class DataViewer(guikit.AsyncWindow):
             compound=tk.RIGHT,
             width=char_width,
             padding=(4, 6, 4, 4),
-            bootstyle=bootstyle,  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+            bootstyle=bootstyle,
         )
         return button
 
@@ -752,7 +752,7 @@ class DataViewer(guikit.AsyncWindow):
         """Handle the ReplayActiveChanged event."""
         replay_active = self.state.replay_active
         new_style = bootstyle.SUCCESS if replay_active else bootstyle.DEFAULT
-        self.replay_button.configure(bootstyle=new_style)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
+        self.replay_button.configure(bootstyle=new_style)
         self.replay_variable.set(replay_active)
 
     def on_theme_changed(self, event_args: tk.Event) -> None:

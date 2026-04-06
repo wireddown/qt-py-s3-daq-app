@@ -12,7 +12,8 @@ from tkinter import font
 
 import ttkbootstrap as ttk
 import ttkbootstrap.icons as ttk_icons
-import ttkbootstrap.tableview as ttk_tableview
+import ttkbootstrap.widgets.scrolled as ttk_scrolled
+import ttkbootstrap.widgets.tableview as ttk_tableview
 from ttkbootstrap import constants as bootstyle
 
 from qtpy_datalogger import discovery, guikit, network
@@ -178,7 +179,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.selected_node_combobox = ttk.Combobox(
             selection_status_frame,
             width=20,
-            state=ttk.READONLY,
+            state=bootstyle.READONLY,
         )
         self.selected_node_combobox.bind("<<ComboboxSelected>>", self.on_combobox_selected)
         self.selected_node_combobox.pack(side=tk.LEFT, padx=(8, 0))
@@ -191,7 +192,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.send_message_button = ttk.Button(message_frame, text="Send message", command=self.send_message)
         self.send_message_button.pack(side=tk.LEFT, padx=(8, 0))
 
-        self.message_log = ttk.ScrolledText(comms_frame, state=tk.DISABLED, wrap="word")
+        self.message_log = ttk_scrolled.ScrolledText(comms_frame, state=tk.DISABLED, wrap="word")
         self.message_log.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
         # Add handlers for 'Ctrl-A' / select all
         self.message_log.select_range = self.select_message_log_range  # pyright: ignore reportAttributeAccessIssue -- we are adding this at run time
@@ -282,7 +283,7 @@ class ScannerApp(guikit.AsyncWindow):
         if selected_device:
             selected_resource_name = selected_device.node_id if selected_device.node_id else selected_device.com_port
         self.selected_node_combobox.set(selected_resource_name)
-        self.selected_node_combobox.configure(state=ttk.READONLY)
+        self.selected_node_combobox.configure(state=bootstyle.READONLY)
         self.selected_node_combobox.selection_clear()
 
         self.refresh_send_message_button()
@@ -293,8 +294,8 @@ class ScannerApp(guikit.AsyncWindow):
         status_emoji = ttk_icons.Emoji.get("white heavy check mark")
         if new_style in [bootstyle.WARNING, bootstyle.DANGER]:
             status_emoji = ttk_icons.Emoji.get("cross mark")
-        self.status_icon_label.configure(text=status_emoji, bootstyle=new_style)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
-        self.status_message.configure(text=new_message, bootstyle=new_style)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+        self.status_icon_label.configure(text=status_emoji, bootstyle=new_style)
+        self.status_message.configure(text=new_message, bootstyle=new_style)
 
     def refresh_scan_results_table(self) -> None:
         """Refresh the contents of the result stable depending on the app's state."""
@@ -339,12 +340,12 @@ class ScannerApp(guikit.AsyncWindow):
                     node_resource_names.append(resource_name)
             self.selected_node_combobox.configure(state=tk.NORMAL)  # Set to enabled to update its state
             self.selected_node_combobox["values"] = sorted([*none_choice, *node_resource_names])
-            self.selected_node_combobox.configure(state=ttk.READONLY)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+            self.selected_node_combobox.configure(state=bootstyle.READONLY)
         else:
             self.selected_node_combobox.configure(state=tk.NORMAL)  # Set to enabled to update its state
             self.selected_node_combobox["values"] = none_choice
             self.selected_node_combobox.current(0)
-            self.selected_node_combobox.configure(state=tk.DISABLED, bootstyle=bootstyle.DEFAULT)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+            self.selected_node_combobox.configure(state=tk.DISABLED, bootstyle=bootstyle.DEFAULT)
         self.selected_node_combobox.selection_clear()  # Deselect the text in the combobox
 
     def refresh_send_message_button(self) -> None:
@@ -357,9 +358,9 @@ class ScannerApp(guikit.AsyncWindow):
 
     def append_text_to_log(self, line: str) -> None:
         """Add the specified text to the end of the log."""
-        self.message_log.configure(state=tk.NORMAL)  # Set to enabled to update its state
+        self.message_log.text.configure(state=tk.NORMAL)  # Set to enabled to update its state
         self.message_log.insert("end", line)
-        self.message_log.configure(state=tk.DISABLED)
+        self.message_log.text.configure(state=tk.DISABLED)
         self.message_log.see("end")
 
     def start_scan(self) -> None:
@@ -493,9 +494,9 @@ class ScannerApp(guikit.AsyncWindow):
 
     def clear_log(self) -> None:
         """Clear the log contents."""
-        self.message_log.configure(state=tk.NORMAL)  # Set to enabled to update its state
+        self.message_log.text.configure(state=tk.NORMAL)  # Set to enabled to update its state
         self.message_log.delete("1.0", "end")  # First index has format "{line}.{column}"
-        self.message_log.configure(state=tk.DISABLED)
+        self.message_log.text.configure(state=tk.DISABLED)
         self.update_status_message_and_style("Cleared message log.", bootstyle.SUCCESS)
 
     def select_message_log_range(self, start_index: int | str, end_index: int | str) -> None:

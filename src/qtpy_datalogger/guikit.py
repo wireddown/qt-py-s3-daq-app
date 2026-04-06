@@ -6,6 +6,7 @@ import tkinter as tk
 
 import ttkbootstrap as ttk
 import ttkbootstrap.icons as ttk_icons
+import ttkbootstrap.style as ttk_style
 import ttkbootstrap.themes.standard as ttk_themes
 from ttkbootstrap import constants as bootstyle
 
@@ -65,7 +66,7 @@ class AsyncWindow:
     def __init__(self) -> None:
         """Initialize a new Tk root and cache the asyncio event loop."""
         # Let subclasses set the window icon
-        self.root_window = ttk.Window(iconphoto=None)  # pyright: ignore reportArgumentType -- the type hint for library is incorrect
+        self.root_window = ttk.Window(iconphoto=None)
         self.io_loop = asyncio.get_running_loop()
 
         self.should_run_loop = True
@@ -222,7 +223,7 @@ def create_theme_combobox(parent: tk.BaseWidget) -> ttk.Combobox:
         values=sorted_by_kind,
     )
     theme_combobox.set(active_theme.name.capitalize())
-    theme_combobox.configure(state=ttk.READONLY)
+    theme_combobox.configure(state=bootstyle.READONLY)
     theme_combobox.selection_clear()
 
     def handle_change_theme(event_args: tk.Event) -> None:
@@ -232,7 +233,7 @@ def create_theme_combobox(parent: tk.BaseWidget) -> ttk.Combobox:
         style = ttk.Style.get_instance()
         if not style:
             raise ValueError()
-        sending_combobox.configure(state=ttk.READONLY)
+        sending_combobox.configure(state=bootstyle.READONLY)
         sending_combobox.selection_clear()
         style.theme_use(theme_name)
 
@@ -304,7 +305,7 @@ def inspect_visual_style(frame: tk.Widget) -> dict:
 
 def show_palette(palette: dict) -> None:
     """Show the hex color codes for the specified palette."""
-    color_names = sorted(ttk.Colors.label_iter())
+    color_names = sorted(ttk_style.Colors.label_iter())
     _ = [logger.info(f"{color:>12} {palette.get(color)}") for color in color_names]
 
 
