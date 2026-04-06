@@ -123,7 +123,7 @@ class AboutDialog(ttk_dialogs.Dialog):
         """Initialize a new AboutDialog instance."""
         super().__init__(parent, title, alert=False)
 
-    def create_body(self, master: tk.Widget) -> None:  # noqa: PLR0915 -- allow long function to create the UI
+    def create_body(self, master: tk.Misc) -> None:  # noqa: PLR0915 -- allow long function to create the UI
         """Create the UI for the dialog."""
         master.columnconfigure(0, weight=1)
         master.rowconfigure(0, weight=1)
@@ -198,7 +198,7 @@ class AboutDialog(ttk_dialogs.Dialog):
         )
         source_button.grid(column=5, row=5, sticky=tk.W, pady=(22, 0))
 
-    def create_buttonbox(self, master: tk.Widget) -> None:
+    def create_buttonbox(self, master: tk.Misc) -> None:
         """Create the bottom row of buttons."""
         if not self._toplevel:
             raise RuntimeError()
