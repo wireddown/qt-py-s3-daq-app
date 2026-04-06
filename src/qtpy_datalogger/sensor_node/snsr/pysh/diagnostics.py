@@ -15,8 +15,9 @@ from .py_shell import (
     PromptSession,
 )
 
-try:  # noqa: SIM105 -- contextlib is not available for CircuitPython
-    from typing import BinaryIO, Callable
+try:
+    from collections.abc import Callable
+    from typing import BinaryIO
 except ImportError:
     pass
 

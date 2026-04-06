@@ -231,7 +231,7 @@ class ScannerApp(guikit.AsyncWindow):
     def run_command_on_enter(self, event_args: tk.Event) -> None:
         """Handle the Enter key press for an Entry widget and run its associated command."""
         key_character = event_args.char
-        if key_character not in ["\r"]:
+        if key_character not in ["\r"]:  # noqa: FURB171 -- allow additional control characters
             return
         if key_character == "\r":
             parent = event_args.widget.winfo_parent()
@@ -281,7 +281,7 @@ class ScannerApp(guikit.AsyncWindow):
         selected_resource_name = Constants.NoneChoice
         selected_device = self.scan_db.get_node(node_serial_number)
         if selected_device:
-            selected_resource_name = selected_device.node_id if selected_device.node_id else selected_device.com_port
+            selected_resource_name = selected_device.node_id or selected_device.com_port
         self.selected_node_combobox.set(selected_resource_name)
         self.selected_node_combobox.configure(state=bootstyle.READONLY)
         self.selected_node_combobox.selection_clear()
@@ -336,7 +336,7 @@ class ScannerApp(guikit.AsyncWindow):
             node_resource_names = []
             for group_nodes in self.scan_db.devices_by_group.values():
                 for entry in group_nodes.values():
-                    resource_name = entry.node_id if entry.node_id else entry.com_port
+                    resource_name = entry.node_id or entry.com_port
                     node_resource_names.append(resource_name)
             self.selected_node_combobox.configure(state=tk.NORMAL)  # Set to enabled to update its state
             self.selected_node_combobox["values"] = sorted([*none_choice, *node_resource_names])

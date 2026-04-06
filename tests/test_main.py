@@ -13,7 +13,7 @@ def program_args(args: list[str] | None = None):  # noqa: ANN201
     """Use the specified args as sys.argv[1:] during a with: statement."""
     old_sys_args = sys.argv
     try:
-        args = args if args else []
+        args = args or []
         new_sys_args = [sys.argv[0], *args]
         sys.argv = new_sys_args
         yield
