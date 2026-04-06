@@ -399,15 +399,15 @@ class DataViewer(guikit.AsyncWindow):
 
         self.root_window.bind(
             AppState.Event.DataFileChanged,
-            lambda e: self.on_data_file_changed(e),
+            self.on_data_file_changed,
         )
         self.root_window.bind(
             AppState.Event.ReplayActiveChanged,
-            lambda e: self.on_replay_active_changed(e),
+            self.on_replay_active_changed,
         )
         self.root_window.bind(
             "<<ThemeChanged>>",
-            lambda e: self.on_theme_changed(e),
+            self.on_theme_changed,
         )
 
         self.reload_file(sender=main)

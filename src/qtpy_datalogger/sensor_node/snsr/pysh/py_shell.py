@@ -99,11 +99,11 @@ class PromptSession:
         self.default_prompt = default_prompt
         self.in_stream = in_stream
         self.out_stream = out_stream
-        self.history = history if history else InMemoryHistory()
+        self.history = history or InMemoryHistory()
 
     def prompt(self, message: str | None = None) -> str:
         """Prompt the user for input with the given message or the default message."""
-        message = message if message else self.default_prompt
+        message = message or self.default_prompt
 
         decoded = _prompt(message, in_stream=self.in_stream, out_stream=self.out_stream, history=self.history)
 

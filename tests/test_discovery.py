@@ -233,7 +233,7 @@ def test_handle_connect_with_one_usb_device(  # noqa: PLR0913 -- allow more than
     """Does it correctly handle connect() when there is only one QT Py device?"""
     monkeypatch.setattr(discovery, "discover_qtpy_devices", one_usb_qtpy_device)
     discovered_port = discovery.discover_qtpy_devices(Default.MqttGroup).popitem()[1].com_port
-    expected_port = port if port else discovered_port
+    expected_port = port or discovered_port
 
     with pytest.raises(raised_exception) as excinfo:
         discovery.handle_connect(behavior, Default.MqttGroup, node, port)
@@ -275,7 +275,7 @@ def test_handle_connect_with_two_usb_devices(  # noqa: PLR0913 -- allow more tha
     discovered_devices = discovery.discover_qtpy_devices(Default.MqttGroup)
     selected_device = sorted(discovered_devices)[-1]
     selected_port = discovered_devices[selected_device].com_port
-    expected_port = port if port else selected_port
+    expected_port = port or selected_port
 
     with pytest.raises(raised_exception) as excinfo:
         discovery.handle_connect(behavior, Default.MqttGroup, node, port)
@@ -324,7 +324,7 @@ def test_handle_connect_with_one_mqtt_device(  # noqa: PLR0913 -- allow more tha
         network, "open_session_on_node", lambda group, node: raise_exception(raised_exception, exception_message)
     )
     discovered_node = discovery.discover_qtpy_devices(Default.MqttGroup).popitem()[1].node_id
-    expected_node = node if node else discovered_node
+    expected_node = node or discovered_node
 
     with pytest.raises(raised_exception) as excinfo:
         discovery.handle_connect(behavior, Default.MqttGroup, node, port)
@@ -365,7 +365,7 @@ def test_handle_connect_with_two_dual_mode_devices(  # noqa: PLR0913 -- allow mo
     discovered_devices = discovery.discover_qtpy_devices(Default.MqttGroup)
     selected_device = sorted(discovered_devices)[-1]
     selected_node = discovered_devices[selected_device].node_id
-    expected_node = node if node else selected_node
+    expected_node = node or selected_node
 
     with pytest.raises(raised_exception) as excinfo:
         discovery.handle_connect(behavior, Default.MqttGroup, node, port)

@@ -6,8 +6,9 @@ import re
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from enum import StrEnum
-from typing import Callable, NamedTuple
+from typing import NamedTuple
 
 from .datatypes import ExitCode, Links
 from .sensor_node.snsr.node import mqtt as node_mqtt
