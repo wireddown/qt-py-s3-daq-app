@@ -233,13 +233,13 @@ class AboutDialog(ttk_dialogs.Dialog):
         self._toplevel.clipboard_clear()
         self._toplevel.clipboard_append(json.dumps(formatted_version))
         status_emoji = ttk_icons.Emoji.get("white heavy check mark")
-        self.copy_version_button.configure(text=f"{status_emoji}   Copied!", bootstyle=bootstyle.SUCCESS)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+        self.copy_version_button.configure(text=f"{status_emoji}   Copied!", bootstyle=bootstyle.SUCCESS)
         self.copy_version_button.after(
             850,
             functools.partial(
                 self.copy_version_button.configure,
                 text=DataViewer.CommandName.CopyVersion,
-                bootstyle=(bootstyle.DEFAULT, bootstyle.OUTLINE),  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+                bootstyle=(bootstyle.DEFAULT, bootstyle.OUTLINE),
             ),
         )
 
@@ -553,7 +553,7 @@ class DataViewer(guikit.AsyncWindow):
             compound=tk.RIGHT,
             width=char_width,
             padding=(4, 6, 4, 4),
-            bootstyle=bootstyle,  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+            bootstyle=bootstyle,
         )
         return button
 
@@ -752,7 +752,7 @@ class DataViewer(guikit.AsyncWindow):
         """Handle the ReplayActiveChanged event."""
         replay_active = self.state.replay_active
         new_style = bootstyle.SUCCESS if replay_active else bootstyle.DEFAULT
-        self.replay_button.configure(bootstyle=new_style)  # pyright: ignore reportArgumentType -- the type hint for library uses strings
+        self.replay_button.configure(bootstyle=new_style)
         self.replay_variable.set(replay_active)
 
     def on_theme_changed(self, event_args: tk.Event) -> None:

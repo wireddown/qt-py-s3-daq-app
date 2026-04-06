@@ -294,8 +294,8 @@ class ScannerApp(guikit.AsyncWindow):
         status_emoji = ttk_icons.Emoji.get("white heavy check mark")
         if new_style in [bootstyle.WARNING, bootstyle.DANGER]:
             status_emoji = ttk_icons.Emoji.get("cross mark")
-        self.status_icon_label.configure(text=status_emoji, bootstyle=new_style)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
-        self.status_message.configure(text=new_message, bootstyle=new_style)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+        self.status_icon_label.configure(text=status_emoji, bootstyle=new_style)
+        self.status_message.configure(text=new_message, bootstyle=new_style)
 
     def refresh_scan_results_table(self) -> None:
         """Refresh the contents of the result stable depending on the app's state."""
