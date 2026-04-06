@@ -242,6 +242,8 @@ class ScannerApp(guikit.AsyncWindow):
 
     def on_row_selected(self, event_args: tk.Event) -> None:
         """Handle the user selecting a row in the results table."""
+        if not isinstance(event_args.widget, ttk.Treeview):
+            raise TypeError()
         selected_rows = event_args.widget.selection()
         if not selected_rows:
             return
@@ -256,6 +258,8 @@ class ScannerApp(guikit.AsyncWindow):
 
     def on_combobox_selected(self, event_args: tk.Event) -> None:
         """Handle the user selecting a new entry in the combobox."""
+        if not isinstance(event_args.widget, ttk.Combobox):
+            raise TypeError()
         selected_value = event_args.widget.get()
         selected_serial_number = Constants.NoneChoice
         for _, devices_in_group in self.scan_db.devices_by_group.items():

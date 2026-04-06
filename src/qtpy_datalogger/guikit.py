@@ -229,6 +229,8 @@ def create_theme_combobox(parent: tk.BaseWidget) -> ttk.Combobox:
     def handle_change_theme(event_args: tk.Event) -> None:
         """Handle the selection event for the theme Combobox."""
         sending_combobox = event_args.widget
+        if not isinstance(sending_combobox, ttk.Combobox):
+            raise TypeError()
         theme_name = sending_combobox.get().lower()
         style = ttk.Style.get_instance()
         if not style:

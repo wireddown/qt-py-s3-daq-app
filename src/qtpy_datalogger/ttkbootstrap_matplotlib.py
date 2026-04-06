@@ -96,19 +96,15 @@ def create_styled_plot_toolbar(
 def handle_theme_changed(event_args: tk.Event) -> None:
     """Handle the ttkbootstrap virtual event named <<ThemeChanged>>."""
     sender = event_args.widget
-    sender_class = type(sender)
-    sender_is_figure = issubclass(sender_class, tk.Canvas)
-    sender_is_toolbar = issubclass(sender_class, tk.Frame)
-
     style = ttk.Style.get_instance()
     if not (style and style.theme):
         raise ValueError()
 
     default_theme = ttk_themes.STANDARD_THEMES[bootstyle.DEFAULT_THEME]
     requested_theme = ttk_themes.STANDARD_THEMES.get(style.theme.name, default_theme)
-    if sender_is_figure:
+    if isinstance(sender, tk.Canvas):
         apply_figure_style(sender, requested_theme)
-    elif sender_is_toolbar:
+    elif isinstance(sender, tk.Frame):
         apply_toolbar_style(sender, requested_theme)
     else:
         raise TypeError()
