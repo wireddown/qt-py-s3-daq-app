@@ -6,6 +6,7 @@ import tkinter as tk
 
 import ttkbootstrap as ttk
 import ttkbootstrap.icons as ttk_icons
+import ttkbootstrap.style as ttk_style
 import ttkbootstrap.themes.standard as ttk_themes
 from ttkbootstrap import constants as bootstyle
 
@@ -304,7 +305,7 @@ def inspect_visual_style(frame: tk.Widget) -> dict:
 
 def show_palette(palette: dict) -> None:
     """Show the hex color codes for the specified palette."""
-    color_names = sorted(ttk.Colors.label_iter())
+    color_names = sorted(ttk_style.Colors.label_iter())
     _ = [logger.info(f"{color:>12} {palette.get(color)}") for color in color_names]
 
 
