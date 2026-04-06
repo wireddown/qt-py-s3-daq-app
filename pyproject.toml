@@ -29,7 +29,7 @@ tkfontawesome = "^0.3.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.2"
-ruff = "^0.13.2"
+ruff = "^0.15.8"
 pyright = "^1.1.398"
 
 [tool.poetry.group.circup.dependencies]
