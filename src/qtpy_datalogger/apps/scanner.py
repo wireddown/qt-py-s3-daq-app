@@ -13,6 +13,7 @@ from tkinter import font
 import ttkbootstrap as ttk
 import ttkbootstrap.icons as ttk_icons
 import ttkbootstrap.tableview as ttk_tableview
+import ttkbootstrap.widgets.scrolled as ttk_scrolled
 from ttkbootstrap import constants as bootstyle
 
 from qtpy_datalogger import discovery, guikit, network
@@ -191,7 +192,7 @@ class ScannerApp(guikit.AsyncWindow):
         self.send_message_button = ttk.Button(message_frame, text="Send message", command=self.send_message)
         self.send_message_button.pack(side=tk.LEFT, padx=(8, 0))
 
-        self.message_log = ttk.ScrolledText(comms_frame, state=tk.DISABLED, wrap="word")
+        self.message_log = ttk_scrolled.ScrolledText(comms_frame, state=tk.DISABLED, wrap="word")
         self.message_log.pack(side=tk.TOP, expand=True, fill=tk.BOTH)
         # Add handlers for 'Ctrl-A' / select all
         self.message_log.select_range = self.select_message_log_range  # pyright: ignore reportAttributeAccessIssue -- we are adding this at run time
@@ -357,9 +358,9 @@ class ScannerApp(guikit.AsyncWindow):
 
     def append_text_to_log(self, line: str) -> None:
         """Add the specified text to the end of the log."""
-        self.message_log.configure(state=tk.NORMAL)  # Set to enabled to update its state
+        self.message_log.text.configure(state=tk.NORMAL)  # Set to enabled to update its state
         self.message_log.insert("end", line)
-        self.message_log.configure(state=tk.DISABLED)
+        self.message_log.text.configure(state=tk.DISABLED)
         self.message_log.see("end")
 
     def start_scan(self) -> None:
@@ -493,9 +494,9 @@ class ScannerApp(guikit.AsyncWindow):
 
     def clear_log(self) -> None:
         """Clear the log contents."""
-        self.message_log.configure(state=tk.NORMAL)  # Set to enabled to update its state
+        self.message_log.text.configure(state=tk.NORMAL)  # Set to enabled to update its state
         self.message_log.delete("1.0", "end")  # First index has format "{line}.{column}"
-        self.message_log.configure(state=tk.DISABLED)
+        self.message_log.text.configure(state=tk.DISABLED)
         self.update_status_message_and_style("Cleared message log.", bootstyle.SUCCESS)
 
     def select_message_log_range(self, start_index: int | str, end_index: int | str) -> None:
