@@ -12,8 +12,8 @@ from tkinter import font
 
 import ttkbootstrap as ttk
 import ttkbootstrap.icons as ttk_icons
-import ttkbootstrap.tableview as ttk_tableview
 import ttkbootstrap.widgets.scrolled as ttk_scrolled
+import ttkbootstrap.widgets.tableview as ttk_tableview
 from ttkbootstrap import constants as bootstyle
 
 from qtpy_datalogger import discovery, guikit, network
