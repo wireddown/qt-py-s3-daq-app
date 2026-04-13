@@ -89,7 +89,8 @@ class QTPyController:
         self.broadcast_topic = all_topics["broadcast"]
         self.command_topic = all_topics["command"]
         self.descriptor_topic = all_topics["descriptor"]
-        self.all_descriptors_in_group_topic = node_mqtt.get_descriptor_topic(group_id, node_id="+")
+        self.all_descriptors_in_group_topic = node_mqtt.get_descriptor_topic(self.group_id, node_id="+")
+        self.all_results_in_group_topic = node_mqtt.get_result_topic(self.group_id, node_id="+")
 
         self.named_counter = NamedCounter()
         self.message_queue: asyncio.Queue[MqttMessage] = asyncio.Queue()
@@ -136,6 +137,7 @@ class QTPyController:
                 self.broadcast_topic,
                 self.command_topic,
                 self.all_descriptors_in_group_topic,
+                self.all_results_in_group_topic,
             ]
         )
 
@@ -175,7 +177,7 @@ class QTPyController:
         }
         return node_information
 
-    async def send_action(self, node_id: str, command_name: str, parameters: dict) -> node_classes.ActionInformation:
+    def send_action(self, node_id: str, command_name: str, parameters: dict) -> node_classes.ActionInformation:
         """
         Send a command with the specified parameters to the node in the group with node_id and return the sent ActionInformation.
 
@@ -187,7 +189,7 @@ class QTPyController:
             message_id=self._format_message_id(command_name),
         )
 
-        await self._publish_action_payload(node_id, action)
+        self._publish_action_payload(node_id, action)
         return action
 
     async def get_matching_result(
@@ -329,16 +331,12 @@ class QTPyController:
             logger.debug(f"Requeueing response '{topic_and_message}'")
             self.message_queue.put_nowait(topic_and_message)
 
-    async def _publish_action_payload(self, node_id: str, action: node_classes.ActionInformation) -> None:
+    def _publish_action_payload(self, node_id: str, action: node_classes.ActionInformation) -> None:
         """Send the specified action to the specified node_id's command topic."""
         action_payload = node_classes.ActionPayload(
             action=action,
             sender=_build_sender_information(self.descriptor_topic),
         )
-
-        result_topic = node_mqtt.get_result_topic(self.group_id, node_id)
-        await self._subscribe([result_topic])
-
         command_topic = node_mqtt.get_command_topic(self.group_id, node_id)
         self.client.publish(command_topic, json.dumps(action_payload.as_dict()))
 
@@ -402,7 +400,7 @@ async def _open_session_on_node(group_id: str, node_id: str) -> None:
         custom_parameters = {
             "input": user_input,
         }
-        sent_action = await controller.send_action(node_id, command_name, custom_parameters)
+        sent_action = controller.send_action(node_id, command_name, custom_parameters)
 
         response_complete = False
         while not response_complete:
