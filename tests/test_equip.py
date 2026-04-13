@@ -185,7 +185,7 @@ def test_only_newer_files(
 ) -> None:
     """Does it skip circup packages for Behavior.OnlyNewerFiles?"""
     create_test_device_folder(tmp_path)
-    newer_files = []
+    newer_files: list[pathlib.Path] = []
 
     def override_file_freshness(
         tree1: list[pathlib.Path], tree2: list[pathlib.Path], newer_files: list[pathlib.Path] = newer_files
@@ -197,12 +197,16 @@ def test_only_newer_files(
         equal_file = shared_in_both[0]
         older_file = shared_in_both[1]
         newer_file = shared_in_both[2]
+        novel_file = tree1[0] / "PYTEST_NEWFILE.py"
+        novel_file.touch()
         tree1_file_ages = {
             equal_file: "equal",
             older_file: "older",
             newer_file: "newer",
+            novel_file: "newer",
         }
         newer_files.append(newer_file)
+        newer_files.append(novel_file)
         return tree1_file_ages
 
     monkeypatch.setattr(equip, "_compare_file_trees", override_file_freshness)
@@ -214,4 +218,7 @@ def test_only_newer_files(
     assert_device_matches_self(comparison_results)
     assert not tmp_path.joinpath("lib").exists()
     updated_file = newer_files[0]
+    copied_file = newer_files[1]
+    copied_file.unlink()
     assert f"Newer: {updated_file!s}" in caplog.text
+    assert f"Newer: {copied_file!s}" in caplog.text
