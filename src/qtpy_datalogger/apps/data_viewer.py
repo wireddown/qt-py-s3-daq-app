@@ -868,6 +868,11 @@ class DataViewer(guikit.AsyncWindow):
         return time_coordinates, measurement_series  # pyright: ignore reportReturnType
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Run the app."""
     logger.debug(f"Launching {__package__}")
     asyncio.run(guikit.AsyncApp.create_and_run(DataViewer))
+
+
+if __name__ == "__main__":
+    main()
