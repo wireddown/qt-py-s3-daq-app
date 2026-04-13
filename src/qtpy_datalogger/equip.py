@@ -19,7 +19,7 @@ import toml
 
 from qtpy_datalogger import discovery
 
-from .datatypes import ConnectionTransport, Default, ExitCode, Links, SnsrNotice, SnsrPath, suppress_unless_debug
+from .datatypes import ConnectionTransport, Default, ExitCode, Links, SnsrNotice, SnsrPath
 
 logger = logging.getLogger(__name__)
 
@@ -314,7 +314,7 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
             full_path = this_bundle.device_files[0].joinpath(path)
             if not full_path.is_file():
                 continue
-            if freshness == "newer":
+            if freshness == "newer" and all(pattern not in str(path) for pattern in ignore_patterns):
                 logger.info(f"  Newer: {path}")
                 newer_files.add(path.name)
                 continue
@@ -422,6 +422,8 @@ def _compare_file_trees(tree1: list[pathlib.Path], tree2: list[pathlib.Path]) ->
         if modification_time1 < modification_time2:
             age = "older"
         tree1_file_ages[path] = age
+    for path in set1 - set2:
+        tree1_file_ages[path] = "newer"
     return tree1_file_ages
 
 
@@ -497,9 +499,14 @@ def _query_modules_from_circup(main_folder: pathlib.Path, log_info: bool) -> lis
     """Use circup to detect the installed CircuitPython modules and versions found in the specified folder."""
     if main_folder.joinpath("lib").exists() and (log_info or logger.isEnabledFor(logging.DEBUG)):
         logger.info("Detecting installed external CircuitPython modules")
-    with suppress_unless_debug():
-        circup_backend = circup.DiskBackend(str(main_folder), logger)
-        installed_cp_modules = circup_backend.get_device_versions()
+
+    circup_logger = logger
+    if not logger.isEnabledFor(logging.DEBUG):
+        muted_logger = logging.getLogger("muted")
+        muted_logger.setLevel(logging.CRITICAL)
+        circup_logger = muted_logger
+    circup_backend = circup.DiskBackend(str(main_folder), circup_logger)
+    installed_cp_modules = circup_backend.get_device_versions()
     if installed_cp_modules and (log_info or logger.isEnabledFor(logging.DEBUG)):
         _ = [
             logger.info(f" * {name:<20} {details['__version__']}")
