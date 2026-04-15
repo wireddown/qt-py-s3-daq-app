@@ -129,6 +129,11 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None, secrets: str) ->
         "runtime bundle": this_bundle,
     }
 
+    if secrets_behavior == SecretsBehavior.Analyze:
+        node_secrets = _detect_node_secrets(device_bundle.device_files[0])
+        secrets_description = _format_secrets_description(node_secrets)
+        _ = [logger.info(line) for line in secrets_description]
+
     if behavior == Behavior.Compare:
         runtime_freshness = _compare_file_trees(
             this_bundle.device_files,
@@ -145,9 +150,7 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None, secrets: str) ->
         case SecretsBehavior.Noop:
             pass
         case SecretsBehavior.Analyze:
-            node_secrets = _detect_node_secrets(device_bundle.device_files[0])
-            secrets_description = _format_secrets_description(node_secrets)
-            _ = [logger.info(line) for line in secrets_description]
+            pass
         case SecretsBehavior.Update:
             logger.info("Updating sensor_node secrets")
             _update_secrets(secrets_file, device_bundle.device_files[0])
