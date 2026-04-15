@@ -180,11 +180,19 @@ def run(behavior: str, app_name: str) -> None:
     metavar="FOLDER",
     help="Use FOLDER as the root.",
 )
+@click.option(
+    "--secrets",
+    is_flag=False,  # This pattern is a corner case for click options
+    default=_equip.SecretsBehavior.Noop.as_full_name(),  # Use this value when '--secrets' is NOT on the command line
+    flag_value=_equip.SecretsBehavior.Analyze.as_full_name(),  # Use this value when '--secrets' is present but has no FILE value
+    metavar="[FILE | -]",
+    help="Update the secrets on the sensor_node from FILE or stdin with '-'. Without FILE, show which are missing.",
+)
 @click.help_option()
-def equip(behavior: str, root: pathlib.Path | None) -> None:
+def equip(behavior: str, root: pathlib.Path | None, secrets: str) -> None:
     """Install the QT Py Sensor Node runtime on a CircuitPython device."""
     equip_behavior = _equip.Behavior(behavior)
-    _equip.handle_equip(equip_behavior, root)
+    _equip.handle_equip(equip_behavior, root, secrets)
 
 
 @cli.command(epilog=f"Detailed help online\n\n{Links.MQTT_Walkthrough}")

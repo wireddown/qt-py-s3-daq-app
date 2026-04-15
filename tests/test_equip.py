@@ -4,6 +4,7 @@ import logging
 import pathlib
 import shutil
 
+import click
 import pytest
 import toml
 from test_discovery import one_mqtt_qtpy_device
@@ -71,10 +72,26 @@ def assert_device_matches_self(comparison_results: dict[str, equip.SnsrNodeBundl
     assert device_bundle.notice == runtime_bundle.notice
 
 
+def skip_secrets(text: str, default: str, hide_input: bool, type: type, show_default: bool) -> str:  # noqa: A002 -- we must hide 'type' to match the click API
+    """Return the user input that skips setting a secret."""
+    return ""
+
+
+def merge_secrets(text: str, default: str, hide_input: bool, type: type, show_default: bool) -> str:  # noqa: A002 -- we must hide 'type' to match the click API
+    """Return user input that only sets a subset of secrets."""
+    if "QTPY_BROKER_IP_ADDRESS" in text:
+        return "1.2.3.4"
+    if "QTPY_NODE_NAME" in text:
+        return "node_name"
+    return ""
+
+
 def test_describe(tmp_path: pathlib.Path) -> None:
     """Does it exit successfully after describing?"""
     with pytest.raises(SystemExit) as excinfo:
-        equip.handle_equip(behavior=equip.Behavior.Describe, root=tmp_path)
+        equip.handle_equip(
+            behavior=equip.Behavior.Describe, root=tmp_path, secrets=equip.SecretsBehavior.Noop.as_full_name()
+        )
 
     assert excinfo
     exception = excinfo.value
@@ -88,7 +105,9 @@ def test_compare(tmp_path: pathlib.Path) -> None:
     create_test_device_folder(tmp_path)
 
     with pytest.raises(SystemExit) as excinfo:
-        equip.handle_equip(behavior=equip.Behavior.Compare, root=tmp_path)
+        equip.handle_equip(
+            behavior=equip.Behavior.Compare, root=tmp_path, secrets=equip.SecretsBehavior.Noop.as_full_name()
+        )
 
     assert excinfo
     exception = excinfo.value
@@ -102,7 +121,9 @@ def test_cannot_install_with_mqtt(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(discovery, "discover_qtpy_devices", one_mqtt_qtpy_device)
 
     with pytest.raises(SystemExit) as excinfo:
-        equip.handle_equip(behavior=equip.Behavior.Upgrade, root=None)
+        equip.handle_equip(
+            behavior=equip.Behavior.Upgrade, root=None, secrets=equip.SecretsBehavior.Noop.as_full_name()
+        )
 
     assert excinfo
     exception = excinfo.value
@@ -113,7 +134,9 @@ def test_cannot_install_with_mqtt(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_install_new(tmp_path: pathlib.Path) -> None:
     """Does it install when the device isn't a sensor node?"""
-    equip.handle_equip(behavior=equip.Behavior.Upgrade, root=tmp_path)
+    equip.handle_equip(
+        behavior=equip.Behavior.Upgrade, root=tmp_path, secrets=equip.SecretsBehavior.Noop.as_full_name()
+    )
 
     comparison_results = get_bundle_comparison(tmp_path)
     assert_device_matches_self(comparison_results)
@@ -132,7 +155,9 @@ def test_upgrade(tmp_path: pathlib.Path) -> None:
     )
     set_device_notice(downversion_toml, tmp_path)
 
-    equip.handle_equip(behavior=equip.Behavior.Upgrade, root=tmp_path)
+    equip.handle_equip(
+        behavior=equip.Behavior.Upgrade, root=tmp_path, secrets=equip.SecretsBehavior.Noop.as_full_name()
+    )
 
     comparison_results = get_bundle_comparison(tmp_path)
     assert_device_matches_self(comparison_results)
@@ -157,7 +182,9 @@ def test_skip_upgrade(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -
     )
     set_device_notice(upversion_toml, tmp_path)
 
-    equip.handle_equip(behavior=equip.Behavior.Upgrade, root=tmp_path)
+    equip.handle_equip(
+        behavior=equip.Behavior.Upgrade, root=tmp_path, secrets=equip.SecretsBehavior.Noop.as_full_name()
+    )
     assert not tmp_path.joinpath("lib").exists()
 
 
@@ -173,7 +200,7 @@ def test_force_install(tmp_path: pathlib.Path) -> None:
     )
     set_device_notice(upversion_toml, tmp_path)
 
-    equip.handle_equip(behavior=equip.Behavior.Force, root=tmp_path)
+    equip.handle_equip(behavior=equip.Behavior.Force, root=tmp_path, secrets=equip.SecretsBehavior.Noop.as_full_name())
 
     comparison_results = get_bundle_comparison(tmp_path)
     assert_device_matches_self(comparison_results)
@@ -188,7 +215,10 @@ def test_only_newer_files(
     newer_files: list[pathlib.Path] = []
 
     def override_file_freshness(
-        tree1: list[pathlib.Path], tree2: list[pathlib.Path], newer_files: list[pathlib.Path] = newer_files
+        tree1: list[pathlib.Path],
+        tree2: list[pathlib.Path],
+        ignore_list: set[str],
+        newer_files: list[pathlib.Path] = newer_files,
     ) -> dict[pathlib.Path, str]:
         """Override equip._compare_file_trees() to make the bundle newer than than device."""
         set1 = {path.relative_to(tree1[0]) for path in tree1}
@@ -212,7 +242,9 @@ def test_only_newer_files(
     monkeypatch.setattr(equip, "_compare_file_trees", override_file_freshness)
 
     with caplog.at_level(logging.INFO):
-        equip.handle_equip(behavior=equip.Behavior.NewerFilesOnly, root=tmp_path)
+        equip.handle_equip(
+            behavior=equip.Behavior.NewerFilesOnly, root=tmp_path, secrets=equip.SecretsBehavior.Noop.as_full_name()
+        )
 
     comparison_results = get_bundle_comparison(tmp_path)
     assert_device_matches_self(comparison_results)
@@ -222,3 +254,70 @@ def test_only_newer_files(
     copied_file.unlink()
     assert f"Newer: {updated_file!s}" in caplog.text
     assert f"Newer: {copied_file!s}" in caplog.text
+
+
+def test_detect_missing_secrets(tmp_path: pathlib.Path, caplog: pytest.LogCaptureFixture) -> None:
+    """Does it detect missing secrets with '--secrets'?"""
+    with caplog.at_level(logging.INFO):
+        equip.handle_equip(
+            behavior=equip.Behavior.Upgrade, root=tmp_path, secrets=equip.SecretsBehavior.Analyze.as_full_name()
+        )
+
+    assert "Detecting secrets" in caplog.text
+    assert " MISSING" in caplog.text
+
+
+def test_prompt_for_secrets(
+    tmp_path: pathlib.Path,
+    capsys: pytest.CaptureFixture,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Does it prompt the user for secrets with '--secrets -'?"""
+    create_test_device_folder(tmp_path)  # Pre-install so equip doesn't invoke circup which fails with capsys
+    monkeypatch.setattr(click, "prompt", skip_secrets)
+
+    with caplog.at_level(logging.INFO):
+        equip.handle_equip(behavior=equip.Behavior.Upgrade, root=tmp_path, secrets="-")
+
+    assert "Updating sensor_node secrets" in caplog.text
+    assert "Set a new value or press <Enter> to skip" in capsys.readouterr().out
+    assert "Secrets updated" in caplog.text
+    assert tmp_path.joinpath(SnsrPath.settings).exists()
+
+
+def test_merge_secrets(
+    tmp_path: pathlib.Path,
+    capsys: pytest.CaptureFixture,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Does it correctly merge unrelated, old, and new secrets with '--secrets -'?"""
+    create_test_device_folder(tmp_path)  # Pre-install so equip doesn't invoke circup which fails with capsys
+    secrets_file = tmp_path.joinpath(SnsrPath.settings)
+    old_secrets = {
+        "CIRCUITPY_WIFI_SSID": "old ssid",
+        "CIRCUITPY_WIFI_PASSWORD": "old password",
+        "QTPY_BROKER_IP_ADDRESS": "old broker ip",
+        "QTPY_NODE_GROUP": "old node group",
+        "QTPY_NODE_NAME": "old node name",
+        "UNRELATED_SECRET": "unrelated secret",
+    }
+    with secrets_file.open("w") as settings_fd:
+        toml.dump(old_secrets, settings_fd)
+    monkeypatch.setattr(click, "prompt", merge_secrets)
+
+    with caplog.at_level(logging.INFO):
+        equip.handle_equip(behavior=equip.Behavior.Upgrade, root=tmp_path, secrets="-")
+
+    assert "Updating sensor_node secrets" in caplog.text
+    assert "Set a new value or press <Enter> to skip" in capsys.readouterr().out
+    assert "Secrets updated" in caplog.text
+    assert secrets_file.exists()
+    updated_secrets = toml.load(secrets_file)
+    assert updated_secrets["CIRCUITPY_WIFI_SSID"] == "old ssid"
+    assert updated_secrets["CIRCUITPY_WIFI_PASSWORD"] == "old password"  # noqa: S105 -- this is not a secret
+    assert updated_secrets["QTPY_BROKER_IP_ADDRESS"] == "1.2.3.4"  # (Updated)
+    assert updated_secrets["QTPY_NODE_GROUP"] == "old node group"
+    assert updated_secrets["QTPY_NODE_NAME"] == "node_name"  # (Updated)
+    assert updated_secrets["UNRELATED_SECRET"] == "unrelated secret"  # noqa: S105 -- this is not a secret (Preserved)

@@ -13,6 +13,7 @@ from typing import NamedTuple
 
 import bs4
 import circup
+import click
 import findimports
 import packaging.version
 import toml
@@ -27,6 +28,23 @@ _PC_ONLY_IMPORTS = [
     "typing",
 ]
 
+_EQUIP_IGNORE_PATTERNS = frozenset(
+    {
+        "*.pyc",
+        "__pycache__",
+    }
+)
+
+_SNSR_NODE_SECRET_KEY_NAMES = frozenset(
+    {
+        "CIRCUITPY_WIFI_SSID",
+        "CIRCUITPY_WIFI_PASSWORD",
+        "QTPY_BROKER_IP_ADDRESS",
+        "QTPY_NODE_GROUP",
+        "QTPY_NODE_NAME",
+    }
+)
+
 
 class Behavior(StrEnum):
     """Supported installation behaviors for QT Py sensor nodes."""
@@ -36,6 +54,18 @@ class Behavior(StrEnum):
     Describe = "Describe"
     Force = "Force"
     NewerFilesOnly = "NewerFilesOnly"
+
+
+class SecretsBehavior(StrEnum):
+    """Supported behaviors for handling the --secrets option."""
+
+    Analyze = "Analyze"
+    Noop = "Noop"
+    Update = "Update"
+
+    def as_full_name(self) -> str:
+        """Return a string of the value's full name."""
+        return f"{self.__class__.__name__}.{self.name}"
 
 
 class SnsrNodeBundle(NamedTuple):
@@ -49,9 +79,24 @@ class SnsrNodeBundle(NamedTuple):
     installed_circuitpy_modules: list[tuple[str, str]]
 
 
-def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
+def handle_equip(behavior: Behavior, root: pathlib.Path | None, secrets: str) -> None:  # noqa: PLR0912 PLR0915 -- we need many lines and statements to handle CLI commands
     """Handle the equip CLI command."""
-    logger.debug(f"behavior: '{behavior}', root: '{root}'")
+    logger.debug(f"behavior: '{behavior}', root: '{root}', secrets: '{secrets}'")
+
+    secrets_file = None
+    if secrets == SecretsBehavior.Noop.as_full_name():
+        secrets_behavior = SecretsBehavior.Noop
+    elif secrets == SecretsBehavior.Analyze.as_full_name():
+        secrets_behavior = SecretsBehavior.Analyze
+    else:
+        secrets_behavior = SecretsBehavior.Update
+        if secrets == "-":
+            pass
+        else:
+            secrets_file = pathlib.Path(secrets)
+            if not (secrets_file.is_file() and secrets_file.exists()):
+                logger.error(f"Cannot open secrets file '{secrets_file!s}'.")
+                raise SystemExit(ExitCode.Secrets_File_Missing)
 
     this_file = pathlib.Path(__file__)
     this_folder = this_file.parent
@@ -84,13 +129,32 @@ def handle_equip(behavior: Behavior, root: pathlib.Path | None) -> None:
         "runtime bundle": this_bundle,
     }
 
+    if secrets_behavior == SecretsBehavior.Analyze:
+        node_secrets = _detect_node_secrets(device_bundle.device_files[0])
+        secrets_description = _format_secrets_description(node_secrets)
+        _ = [logger.info(line) for line in secrets_description]
+
     if behavior == Behavior.Compare:
-        runtime_freshness = _compare_file_trees(this_bundle.device_files, device_bundle.device_files)
+        runtime_freshness = _compare_file_trees(
+            this_bundle.device_files,
+            device_bundle.device_files,
+            _EQUIP_IGNORE_PATTERNS,
+        )
         comparison_report = _format_bundle_comparison(comparison_information, runtime_freshness)
         _ = [logger.info(line) for line in comparison_report]
         raise SystemExit(ExitCode.Success)
 
     should_install, skip_reason = _should_install(behavior, comparison_information)
+
+    match secrets_behavior:
+        case SecretsBehavior.Noop:
+            pass
+        case SecretsBehavior.Analyze:
+            pass
+        case SecretsBehavior.Update:
+            logger.info("Updating sensor_node secrets")
+            _update_secrets(secrets_file, device_bundle.device_files[0])
+            logger.info("Secrets updated")
 
     if should_install:
         _equip_snsr_node(behavior, comparison_information)
@@ -305,16 +369,20 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
     my_main_folder = this_bundle.device_files[0]
     device_snsr_root = device_main_folder.joinpath(SnsrPath.root)
 
-    ignore_patterns = {"*.pyc", "__pycache__"}
+    ignore_patterns = set(_EQUIP_IGNORE_PATTERNS)
     if behavior == Behavior.NewerFilesOnly:
-        runtime_freshness = _compare_file_trees(this_bundle.device_files, device_bundle.device_files)
+        runtime_freshness = _compare_file_trees(
+            this_bundle.device_files,
+            device_bundle.device_files,
+            frozenset(ignore_patterns),
+        )
         older_files = set()
         newer_files = set()
         for path, freshness in runtime_freshness.items():
             full_path = this_bundle.device_files[0].joinpath(path)
             if not full_path.is_file():
                 continue
-            if freshness == "newer" and all(pattern not in str(path) for pattern in ignore_patterns):
+            if freshness == "newer":
                 logger.info(f"  Newer: {path}")
                 newer_files.add(path.name)
                 continue
@@ -407,10 +475,14 @@ def _collect_file_list(folder: pathlib.Path) -> list[pathlib.Path]:
     return [folder]
 
 
-def _compare_file_trees(tree1: list[pathlib.Path], tree2: list[pathlib.Path]) -> dict[pathlib.Path, str]:
+def _compare_file_trees(
+    tree1: list[pathlib.Path],
+    tree2: list[pathlib.Path],
+    ignore_list: frozenset[str],
+) -> dict[pathlib.Path, str]:
     """Compare two lists of paths, identifying newer. A value of "newer" means tree1's file is newer than tree2's file."""
-    set1 = {path.relative_to(tree1[0]) for path in tree1}
-    set2 = {path.relative_to(tree2[0]) for path in tree2}
+    set1 = {path.relative_to(tree1[0]) for path in tree1 if all(pattern not in str(path) for pattern in ignore_list)}
+    set2 = {path.relative_to(tree2[0]) for path in tree2 if all(pattern not in str(path) for pattern in ignore_list)}
     shared_in_both = set1 & set2
     tree1_file_ages = {}
     for path in shared_in_both:
@@ -514,6 +586,62 @@ def _query_modules_from_circup(main_folder: pathlib.Path, log_info: bool) -> lis
         ]
     modules_with_version = [(name, details["__version__"]) for name, details in sorted(installed_cp_modules.items())]
     return modules_with_version
+
+
+def _detect_node_secrets(device_root: pathlib.Path) -> dict[str, bool]:
+    """Parse the settings.toml file on the sensor_node and return a dictionary of detected secrets."""
+    expected_secrets = dict.fromkeys(_SNSR_NODE_SECRET_KEY_NAMES, False)
+    settings_file = device_root.joinpath(SnsrPath.settings)
+    if not settings_file.exists():
+        return expected_secrets
+    device_settings = toml.load(settings_file)
+    detected_secrets = {
+        secret: secret in device_settings
+        for secret in sorted(expected_secrets)
+    }  # fmt: skip
+    return detected_secrets
+
+
+def _format_secrets_description(node_secrets: dict[str, bool]) -> list[str]:
+    """Format and return a list of lines that describes this sensor_node's secrets."""
+    secrets_report = []
+    secrets_report.append("Detecting secrets")
+    for secret_name, is_defined in node_secrets.items():
+        message = "ok" if is_defined else click.style("MISSING", "yellow")
+        secrets_report.append(f" * {secret_name:<24}  {message}")
+    return secrets_report
+
+
+def _update_secrets(new_secrets_file: pathlib.Path | None, device_root: pathlib.Path) -> None:
+    """Update the secrets on the sensor_node."""
+    secrets_file = device_root.joinpath(SnsrPath.settings)
+    if new_secrets_file:
+        shutil.copy(new_secrets_file, secrets_file)
+        return
+
+    click.echo()
+    click.echo(f"Set a new value or press {click.style('<Enter>', 'bright_cyan')} to skip")
+    new_secrets = {}
+    detected_secrets = _detect_node_secrets(device_root)
+    for secret in detected_secrets:
+        user_input = click.prompt(
+            text=f"  {click.style(secret, 'bright_green')}",
+            default="",
+            hide_input=True,
+            type=str,
+            show_default=False,
+        )
+        if user_input:
+            new_secrets[secret] = user_input
+    click.echo()
+
+    final_secrets = new_secrets.copy()
+    if secrets_file.exists():
+        old_secrets = toml.load(secrets_file)
+        final_secrets.update(old_secrets)  # Retain unrelated toml entries
+        final_secrets.update(new_secrets)  # Overlay the new secrets
+    with secrets_file.open("w") as secrets_fd:
+        toml.dump(final_secrets, secrets_fd)
 
 
 def _handle_generate_notice() -> str:
