@@ -9,6 +9,7 @@ import tkinter as tk
 import webbrowser
 from collections.abc import Callable
 from tkinter import font
+from typing import ClassVar
 
 import ttkbootstrap as ttk
 import ttkbootstrap.icons as ttk_icons
@@ -102,6 +103,23 @@ class AsyncDialog:
     Helper methods
     - self.exit()
     """
+
+    _open_dialogs: ClassVar[set["AsyncDialog"]] = set()
+    _open_dialog_tasks: ClassVar[set[asyncio.Task]] = set()
+
+    @classmethod
+    def show_no_wait(cls, dialog: "AsyncDialog", behavior: DialogBehavior) -> None:
+        """Show the dialog without waiting for or returning a result."""
+        if dialog not in cls._open_dialogs:
+
+            def finalize_safe_show(task: asyncio.Task) -> None:
+                cls._open_dialogs.discard(dialog)
+                cls._open_dialog_tasks.discard(task)
+
+            open_dialog_task = asyncio.create_task(dialog.show(behavior))
+            open_dialog_task.add_done_callback(finalize_safe_show)
+            cls._open_dialogs.add(dialog)
+            cls._open_dialog_tasks.add(open_dialog_task)
 
     def __init__(self, parent: ttk.Toplevel | ttk.Window, title: str) -> None:
         """Initialize a new Tk Toplevel and cache the asyncio event loop."""
@@ -255,6 +273,7 @@ class AboutDialog(AsyncDialog):
         if not all_icons:
             all_icons = ["microchip", "worm", app_icon]
         self.app_icons = all_icons[:3]
+        self.icon_labels = []
         self.app_icon_images = []
         self.help_url = help_url or datatypes.Links.Homepage
         self.source_url = source_url or datatypes.Links.Source
@@ -290,15 +309,13 @@ class AboutDialog(AsyncDialog):
         message_frame.rowconfigure(6, weight=0)  # Source2
         message_frame.rowconfigure(7, weight=0, minsize=50)  # Filler
 
-        icon_height = 48
-        icon_color = hex_string_for_style(StyleKey.Fg)
-        icon_column = 3
-        for icon_name in reversed(self.app_icons):
-            icon_image = icon_to_image(icon_name, fill=icon_color, scale_to_height=icon_height)
-            self.app_icon_images.append(icon_image)
-            chart_label = ttk.Label(message_frame, image=icon_image, padding=4)
-            chart_label.grid(column=icon_column, row=1, rowspan=2)
-            icon_column = icon_column - 1
+        for index, _ in enumerate(self.app_icons):
+            icon_column = index + 1  # Column 0 is margin filler
+            icon_label = ttk.Label(message_frame, padding=4)
+            icon_label.grid(column=icon_column, row=1, rowspan=2)
+            self.icon_labels.append(icon_label)
+
+        self.refresh_icons()
 
         name_label = ttk.Label(message_frame, font=font.Font(weight="bold", size=28), text=self.app_name)
         name_label.grid(column=5, row=1, sticky=tk.W)
@@ -353,6 +370,18 @@ class AboutDialog(AsyncDialog):
         ok_button.grid(column=1, row=0, sticky=tk.E)
         self.initial_focus = ok_button
 
+        ThemeChanger.add_handler(self.root_window, self.on_theme_changed)
+
+    def refresh_icons(self) -> None:
+        """Refresh the icons in the dialog using the active style."""
+        icon_height = 48
+        icon_color = hex_string_for_style(StyleKey.Fg)
+        self.app_icon_images.clear()
+        for icon_name, icon_label in zip(self.app_icons, self.icon_labels, strict=True):
+            icon_image = icon_to_image(icon_name, fill=icon_color, scale_to_height=icon_height)
+            self.app_icon_images.append(icon_image)
+            icon_label.configure(image=icon_image)
+
     def copy_version(self) -> None:
         """Copy the version information to the clipboard."""
         formatted_version = {
@@ -376,6 +405,10 @@ class AboutDialog(AsyncDialog):
     async def on_loop(self) -> None:
         """Update UI elements."""
         await asyncio.sleep(20e-3)
+
+    def on_theme_changed(self, event_args: tk.Event) -> None:
+        """Handle the ThemeChanger.Event.BootstrapThemeChanged event."""
+        self.refresh_icons()
 
 
 class ThemeChanger:

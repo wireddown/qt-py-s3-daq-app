@@ -4,7 +4,6 @@ import asyncio
 import atexit
 import contextlib
 import functools
-import json
 import logging
 import math
 import pathlib
@@ -13,7 +12,6 @@ import shutil
 import tempfile
 import time
 import tkinter as tk
-import webbrowser
 from enum import StrEnum
 from tkinter import filedialog, font
 
@@ -21,13 +19,11 @@ import matplotlib.figure as mpl_figure
 import numpy as np
 import pandas as pd
 import ttkbootstrap as ttk
-import ttkbootstrap.dialogs as ttk_dialogs
-import ttkbootstrap.icons as ttk_icons
 import ttkbootstrap.themes.standard as ttk_themes
 from tkfontawesome import icon_to_image
 from ttkbootstrap import constants as bootstyle
 
-from qtpy_datalogger import datatypes, guikit, ttkbootstrap_matplotlib
+from qtpy_datalogger import guikit, ttkbootstrap_matplotlib
 
 logger = logging.getLogger(pathlib.Path(__file__).stem)
 
@@ -748,7 +744,7 @@ class DataViewer(guikit.AsyncWindow):
         self.replay_variable.set(replay_active)
 
     def on_theme_changed(self, event_args: tk.Event) -> None:
-        """Handle the ThemeChanged event."""
+        """Handle the ThemeChanger.Event.BootstrapThemeChanged event."""
         theme_name = self.state.active_theme
         self.theme_variable.set(theme_name.capitalize())
         self.startup_label.configure(background=guikit.hex_string_for_style(bootstyle.LIGHT))
