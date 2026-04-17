@@ -37,15 +37,10 @@ class AsyncApp:
         """
         if not issubclass(async_window_type, AsyncWindow):
             raise TypeError()
+
         app = async_window_type()
-
-        # Create and layout the UI
-        app.root_window.withdraw()
         app.create_user_interface()
-        app.root_window.update()
-
-        # Present the UI
-        app.root_window.deiconify()
+        app.root_window.update_idletasks()
         await app.show()
 
 
@@ -105,7 +100,6 @@ class AsyncDialog:
         self.should_run_loop = True
 
         def __on_closing(event: tk.Event | None = None) -> None:
-            self.on_closing()
             self.exit()
 
         self.root_window.protocol("WM_DELETE_WINDOW", __on_closing)
@@ -134,7 +128,8 @@ class AsyncDialog:
             await self.on_loop()
             self.root_window.update()
 
-        self.root_window.master.focus_set()
+        self.on_closing()
+        self.parent.focus_set()
         self.root_window.destroy()
         return self.result
 
@@ -187,25 +182,28 @@ class AsyncWindow:
         """Initialize a new Tk root and cache the asyncio event loop."""
         # Let subclasses set the window icon
         self.root_window = ttk.Window(iconphoto=None)
-        self.io_loop = asyncio.get_running_loop()
+        self.root_window.withdraw()
 
+        self.io_loop = asyncio.get_running_loop()
         self.should_run_loop = True
 
         def __on_closing() -> None:
-            self.on_closing()
             self.exit()
 
         self.root_window.protocol("WM_DELETE_WINDOW", __on_closing)
 
     async def show(self) -> None:
-        """Show the UI and cooperatively run with asyncio."""
-        self.root_window.wait_visibility(self.root_window)
-        self.root_window.update_idletasks()
+        """Show the window and cooperatively run with asyncio."""
         self.on_show()
+        self.root_window.deiconify()
+        self.root_window.wait_visibility(self.root_window)
+
         while self.should_run_loop:
             await asyncio.sleep(0)
             await self.on_loop()
             self.root_window.update()
+
+        self.on_closing()
         self.root_window.quit()
 
     def create_user_interface(self) -> None:
