@@ -436,7 +436,18 @@ def create_theme_combobox(parent: tk.BaseWidget) -> ttk.Combobox:
         sending_combobox.selection_clear()
         ThemeChanger.use_bootstrap_theme(theme_name, sending_combobox)
 
+    def on_theme_changed(themed_widget: tk.Misc, event_args: tk.Event) -> None:
+        """Handle the ThemeChanger.Event.BootstrapThemeChanged event."""
+        sending_combobox = themed_widget
+        if not isinstance(sending_combobox, ttk.Combobox):
+            raise TypeError()
+        style = ttk.Style.get_instance()
+        if not (style and style.theme):
+            raise ValueError()
+        sending_combobox.set(style.theme.name.capitalize())
+
     theme_combobox.bind("<<ComboboxSelected>>", handle_change_theme)
+    ThemeChanger.add_handler(theme_combobox, functools.partial(on_theme_changed, theme_combobox))
     return theme_combobox
 
 
