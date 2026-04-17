@@ -113,134 +113,6 @@ class AppState:
         return self.data_file_df.copy()
 
 
-class AboutDialog(ttk_dialogs.Dialog):
-    """A class that presents information about the app."""
-
-    def __init__(self, parent: ttk.Window, title: str = "") -> None:
-        """Initialize a new AboutDialog instance."""
-        super().__init__(parent, title, alert=False)
-
-    def create_body(self, master: tk.Misc) -> None:  # noqa: PLR0915 -- allow long function to create the UI
-        """Create the UI for the dialog."""
-        master.columnconfigure(0, weight=1)
-        master.rowconfigure(0, weight=1)
-        self.main_frame = ttk.Frame(master, padding=16)
-        self.main_frame.grid(column=0, row=0, sticky=tk.NSEW)
-        self.main_frame.columnconfigure(0, weight=1)
-        self.main_frame.rowconfigure(0, weight=1)
-
-        message_frame = ttk.Frame(self.main_frame)
-        message_frame.grid(column=0, row=0, sticky=tk.NSEW)
-        message_frame.columnconfigure(0, weight=0, minsize=40)  # Filler
-        message_frame.columnconfigure(1, weight=0)  # Icon1
-        message_frame.columnconfigure(2, weight=0)  # Icon2
-        message_frame.columnconfigure(3, weight=0)  # Icon3
-        message_frame.columnconfigure(4, weight=0, minsize=20)  # Filler
-        message_frame.columnconfigure(5, weight=0)  # Text
-        message_frame.columnconfigure(6, weight=0, minsize=40)  # Filler
-        message_frame.rowconfigure(0, weight=0, minsize=20)  # Filler
-        message_frame.rowconfigure(1, weight=0)  # Icons and Name
-        message_frame.rowconfigure(2, weight=0)  # Icons and Version
-        message_frame.rowconfigure(3, weight=0)  # Separator
-        message_frame.rowconfigure(4, weight=0)  # Help
-        message_frame.rowconfigure(5, weight=0)  # Source
-        message_frame.rowconfigure(6, weight=0)  # Source2
-        message_frame.rowconfigure(7, weight=0, minsize=50)  # Filler
-
-        icon_height = 48
-        icon_color = guikit.hex_string_for_style(StyleKey.Fg)
-        self.microchip_icon = icon_to_image("microchip", fill=icon_color, scale_to_height=icon_height)
-        microchip_label = ttk.Label(message_frame, image=self.microchip_icon, padding=3)
-        microchip_label.grid(column=1, row=1, rowspan=2)
-        self.qtpy_icon = icon_to_image("worm", fill=icon_color, scale_to_height=icon_height)
-        qtpy_label = ttk.Label(message_frame, image=self.qtpy_icon, padding=4)
-        qtpy_label.grid(column=2, row=1, rowspan=2)
-        self.chart_icon = icon_to_image("chart-line", fill=icon_color, scale_to_height=icon_height)
-        chart_label = ttk.Label(message_frame, image=self.chart_icon, padding=4)
-        chart_label.grid(column=3, row=1, rowspan=2, padx=(2, 0))
-
-        name_label = ttk.Label(message_frame, font=font.Font(weight="bold", size=28), text=DataViewer.app_name)
-        name_label.grid(column=5, row=1, sticky=tk.W)
-        self.notice_information = datatypes.SnsrNotice.get_package_notice_info(allow_dev_version=True)
-        bullet = ttk_icons.Emoji.get("black medium small square")
-        version_label = ttk.Label(
-            message_frame,
-            text=f"{self.notice_information.version} {bullet} {self.notice_information.timestamp:%Y-%m-%d} {bullet} {self.notice_information.commit}",
-        )
-        version_label.grid(column=5, row=2, sticky=tk.W, padx=(4, 0))
-        separator = ttk.Separator(message_frame)
-        separator.grid(column=1, row=3, columnspan=5, sticky=tk.EW, pady=4)
-        button_text_color = guikit.hex_string_for_style(StyleKey.SelectFg)
-        spacer = "   "
-        self.help_icon = icon_to_image("parachute-box", fill=button_text_color, scale_to_width=16)
-        help_button = ttk.Button(
-            message_frame,
-            compound=tk.LEFT,
-            image=self.help_icon,
-            text=f"{spacer}Online help ",  # The trailing space helps with internal margins
-            style=bootstyle.INFO,
-            width=18,
-            command=functools.partial(webbrowser.open_new_tab, datatypes.Links.Homepage),
-        )
-        help_button.grid(column=5, row=4, sticky=tk.W, pady=(18, 0))
-        self.source_icon = icon_to_image("github-alt", fill=button_text_color, scale_to_width=16)
-        source_button = ttk.Button(
-            message_frame,
-            compound=tk.LEFT,
-            image=self.source_icon,
-            text=f"{spacer}Source code",
-            style=bootstyle.INFO,
-            width=18,
-            command=functools.partial(webbrowser.open_new_tab, datatypes.Links.Source),
-        )
-        source_button.grid(column=5, row=5, sticky=tk.W, pady=(22, 0))
-
-    def create_buttonbox(self, master: tk.Misc) -> None:
-        """Create the bottom row of buttons."""
-        if not self._toplevel:
-            raise RuntimeError()
-        self.main_frame.rowconfigure(1, weight=1)
-
-        button_frame = ttk.Frame(self.main_frame)
-        button_frame.grid(column=0, row=1, sticky=tk.NSEW, padx=(0, 16), pady=(8, 0))
-        button_frame.columnconfigure(0, weight=1)
-        button_frame.columnconfigure(1, weight=0)
-        button_frame.rowconfigure(0, weight=0)
-        self.copy_version_button = ttk.Button(
-            button_frame,
-            text=DataViewer.CommandName.CopyVersion,
-            style=bootstyle.OUTLINE,
-            command=self.copy_version,
-            width=12,
-        )
-        self.copy_version_button.grid(column=0, row=0, sticky=tk.E, padx=(0, 16))
-        ok_button = ttk.Button(button_frame, text=DataViewer.CommandName.OK, command=self._toplevel.destroy)
-        ok_button.grid(column=1, row=0, sticky=tk.E)
-        self._initial_focus = ok_button
-
-    def copy_version(self) -> None:
-        """Copy the version information to the clipboard."""
-        if not self._toplevel:
-            raise RuntimeError()
-        formatted_version = {
-            "version": self.notice_information.version,
-            "timestamp": str(self.notice_information.timestamp),
-            "commit": self.notice_information.commit,
-        }
-        self._toplevel.clipboard_clear()
-        self._toplevel.clipboard_append(json.dumps(formatted_version))
-        status_emoji = ttk_icons.Emoji.get("white heavy check mark")
-        self.copy_version_button.configure(text=f"{status_emoji}   Copied!", bootstyle=bootstyle.SUCCESS)
-        self.copy_version_button.after(
-            850,
-            functools.partial(
-                self.copy_version_button.configure,
-                text=DataViewer.CommandName.CopyVersion,
-                bootstyle=(bootstyle.DEFAULT, bootstyle.OUTLINE),
-            ),
-        )
-
-
 class DataViewer(guikit.AsyncWindow):
     """A GUI that loads a CSV data file and plots the columns."""
 
@@ -673,8 +545,8 @@ class DataViewer(guikit.AsyncWindow):
 
     def show_about(self) -> None:
         """Handle the Help::About menu command."""
-        about_dialog = AboutDialog(parent=self.root_window, title=f"About {DataViewer.app_name}")
-        about_dialog.show()
+        about_dialog = guikit.AboutDialog(parent=self.root_window, app_name=DataViewer.app_name)
+        guikit.AboutDialog.show_no_wait(about_dialog, guikit.DialogBehavior.Modeless)
 
     def on_data_file_changed(self, event_args: tk.Event) -> None:
         """Handle the DataFileChanged event."""
