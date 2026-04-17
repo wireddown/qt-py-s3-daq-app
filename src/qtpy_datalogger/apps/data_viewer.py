@@ -550,7 +550,7 @@ class DataViewer(guikit.AsyncWindow):
         return button
 
     async def on_loop(self) -> None:
-        """Update the UI with new information."""
+        """Update the window with new information."""
         await asyncio.sleep(1e-6)
 
         if not self.state.replay_active:
