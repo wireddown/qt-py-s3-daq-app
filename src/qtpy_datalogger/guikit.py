@@ -266,7 +266,7 @@ class DemoWithAnimation(AsyncWindow):
             text="Modal",
             command=functools.partial(self.open_dialog, DialogBehavior.Modal),
             style=(bootstyle.SECONDARY, bootstyle.INFO),  # pyright: ignore reportArgumentType -- the type hints do not understand tuples
-        )  # pyright: ignore reportArgumentType -- the type hint for library uses strings
+        )
         modal_button.grid(column=0, row=3, sticky=tk.EW, padx=8)
 
         modeless_button = ttk.Button(
@@ -274,7 +274,7 @@ class DemoWithAnimation(AsyncWindow):
             text="Modeless",
             command=functools.partial(self.open_dialog, DialogBehavior.Modeless),
             style=(bootstyle.SECONDARY, bootstyle.INFO),  # pyright: ignore reportArgumentType -- the type hints do not understand tuples
-        )  # pyright: ignore reportArgumentType -- the type hint for library uses strings
+        )
         modeless_button.grid(column=1, row=3, sticky=tk.EW, pady=8)
 
         standalone_button = ttk.Button(
@@ -334,7 +334,7 @@ def create_demo_ui(
     progressbar = ttk.Progressbar(
         root,
         length=280,
-        style=(bootstyle.STRIPED, bootstyle.SUCCESS),  # pyright: ignore reportArgumentType -- the type hint for library uses strings
+        style=(bootstyle.STRIPED, bootstyle.SUCCESS),  # pyright: ignore reportArgumentType -- the type hints do not understand tuples
     )
     progressbar.grid(
         row=1,
