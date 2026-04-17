@@ -234,9 +234,9 @@ class ThemeChanger:
     @staticmethod
     def add_handler(owner: tk.Misc, command: Callable[[tk.Event], None]) -> str:
         """Subscribe command as a handler for the BootstrapThemeChanged event and return a unique ID for the binding."""
-        # **Must** bind to the root window, emit to the root window, add to the handler list
+        # **Must** bind to the application, emit to the root window, add to the handler list
         # - See https://stackoverflow.com/a/31798918
-        return owner.winfo_toplevel().bind(ThemeChanger.Event.BootstrapThemeChanged, command, add="+")
+        return owner.winfo_toplevel().bind_all(ThemeChanger.Event.BootstrapThemeChanged, command, add="+")
 
     @staticmethod
     def use_bootstrap_theme(new_theme: str, owner: tk.Misc) -> None:
