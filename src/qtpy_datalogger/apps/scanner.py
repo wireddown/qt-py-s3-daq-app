@@ -227,11 +227,11 @@ class ScannerApp(guikit.AsyncWindow):
         self.clear_results()
 
     def on_show(self) -> None:
-        """Initialize UI before entering main loop."""
+        """Initialize window before entering main loop."""
         self.group_input.focus()
 
     async def on_loop(self) -> None:
-        """Update the UI with new information."""
+        """Update the window with new information."""
         await asyncio.sleep(10e-6)  # Yield the CPU to prevent high-but-idle spin-wait consumption
 
     def run_command_on_enter(self, event_args: tk.Event) -> None:

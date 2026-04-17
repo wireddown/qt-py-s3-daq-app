@@ -125,11 +125,11 @@ class PlottingApp(guikit.AsyncWindow):
         guikit.ThemeChanger.use_bootstrap_theme(theme_name, self.root_window)
 
     async def on_loop(self) -> None:
-        """Update the UI with new information."""
+        """Update the window with new information."""
         await asyncio.sleep(1e-6)
 
     def on_closing(self) -> None:
-        """Clean up before exiting."""
+        """Finalize the window after exiting main loop."""
 
     def update_frequency(self, new_val: str) -> None:
         """Refresh the graph using the new user input."""

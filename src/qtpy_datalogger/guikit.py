@@ -30,6 +30,10 @@ class AsyncApp:
         because asyncio has not created or started an event loop.
 
         The base type of async_window_type must be an AsyncWindow to use cooperative event handling.
+
+        Example:
+        asyncio.run(AsyncApp.create_and_run(AsyncWindowSubclass))
+
         """
         if not issubclass(async_window_type, AsyncWindow):
             raise TypeError()
@@ -70,17 +74,25 @@ class AsyncDialog:
     """
     A Tk Toplevel wrapper that cooperates with asyncio.
 
-    Define a subclass of AsyncDialog to create a dialog with Tk that cooperates with asyncio code.
+    Define a subclass of AsyncDialog and override both create_user_interface() and
+    async on_loop() to create a dialog with Tk that cooperates with asyncio APIs.
+
+    Call show() to present the dialog and retrieve its result after it closes. To set
+    the result, assign a value to self.result in on_loop() or on_closing().
+
+    Override set_position() to place the dialog before presentation. Call exit() to
+    close the dialog.
 
     Required overrides
-    - create_user_interface(self) -> None
+    - create_user_interface(self)
 
     Remaining overrides
-    - async def on_loop(self) -> None
-    - def on_closing(self) -> None
+    - set_position(self)
+    - async on_loop(self)
+    - on_closing(self)
 
     Helper methods
-    - self.close()
+    - self.exit()
     """
 
     def __init__(self, parent: ttk.Toplevel | ttk.Window, title: str) -> None:
@@ -105,7 +117,7 @@ class AsyncDialog:
         self.root_window.update_idletasks()  # Calculate geometry and size information
 
     async def show(self, behavior: DialogBehavior) -> object | None:
-        """Show the UI and cooperatively run with asyncio."""
+        """Show the dialog and cooperatively run with asyncio."""
         if behavior != DialogBehavior.Standalone and self.parent.winfo_viewable():
             self.root_window.transient(self.parent)
 
@@ -138,13 +150,13 @@ class AsyncDialog:
         """Create the layout and widget event handlers."""
 
     async def on_loop(self) -> None:
-        """Update UI elements."""
+        """Update dialog elements and poll asyncio resources."""
 
     def on_closing(self) -> None:
-        """Handle the click event for the title bar's close button."""
+        """Finalize the dialog result after exiting the main loop."""
 
     def exit(self) -> None:
-        """Close the UI and exit."""
+        """Close the dialog and exit."""
         self.should_run_loop = False
 
 
@@ -152,14 +164,16 @@ class AsyncWindow:
     """
     A Tk root window wrapper that cooperates with asyncio.
 
-    Define a subclass of AsyncWindow to create a GUI with Tk that cooperates with asyncio code.
+    Define a subclass of AsyncWindow and override both create_user_interface() and
+    async on_loop() to create a GUI with Tk that cooperates with asyncio APIs.
 
     Required overrides
-    - create_user_interface(self) -> None
+    - create_user_interface(self)
 
     Remaining overrides
-    - async def on_loop(self) -> None
-    - def on_closing(self) -> None
+    - on_show()
+    - async on_loop(self)
+    - on_closing(self)
 
     Helper methods
     - self.exit()
@@ -198,16 +212,16 @@ class AsyncWindow:
         """Create the layout and widget event handlers."""
 
     def on_show(self) -> None:
-        """Initialize UI before entering main loop."""
+        """Initialize the window before entering main loop."""
 
     async def on_loop(self) -> None:
-        """Update UI elements."""
+        """Update window elements and poll asyncio resources."""
 
     def on_closing(self) -> None:
-        """Handle the click event for the title bar's close button."""
+        """Finalize the window after exiting main loop."""
 
     def exit(self) -> None:
-        """Close the UI and exit."""
+        """Close the window and exit."""
         self.should_run_loop = False
 
 
@@ -293,12 +307,12 @@ class DialogWithAnimation(AsyncDialog):
         super().__init__(parent, title)
 
     def create_user_interface(self) -> None:
-        """Create the layout and widget event handlers."""
+        """Create text label to animate and define buttons to demonstrate blocking vs async calls."""
         self.animation = "⬛⬛⬛⬛⬛⬛⬛⬛⬛⬜⬜"
         _, self.label, self.progressbar = create_demo_ui(self.root_window, self.io_loop)
 
     async def on_loop(self) -> None:
-        """Update UI elements."""
+        """Update the animation."""
         self.label["text"] = self.animation
         self.animation = self.animation[-1] + self.animation[0:-1]
         await asyncio.sleep(0.06)
