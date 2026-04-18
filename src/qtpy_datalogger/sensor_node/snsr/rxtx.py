@@ -4,8 +4,7 @@ import adafruit_connection_manager
 import adafruit_minimqtt.adafruit_minimqtt as minimqtt
 import wifi
 
-from snsr.handlers import build_sender_information, handle_identify
-from snsr.node.mqtt import get_descriptor_topic, get_result_topic
+from snsr.handlers import handle_command_message, handle_identify
 from snsr.settings import settings
 
 
@@ -69,29 +68,7 @@ def on_message(client: minimqtt.MQTT, topic: str, message: str) -> None:
     if last_part == "broadcast":
         handle_identify(client)
     elif last_part == "command":
-        from json import dumps, loads
-
-        from .node.classes import ActionInformation, ActionPayload
-
-        context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
-        action_payload_information = loads(message)
-        action_payload = ActionPayload.from_dict(action_payload_information)
-        action = action_payload.action
-        descriptor_topic = get_descriptor_topic(context["node_group"], context["node_identifier"])
-        sender = build_sender_information(descriptor_topic)
-        result_payload = ActionPayload(
-            action=ActionInformation(
-                command=action.command,
-                parameters={
-                    "output": f"received: {action.parameters['input']}",
-                    "complete": True,
-                },
-                message_id=action.message_id,
-            ),
-            sender=sender,
-        )
-        result_topic = get_result_topic(context["node_group"], context["node_identifier"])
-        client.publish(result_topic, dumps(result_payload.as_dict()))
+        handle_command_message(client, message)
 
 
 def create_mqtt_client(radio: wifi.Radio, node_group: str, node_identifier: str) -> minimqtt.MQTT:

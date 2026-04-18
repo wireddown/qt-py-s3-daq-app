@@ -1,11 +1,14 @@
 """Functions that handle API commands."""
 
+from json import dumps
+
 import adafruit_minimqtt.adafruit_minimqtt as minimqtt
 
 from snsr.node.classes import (
     DescriptorInformation,
     SenderInformation,
 )
+from snsr.node.mqtt import get_descriptor_topic
 from snsr.settings import settings
 
 
@@ -14,20 +17,51 @@ def handle_identify(client: minimqtt.MQTT) -> None:
     from microcontroller import cpu
     from wifi import radio
 
-    from snsr.node.mqtt import get_descriptor_topic
-
     context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
     descriptor_topic = get_descriptor_topic(context["node_group"], context["node_identifier"])
     descriptor_message = get_descriptor_payload("node", cpu.uid.hex().lower(), str(radio.ipv4_address))
     client.publish(descriptor_topic, descriptor_message)
 
 
+def handle_command_message(client: minimqtt.MQTT, message: str) -> None:
+    """Respond to a message sent to the command topic for the node."""
+    from json import loads
+    from time import sleep
+
+    from .node.classes import ActionInformation, ActionPayload
+    from .node.mqtt import get_result_topic
+
+    if not message:
+        return
+    try:
+        action_payload_information = loads(message)
+    except ValueError:
+        return
+    node_context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
+    action_payload = ActionPayload.from_dict(action_payload_information)
+    action_information = action_payload.action
+    descriptor_topic = get_descriptor_topic(node_context["node_group"], node_context["node_identifier"])
+    sender = build_sender_information(descriptor_topic)
+    result_payload = ActionPayload(
+        action=ActionInformation(
+            command=action_information.command,
+            parameters={
+                "output": f"received: {action_information.parameters['input']}",
+                "complete": True,
+            },
+            message_id=action_information.message_id,
+        ),
+        sender=sender,
+    )
+    result_topic = get_result_topic(node_context["node_group"], node_context["node_identifier"])
+    client.publish(result_topic, dumps(result_payload.as_dict()))
+    sleep(0.2)  # Allow the backend to send the message
+
+
 def get_descriptor_payload(role: str, serial_number: str, ip_address: str) -> str:
     """Return a serialized string representation of the DescriptorPayload."""
-    from json import dumps
-
     from snsr.node.classes import DescriptorPayload
-    from snsr.node.mqtt import format_mqtt_client_id, get_descriptor_topic
+    from snsr.node.mqtt import format_mqtt_client_id
 
     pid = 0
     descriptor = build_descriptor_information(role, serial_number, ip_address)
