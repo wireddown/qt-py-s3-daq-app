@@ -3,17 +3,31 @@
 import asyncio
 import enum
 import functools
+import json
 import logging
 import tkinter as tk
+import webbrowser
 from collections.abc import Callable
+from tkinter import font
+from typing import ClassVar
 
 import ttkbootstrap as ttk
 import ttkbootstrap.icons as ttk_icons
 import ttkbootstrap.style as ttk_style
 import ttkbootstrap.themes.standard as ttk_themes
+from tkfontawesome import icon_to_image
 from ttkbootstrap import constants as bootstyle
 
+from qtpy_datalogger import datatypes
+
 logger = logging.getLogger(__name__)
+
+
+class StyleKey(enum.StrEnum):
+    """A class that extends the palette names of ttkbootstrap styles."""
+
+    Fg = "fg"
+    SelectFg = "selectfg"
 
 
 class AsyncApp:
@@ -89,6 +103,23 @@ class AsyncDialog:
     Helper methods
     - self.exit()
     """
+
+    _open_dialogs: ClassVar[set["AsyncDialog"]] = set()
+    _open_dialog_tasks: ClassVar[set[asyncio.Task]] = set()
+
+    @classmethod
+    def show_no_wait(cls, dialog: "AsyncDialog", behavior: DialogBehavior) -> None:
+        """Show the dialog without waiting for or returning a result."""
+        if dialog not in cls._open_dialogs:
+
+            def finalize_safe_show(task: asyncio.Task) -> None:
+                cls._open_dialogs.discard(dialog)
+                cls._open_dialog_tasks.discard(task)
+
+            open_dialog_task = asyncio.create_task(dialog.show(behavior))
+            open_dialog_task.add_done_callback(finalize_safe_show)
+            cls._open_dialogs.add(dialog)
+            cls._open_dialog_tasks.add(open_dialog_task)
 
     def __init__(self, parent: ttk.Toplevel | ttk.Window, title: str) -> None:
         """Initialize a new Tk Toplevel and cache the asyncio event loop."""
@@ -221,6 +252,163 @@ class AsyncWindow:
     def exit(self) -> None:
         """Close the window and exit."""
         self.should_run_loop = False
+
+
+class AboutDialog(AsyncDialog):
+    """A class that presents information about the app."""
+
+    def __init__(  # noqa PLR0913 -- allow many parameters for a framework class
+        self,
+        parent: ttk.Toplevel | ttk.Window,
+        app_name: str = "",
+        app_icon: str = "",
+        all_icons: list[str] | None = None,
+        help_url: str = "",
+        source_url: str = "",
+    ) -> None:
+        """Initialize a new AboutDialog instance."""
+        self.app_name = app_name
+        if not app_icon:
+            app_icon = "chart-line"
+        if not all_icons:
+            all_icons = ["microchip", "worm", app_icon]
+        self.app_icons = all_icons[:3]
+        self.icon_labels = []
+        self.app_icon_images = []
+        self.help_url = help_url or datatypes.Links.Homepage
+        self.source_url = source_url or datatypes.Links.Source
+        self.copy_version_text = "Copy version"
+        super().__init__(parent, f"About {app_name}".strip())
+
+    def create_user_interface(self) -> None:  # noqa: PLR0915 -- allow long function to create the UI
+        """Create the UI for the AboutDialog."""
+        self.root_window.columnconfigure(0, weight=1)
+        self.root_window.rowconfigure(0, weight=1)
+        self.root_window.resizable(width=False, height=False)
+        main_frame = ttk.Frame(self.root_window, padding=16)
+        main_frame.grid(column=0, row=0, sticky=tk.NSEW)
+        main_frame.columnconfigure(0, weight=1)
+        main_frame.rowconfigure(0, weight=1)
+        main_frame.rowconfigure(1, weight=1)
+
+        message_frame = ttk.Frame(main_frame)
+        message_frame.grid(column=0, row=0, sticky=tk.NSEW)
+        message_frame.columnconfigure(0, weight=0, minsize=40)  # Filler
+        message_frame.columnconfigure(1, weight=0)  # Icon1
+        message_frame.columnconfigure(2, weight=0)  # Icon2
+        message_frame.columnconfigure(3, weight=0)  # Icon3
+        message_frame.columnconfigure(4, weight=0, minsize=20)  # Filler
+        message_frame.columnconfigure(5, weight=0)  # Text
+        message_frame.columnconfigure(6, weight=0, minsize=40)  # Filler
+        message_frame.rowconfigure(0, weight=0, minsize=20)  # Filler
+        message_frame.rowconfigure(1, weight=0)  # Icons and Name
+        message_frame.rowconfigure(2, weight=0)  # Icons and Version
+        message_frame.rowconfigure(3, weight=0)  # Separator
+        message_frame.rowconfigure(4, weight=0)  # Help
+        message_frame.rowconfigure(5, weight=0)  # Source
+        message_frame.rowconfigure(6, weight=0)  # Source2
+        message_frame.rowconfigure(7, weight=0, minsize=50)  # Filler
+
+        for index, _ in enumerate(self.app_icons):
+            icon_column = index + 1  # Column 0 is margin filler
+            icon_label = ttk.Label(message_frame, padding=4)
+            icon_label.grid(column=icon_column, row=1, rowspan=2)
+            self.icon_labels.append(icon_label)
+
+        self.refresh_icons()
+
+        name_label = ttk.Label(message_frame, font=font.Font(weight="bold", size=28), text=self.app_name)
+        name_label.grid(column=5, row=1, sticky=tk.W)
+        self.notice_information = datatypes.SnsrNotice.get_package_notice_info(allow_dev_version=True)
+        bullet = ttk_icons.Emoji.get("black medium small square")
+        version_label = ttk.Label(
+            message_frame,
+            text=f"{self.notice_information.version} {bullet} {self.notice_information.timestamp:%Y-%m-%d} {bullet} {self.notice_information.commit}",
+        )
+        version_label.grid(column=5, row=2, sticky=tk.W, padx=(2, 0))
+        separator = ttk.Separator(message_frame)
+        separator.grid(column=1, row=3, columnspan=5, sticky=tk.EW, pady=4)
+        button_text_color = hex_string_for_style(StyleKey.SelectFg)
+        spacer = "   "
+        self.help_icon = icon_to_image("parachute-box", fill=button_text_color, scale_to_width=16)
+        help_button = ttk.Button(
+            message_frame,
+            compound=tk.LEFT,
+            image=self.help_icon,
+            text=f"{spacer}Online help ",  # The trailing space helps with internal margins
+            style=bootstyle.INFO,
+            width=18,
+            command=functools.partial(webbrowser.open_new_tab, self.help_url),
+        )
+        help_button.grid(column=5, row=4, sticky=tk.W, pady=(18, 0))
+        self.source_icon = icon_to_image("github-alt", fill=button_text_color, scale_to_width=16)
+        source_button = ttk.Button(
+            message_frame,
+            compound=tk.LEFT,
+            image=self.source_icon,
+            text=f"{spacer}Source code",
+            style=bootstyle.INFO,
+            width=18,
+            command=functools.partial(webbrowser.open_new_tab, self.source_url),
+        )
+        source_button.grid(column=5, row=5, sticky=tk.W, pady=(22, 0))
+
+        button_frame = ttk.Frame(main_frame)
+        button_frame.grid(column=0, row=1, sticky=tk.NSEW, padx=(0, 16), pady=(8, 0))
+        button_frame.columnconfigure(0, weight=1)
+        button_frame.columnconfigure(1, weight=0)
+        button_frame.rowconfigure(0, weight=0)
+        self.copy_version_button = ttk.Button(
+            button_frame,
+            text=self.copy_version_text,
+            style=bootstyle.OUTLINE,
+            command=self.copy_version,
+            width=12,
+        )
+        self.copy_version_button.grid(column=0, row=0, sticky=tk.E, padx=(0, 16))
+        ok_button = ttk.Button(button_frame, text="OK", command=self.exit)
+        ok_button.grid(column=1, row=0, sticky=tk.E)
+        self.initial_focus = ok_button
+
+        ThemeChanger.add_handler(self.root_window, self.on_theme_changed)
+
+    def refresh_icons(self) -> None:
+        """Refresh the icons in the dialog using the active style."""
+        icon_height = 48
+        icon_color = hex_string_for_style(StyleKey.Fg)
+        self.app_icon_images.clear()
+        for icon_name, icon_label in zip(self.app_icons, self.icon_labels, strict=True):
+            icon_image = icon_to_image(icon_name, fill=icon_color, scale_to_height=icon_height)
+            self.app_icon_images.append(icon_image)
+            icon_label.configure(image=icon_image)
+
+    def copy_version(self) -> None:
+        """Copy the version information to the clipboard."""
+        formatted_version = {
+            "version": self.notice_information.version,
+            "timestamp": str(self.notice_information.timestamp),
+            "commit": self.notice_information.commit,
+        }
+        self.parent.clipboard_clear()
+        self.parent.clipboard_append(json.dumps(formatted_version))
+        status_emoji = ttk_icons.Emoji.get("white heavy check mark")
+        self.copy_version_button.configure(text=f"{status_emoji}   Copied!", bootstyle=bootstyle.SUCCESS)
+        self.copy_version_button.after(
+            850,
+            functools.partial(
+                self.copy_version_button.configure,
+                text=self.copy_version_text,
+                bootstyle=(bootstyle.DEFAULT, bootstyle.OUTLINE),  # pyright: ignore callIssue -- the type hints do not understand tuples
+            ),
+        )
+
+    async def on_loop(self) -> None:
+        """Update UI elements."""
+        await asyncio.sleep(20e-3)
+
+    def on_theme_changed(self, event_args: tk.Event) -> None:
+        """Handle the ThemeChanger.Event.BootstrapThemeChanged event."""
+        self.refresh_icons()
 
 
 class ThemeChanger:
