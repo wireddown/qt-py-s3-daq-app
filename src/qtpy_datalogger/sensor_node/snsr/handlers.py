@@ -1,12 +1,25 @@
 """Functions that handle API commands."""
 
-from snsr.core import get_new_descriptor, get_notice_info
+import adafruit_minimqtt.adafruit_minimqtt as minimqtt
+
 from snsr.node.classes import (
     DescriptorInformation,
-    NoticeInformation,
     SenderInformation,
 )
 from snsr.settings import settings
+
+
+def handle_identify(client: minimqtt.MQTT) -> None:
+    """Respond to the the identify command."""
+    from microcontroller import cpu
+    from wifi import radio
+
+    from snsr.node.mqtt import get_descriptor_topic
+
+    context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
+    descriptor_topic = get_descriptor_topic(context["node_group"], context["node_identifier"])
+    descriptor_message = get_descriptor_payload("node", cpu.uid.hex().lower(), str(radio.ipv4_address))
+    client.publish(descriptor_topic, descriptor_message)
 
 
 def get_descriptor_payload(role: str, serial_number: str, ip_address: str) -> str:
@@ -31,6 +44,9 @@ def build_descriptor_information(role: str, serial_number: str, ip_address: str)
     from sys import implementation, version_info
 
     from board import board_id
+
+    from snsr.core import get_new_descriptor, get_notice_info
+    from snsr.node.classes import NoticeInformation
 
     pid = 0
     system_info = uname()

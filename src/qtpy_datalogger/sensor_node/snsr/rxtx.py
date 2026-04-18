@@ -4,7 +4,7 @@ import adafruit_connection_manager
 import adafruit_minimqtt.adafruit_minimqtt as minimqtt
 import wifi
 
-from snsr.handlers import build_sender_information, get_descriptor_payload
+from snsr.handlers import build_sender_information, handle_identify
 from snsr.node.mqtt import get_descriptor_topic, get_result_topic
 from snsr.settings import settings
 
@@ -67,13 +67,7 @@ def on_message(client: minimqtt.MQTT, topic: str, message: str) -> None:
     topic_parts = topic.split("/")
     last_part = topic_parts[-1]
     if last_part == "broadcast":
-        from microcontroller import cpu
-        from wifi import radio
-
-        context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
-        descriptor_topic = get_descriptor_topic(context["node_group"], context["node_identifier"])
-        descriptor_message = get_descriptor_payload("node", cpu.uid.hex().lower(), str(radio.ipv4_address))
-        client.publish(descriptor_topic, descriptor_message)
+        handle_identify(client)
     elif last_part == "command":
         from json import dumps, loads
 
