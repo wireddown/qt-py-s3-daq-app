@@ -1,6 +1,6 @@
 """Functions that handle API commands."""
 
-from json import dumps
+from json import dumps, loads
 
 import adafruit_minimqtt.adafruit_minimqtt as minimqtt
 
@@ -15,8 +15,6 @@ from snsr.settings import settings
 
 def handle_broadcast_message(client: minimqtt.MQTT, message: str) -> None:
     """Respond to a message sent to the broadcast topic for the node's group."""
-    from json import loads
-
     if not message:
         return
     try:
@@ -46,7 +44,6 @@ def handle_identify(client: minimqtt.MQTT) -> None:
 
 def handle_command_message(client: minimqtt.MQTT, message: str) -> None:
     """Respond to a message sent to the command topic for the node."""
-    from json import loads
     from time import sleep
 
     from .node.classes import ActionInformation
