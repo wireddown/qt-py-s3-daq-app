@@ -1,6 +1,5 @@
 """Classes and functions for control and communication over MQTT."""
 
-import adafruit_connection_manager
 import adafruit_minimqtt.adafruit_minimqtt as minimqtt
 import wifi
 
@@ -73,8 +72,10 @@ def on_message(client: minimqtt.MQTT, topic: str, message: str) -> None:
 
 def create_mqtt_client(radio: wifi.Radio, node_group: str, node_identifier: str) -> minimqtt.MQTT:
     """Create an MQTT client and set its callback functions."""
+    from adafruit_connection_manager import get_radio_socketpool
+
     # Set up a MiniMQTT Client
-    pool = adafruit_connection_manager.get_radio_socketpool(radio)
+    pool = get_radio_socketpool(radio)
     mqtt_client = minimqtt.MQTT(
         broker=settings.mqtt_broker,
         socket_pool=pool,
