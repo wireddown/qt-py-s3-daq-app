@@ -3,7 +3,7 @@
 import adafruit_minimqtt.adafruit_minimqtt as minimqtt
 import wifi
 
-from snsr.handlers import handle_command_message, handle_identify
+from snsr.handlers import handle_broadcast_message, handle_command_message
 from snsr.settings import settings
 
 
@@ -65,7 +65,7 @@ def on_message(client: minimqtt.MQTT, topic: str, message: str) -> None:
     topic_parts = topic.split("/")
     last_part = topic_parts[-1]
     if last_part == "broadcast":
-        handle_identify(client)
+        handle_broadcast_message(client, message)
     elif last_part == "command":
         handle_command_message(client, message)
 

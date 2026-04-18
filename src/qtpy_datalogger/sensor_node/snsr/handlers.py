@@ -5,11 +5,32 @@ from json import dumps
 import adafruit_minimqtt.adafruit_minimqtt as minimqtt
 
 from snsr.node.classes import (
+    ActionPayload,
     DescriptorInformation,
     SenderInformation,
 )
 from snsr.node.mqtt import get_descriptor_topic
 from snsr.settings import settings
+
+
+def handle_broadcast_message(client: minimqtt.MQTT, message: str) -> None:
+    """Respond to a message sent to the broadcast topic for the node's group."""
+    from json import loads
+
+    if not message:
+        return
+    try:
+        action_payload_information = loads(message)
+    except ValueError:
+        return
+    action_payload = ActionPayload.from_dict(action_payload_information)
+    action = action_payload.action
+    if action.command == "identify":
+        handle_identify(client)
+        return
+
+    # Fallback: forward to node as a command
+    handle_command_message(client, message)
 
 
 def handle_identify(client: minimqtt.MQTT) -> None:
@@ -28,7 +49,7 @@ def handle_command_message(client: minimqtt.MQTT, message: str) -> None:
     from json import loads
     from time import sleep
 
-    from .node.classes import ActionInformation, ActionPayload
+    from .node.classes import ActionInformation
     from .node.mqtt import get_result_topic
 
     if not message:
