@@ -1,15 +1,39 @@
 """Functions that handle API commands."""
 
-from json import dumps
+from json import dumps, loads
 
 import adafruit_minimqtt.adafruit_minimqtt as minimqtt
 
 from snsr.node.classes import (
+    ActionPayload,
     DescriptorInformation,
     SenderInformation,
 )
 from snsr.node.mqtt import get_descriptor_topic
 from snsr.settings import settings
+
+
+def can_handle_message(message: str) -> None | ActionPayload:
+    """Return an ActionPayload if the node can respond to the message."""
+    if not message:
+        return None
+    try:
+        action_payload_information = loads(message)
+    except ValueError:
+        return None
+    action_payload = ActionPayload.from_dict(action_payload_information)
+    return action_payload
+
+
+def handle_broadcast_message(client: minimqtt.MQTT, action_payload: ActionPayload) -> None:
+    """Respond to a message sent to the broadcast topic for the node's group."""
+    action = action_payload.action
+    if action.command == "identify":
+        handle_identify(client)
+        return
+
+    # Fallback: forward to node as a command
+    handle_command_message(client, action_payload)
 
 
 def handle_identify(client: minimqtt.MQTT) -> None:
@@ -23,22 +47,14 @@ def handle_identify(client: minimqtt.MQTT) -> None:
     client.publish(descriptor_topic, descriptor_message)
 
 
-def handle_command_message(client: minimqtt.MQTT, message: str) -> None:
+def handle_command_message(client: minimqtt.MQTT, action_payload: ActionPayload) -> None:
     """Respond to a message sent to the command topic for the node."""
-    from json import loads
     from time import sleep
 
-    from .node.classes import ActionInformation, ActionPayload
+    from .node.classes import ActionInformation
     from .node.mqtt import get_result_topic
 
-    if not message:
-        return
-    try:
-        action_payload_information = loads(message)
-    except ValueError:
-        return
     node_context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
-    action_payload = ActionPayload.from_dict(action_payload_information)
     action_information = action_payload.action
     descriptor_topic = get_descriptor_topic(node_context["node_group"], node_context["node_identifier"])
     sender = build_sender_information(descriptor_topic)
