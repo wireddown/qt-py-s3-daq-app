@@ -13,13 +13,17 @@ class Settings:
         """Return the singleton instance, creating it beforehand if necessary."""
         if not hasattr(cls, "_instance"):
             cls._instance = super().__new__(cls)
+            cls._instance._initialized = False
         return cls._instance
 
     def __init__(self) -> None:
         """Initialize the instance."""
+        if self._initialized:
+            return
         self._initialize_from_env()
         self._initialize_dynamic_settings()
         self._dio_pins = {}
+        self._initialized = True
 
     def _initialize_from_env(self) -> None:
         """Initialize the readonly settings from the environment variables."""
