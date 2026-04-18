@@ -1,7 +1,5 @@
 """Classes and functions for control and communication over MQTT."""
 
-import os
-
 import adafruit_connection_manager
 import adafruit_minimqtt.adafruit_minimqtt as minimqtt
 import wifi
@@ -9,12 +7,13 @@ import wifi
 from snsr.core import get_new_descriptor, get_notice_info
 from snsr.node.classes import DescriptorInformation, NoticeInformation, SenderInformation
 from snsr.node.mqtt import get_descriptor_topic, get_result_topic
+from snsr.settings import settings
 
 
 def connect_to_wifi() -> wifi.Radio:
     """Connect to the SSID from settings.toml and return the radio instance."""
     wifi.radio.enabled = True
-    wifi.radio.connect(os.getenv("CIRCUITPY_WIFI_SSID"), os.getenv("CIRCUITPY_WIFI_PASSWORD"))
+    wifi.radio.connect(settings.wifi_ssid, settings.wifi_password)
     return wifi.radio
 
 
@@ -107,7 +106,7 @@ def create_mqtt_client(radio: wifi.Radio, node_group: str, node_identifier: str)
     # Set up a MiniMQTT Client
     pool = adafruit_connection_manager.get_radio_socketpool(radio)
     mqtt_client = minimqtt.MQTT(
-        broker=os.getenv("QTPY_BROKER_IP_ADDRESS", ""),
+        broker=settings.mqtt_broker,
         socket_pool=pool,
         user_data={
             "node_group": node_group,
@@ -157,11 +156,9 @@ def get_descriptor_payload(role: str, serial_number: str, ip_address: str) -> st
     from snsr.node.mqtt import format_mqtt_client_id, get_descriptor_topic
 
     pid = 0
-    group_id = os.getenv("QTPY_NODE_GROUP", "zone1")
-
     descriptor = build_descriptor_information(role, serial_number, ip_address)
     client_id = format_mqtt_client_id(role, serial_number, pid)
-    descriptor_topic = get_descriptor_topic(group_id, client_id)
+    descriptor_topic = get_descriptor_topic(settings.node_group, client_id)
     sender = build_sender_information(descriptor_topic)
     response = DescriptorPayload(descriptor=descriptor, sender=sender)
     return json.dumps(response.as_dict())
