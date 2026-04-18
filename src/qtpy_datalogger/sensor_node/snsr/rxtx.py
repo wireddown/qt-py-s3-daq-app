@@ -3,7 +3,11 @@
 import adafruit_minimqtt.adafruit_minimqtt as minimqtt
 import wifi
 
-from snsr.handlers import handle_broadcast_message, handle_command_message
+from snsr.handlers import (
+    can_handle_message,
+    handle_broadcast_message,
+    handle_command_message,
+)
 from snsr.settings import settings
 
 
@@ -64,10 +68,13 @@ def on_message(client: minimqtt.MQTT, topic: str, message: str) -> None:
     # > print(f"New message on topic {topic}: {message}")
     topic_parts = topic.split("/")
     last_part = topic_parts[-1]
+    action_payload = can_handle_message(message)
+    if not action_payload:
+        return
     if last_part == "broadcast":
-        handle_broadcast_message(client, message)
+        handle_broadcast_message(client, action_payload)
     elif last_part == "command":
-        handle_command_message(client, message)
+        handle_command_message(client, action_payload)
 
 
 def create_mqtt_client(radio: wifi.Radio, node_group: str, node_identifier: str) -> minimqtt.MQTT:
