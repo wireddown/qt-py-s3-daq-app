@@ -787,13 +787,13 @@ def show_button_feedback(
 
     feedback_text = success_text if command_result else failure_text
     feedback_style = bootstyle.SUCCESS if command_result else bootstyle.DANGER
-    button.configure(text=feedback_text, bootstyle=feedback_style)  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+    button.configure(text=feedback_text, bootstyle=feedback_style)
     button.after(
         850,
         functools.partial(
             button.configure,
             text=normal_text,
-            bootstyle=normal_style,  # pyright: ignore callIssue -- the type hint for bootstrap omits its own additions
+            bootstyle=normal_style,
         ),
     )
 
