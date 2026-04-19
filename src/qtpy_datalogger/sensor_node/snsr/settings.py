@@ -1,6 +1,7 @@
 """Global settings used by the sensor_node runtime."""
 
 import board
+import busio
 import digitalio
 
 
@@ -23,6 +24,7 @@ class Settings:
         self._initialize_from_env()
         self._initialize_dynamic_settings()
         self._dio_pins = {}
+        self._stemma_bus = None
         self._initialized = True
 
     def _initialize_from_env(self) -> None:
@@ -86,6 +88,12 @@ class Settings:
             return
         self._dio_pins[pin_name].deinit()
         del self._dio_pins[pin_name]
+
+    def get_stemma_i2c(self) -> busio.I2C:
+        """Initialize the Stemma as an I2C port."""
+        if not self._stemma_bus:
+            self._stemma_bus = board.STEMMA_I2C()
+        return self._stemma_bus
 
 
 settings = Settings()
