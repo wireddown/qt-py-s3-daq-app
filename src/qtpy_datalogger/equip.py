@@ -291,7 +291,7 @@ def _format_bundle_comparison(
     report_lines = report_contents.splitlines()
 
     newer_files = set()
-    for path, freshness in file_freshness.items():
+    for path, freshness in sorted(file_freshness.items()):
         full_path = this_bundle.device_files[0].joinpath(path)
         if not full_path.is_file():
             continue
@@ -378,7 +378,7 @@ def _equip_snsr_node(behavior: Behavior, comparison_information: dict[str, SnsrN
         )
         older_files = set()
         newer_files = set()
-        for path, freshness in runtime_freshness.items():
+        for path, freshness in sorted(runtime_freshness.items()):
             full_path = this_bundle.device_files[0].joinpath(path)
             if not full_path.is_file():
                 continue
