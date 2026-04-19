@@ -3,8 +3,11 @@
 from json import dumps, loads
 
 import adafruit_minimqtt.adafruit_minimqtt as minimqtt
+from microcontroller import cpu
 
+from snsr import apps
 from snsr.node.classes import (
+    ActionInformation,
     ActionPayload,
     DescriptorInformation,
     SenderInformation,
@@ -38,7 +41,6 @@ def handle_broadcast_message(client: minimqtt.MQTT, action_payload: ActionPayloa
 
 def handle_identify(client: minimqtt.MQTT) -> None:
     """Respond to the the identify command."""
-    from microcontroller import cpu
     from wifi import radio
 
     context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
@@ -51,27 +53,51 @@ def handle_command_message(client: minimqtt.MQTT, action_payload: ActionPayload)
     """Respond to a message sent to the command topic for the node."""
     from time import sleep
 
-    from .node.classes import ActionInformation
-    from .node.mqtt import get_result_topic
+    from snsr.node.mqtt import get_result_topic
 
     node_context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
     action_information = action_payload.action
+
+    result_information = try_handle_qtpycmd_message(action_information)
+    snsr_app_name = ""
+    if not result_information:
+        snsr_app_name = action_information.command.split(" ")[0]
+        handle_message = apps.get_handler(snsr_app_name)
+        result_information = handle_message(action_information)
+
     descriptor_topic = get_descriptor_topic(node_context["node_group"], node_context["node_identifier"])
     sender = build_sender_information(descriptor_topic)
-    result_payload = ActionPayload(
-        action=ActionInformation(
-            command=action_information.command,
-            parameters={
-                "output": f"received: {action_information.parameters['input']}",
-                "complete": True,
-            },
-            message_id=action_information.message_id,
-        ),
-        sender=sender,
-    )
+    result_payload = ActionPayload(result_information, sender)
     result_topic = get_result_topic(node_context["node_group"], node_context["node_identifier"])
     client.publish(result_topic, dumps(result_payload.as_dict()))
     sleep(0.2)  # Allow the backend to send the message
+
+    did_handle_message = apps.get_handler_completion(snsr_app_name)
+    did_handle_message(action_information)
+
+
+def try_handle_qtpycmd_message(action_information: ActionInformation) -> None | ActionInformation:
+    """Handle the action if it is a 'qtpycmd' system action. Return None otherwise."""
+    if action_information.command == "custom" and action_information.parameters["input"].startswith("qtpycmd "):
+        system_command = action_information.parameters["input"]
+        parts = system_command.split(" ")
+        verb = parts[1]
+        if verb == "get_apps":
+            return handle_get_apps(action_information)
+    return None
+
+
+def handle_get_apps(received_action: ActionInformation) -> ActionInformation:
+    """Handle the 'qtpycmd get_apps' action."""
+    response_action = ActionInformation(
+        command=received_action.parameters["input"],
+        parameters={
+            "output": apps.get_catalog(),
+            "complete": True,
+        },
+        message_id=received_action.message_id,
+    )
+    return response_action
 
 
 def get_descriptor_payload(role: str, serial_number: str, ip_address: str) -> str:
@@ -123,9 +149,7 @@ def build_sender_information(descriptor_topic: str) -> SenderInformation:
     from gc import mem_alloc, mem_free
     from time import monotonic
 
-    from microcontroller import cpu
-
-    from snsr.node.classes import SenderInformation, StatusInformation
+    from snsr.node.classes import StatusInformation
 
     used_bytes = mem_alloc()
     free_bytes = mem_free()
