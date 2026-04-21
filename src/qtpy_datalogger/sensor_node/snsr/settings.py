@@ -1,5 +1,6 @@
 """Global settings used by the sensor_node runtime."""
 
+import analogio
 import board
 import busio
 import digitalio
@@ -23,7 +24,7 @@ class Settings:
             return
         self._initialize_from_env()
         self._initialize_dynamic_settings()
-        self._dio_pins = {}
+        self._board_io_pins: dict[str, digitalio.DigitalInOut | analogio.AnalogIn] = {}
         self._stemma_bus = None
         self._initialized = True
 
@@ -76,18 +77,30 @@ class Settings:
         """Set a new value for the node's boot time."""
         self._boot_time = new_boot_time
 
-    def get_dio_pin(self, pin_name: str) -> digitalio.DigitalInOut:
-        """Initialize the pin instance that matches the board's pin_name."""
-        if pin_name not in self._dio_pins:
-            self._dio_pins[pin_name] = digitalio.DigitalInOut(getattr(board, pin_name))
-        return self._dio_pins[pin_name]
+    def get_ai_pin(self, pin_name: str) -> analogio.AnalogIn:
+        """Initialize the analog input pin instance that matches the board's pin_name."""
+        if pin_name not in self._board_io_pins:
+            self._board_io_pins[pin_name] = analogio.AnalogIn(getattr(board, pin_name))
+        analog_input = self._board_io_pins[pin_name]
+        if not isinstance(analog_input, analogio.AnalogIn):
+            raise TypeError(type(analog_input), analogio.AnalogIn)
+        return analog_input
 
-    def release_dio_pin(self, pin_name: str) -> None:
+    def get_dio_pin(self, pin_name: str) -> digitalio.DigitalInOut:
+        """Initialize the digital io pin instance that matches the board's pin_name."""
+        if pin_name not in self._board_io_pins:
+            self._board_io_pins[pin_name] = digitalio.DigitalInOut(getattr(board, pin_name))
+        digital_io = self._board_io_pins[pin_name]
+        if not isinstance(digital_io, digitalio.DigitalInOut):
+            raise TypeError(type(digital_io), digitalio.DigitalInOut)
+        return digital_io
+
+    def release_pin(self, pin_name: str) -> None:
         """De-initialize the pin instance that matches the board's pin_name."""
-        if pin_name not in self._dio_pins:
+        if pin_name not in self._board_io_pins:
             return
-        self._dio_pins[pin_name].deinit()
-        del self._dio_pins[pin_name]
+        self._board_io_pins[pin_name].deinit()
+        del self._board_io_pins[pin_name]
 
     def get_stemma_i2c(self) -> busio.I2C:
         """Initialize the Stemma as an I2C port."""
