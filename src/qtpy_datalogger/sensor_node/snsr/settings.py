@@ -4,6 +4,7 @@ import analogio
 import board
 import busio
 import digitalio
+import neopixel
 
 
 class Settings:
@@ -24,7 +25,7 @@ class Settings:
             return
         self._initialize_from_env()
         self._initialize_dynamic_settings()
-        self._board_io_pins: dict[str, digitalio.DigitalInOut | analogio.AnalogIn] = {}
+        self._board_io_pins: dict[str, digitalio.DigitalInOut | analogio.AnalogIn | neopixel.NeoPixel] = {}
         self._stemma_bus = None
         self._initialized = True
 
@@ -76,6 +77,22 @@ class Settings:
     def boot_time(self, new_boot_time: float) -> None:
         """Set a new value for the node's boot time."""
         self._boot_time = new_boot_time
+
+    def get_neopixel(self) -> neopixel.NeoPixel:
+        """Return the NeoPixel on the board."""
+        pin_name = "NEOPIXEL"
+        if pin_name not in self._board_io_pins:
+            self._board_io_pins[pin_name] = neopixel.NeoPixel(
+                pin=getattr(board, pin_name), n=1, brightness=0.2, auto_write=False, pixel_order=neopixel.GRB
+            )
+        the_neopixel = self._board_io_pins[pin_name]
+        if not isinstance(the_neopixel, neopixel.NeoPixel):
+            raise TypeError(type(the_neopixel), neopixel.NeoPixel)
+        return the_neopixel
+
+    def release_neopixel(self) -> None:
+        """De-initialize the NeoPixel on the board."""
+        self.release_pin("NEOPIXEL")
 
     def get_ai_pin(self, pin_name: str) -> analogio.AnalogIn:
         """Initialize the analog input pin instance that matches the board's pin_name."""
