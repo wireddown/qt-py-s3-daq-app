@@ -7,7 +7,6 @@ from microcontroller import cpu
 
 from snsr import apps
 from snsr.node.classes import (
-    ActionInformation,
     ActionPayload,
     DescriptorInformation,
     SenderInformation,
@@ -35,7 +34,7 @@ def handle_broadcast_message(client: minimqtt.MQTT, action_payload: ActionPayloa
         handle_identify(client)
         return
 
-    # Fallback: forward to node as a command
+    # Fallback: forward to node as a command for retained group messages
     handle_command_message(client, action_payload)
 
 
@@ -56,48 +55,21 @@ def handle_command_message(client: minimqtt.MQTT, action_payload: ActionPayload)
     from snsr.node.mqtt import get_result_topic
 
     node_context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
+    node_group = node_context["node_group"]
+    node_identifier = node_context["node_identifier"]
+    result_topic = get_result_topic(node_group, node_identifier)
+    descriptor_topic = get_descriptor_topic(node_group, node_identifier)
     action_information = action_payload.action
 
-    result_information = try_handle_qtpycmd_message(action_information)
-    snsr_app_name = ""
-    if not result_information:
-        snsr_app_name = action_information.command.split(" ")[0]
-        handle_message = apps.get_handler(snsr_app_name)
-        result_information = handle_message(action_information)
+    app = apps.get_app(action_information)
+    result_information = app.handle_message()
 
-    descriptor_topic = get_descriptor_topic(node_context["node_group"], node_context["node_identifier"])
     sender = build_sender_information(descriptor_topic)
     result_payload = ActionPayload(result_information, sender)
-    result_topic = get_result_topic(node_context["node_group"], node_context["node_identifier"])
     client.publish(result_topic, dumps(result_payload.as_dict()))
-    sleep(0.2)  # Allow the backend to send the message
+    sleep(0.2)  # Allow the backend to send the message before invoking the completion which may sleep
 
-    did_handle_message = apps.get_handler_completion(snsr_app_name)
-    did_handle_message(action_information)
-
-
-def try_handle_qtpycmd_message(action_information: ActionInformation) -> None | ActionInformation:
-    """Handle the action if it is a 'qtpycmd' system action. Return None otherwise."""
-    if action_information.command == "custom" and action_information.parameters["input"].startswith("qtpycmd "):
-        system_command = action_information.parameters["input"]
-        parts = system_command.split(" ")
-        verb = parts[1]
-        if verb == "get_apps":
-            return handle_get_apps(action_information)
-    return None
-
-
-def handle_get_apps(received_action: ActionInformation) -> ActionInformation:
-    """Handle the 'qtpycmd get_apps' action."""
-    response_action = ActionInformation(
-        command=received_action.parameters["input"],
-        parameters={
-            "output": apps.get_catalog(),
-            "complete": True,
-        },
-        message_id=received_action.message_id,
-    )
-    return response_action
+    app.did_handle_message()
 
 
 def get_descriptor_payload(role: str, serial_number: str, ip_address: str) -> str:
