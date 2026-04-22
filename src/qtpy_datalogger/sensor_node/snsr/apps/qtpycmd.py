@@ -15,6 +15,8 @@ class QtpyCmdApp(SnsrApp):
         verb = parts[1]
         if verb == "get_apps":
             return handle_get_apps(self.action, parts)
+        if verb == "stats":
+            return handle_get_stats(self.action, parts)
         if verb == "config":
             return handle_do_config(self.action, parts)
         if verb == "pixel":
@@ -54,6 +56,17 @@ def handle_get_apps(received_action: ActionInformation, command_args: list[str])
     """Handle the 'qtpycmd get_apps' action."""
     apps = settings.app_catalog
     return build_response(received_action, sorted(apps))
+
+
+def handle_get_stats(received_action: ActionInformation, command_args: list[str]) -> ActionInformation:
+    """Handle the 'qtpycmd stats' action."""
+    import gc
+
+    gc.collect()
+    return build_response(
+        received_action,
+        f"{settings.used_kb:.3f} kB used | {settings.free_kb:.3f} kB free | {settings.uptime:.2f} s uptime",
+    )
 
 
 def handle_do_config(received_action: ActionInformation, command_args: list[str]) -> ActionInformation:
