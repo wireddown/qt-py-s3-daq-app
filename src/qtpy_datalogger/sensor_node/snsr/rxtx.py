@@ -77,13 +77,3 @@ def unsubscribe_and_disconnect(mqtt_client: minimqtt.MQTT, topics: list[str]) ->
     for topic in topics:
         mqtt_client.unsubscribe(topic)
     mqtt_client.disconnect()
-
-
-def do_full_client_publish(mqtt_client: minimqtt.MQTT, message: str) -> None:
-    """Connect, publish, and disconnect."""
-    mqtt_topic = "qtpy/v1/__group_id__/__node_id__/__example__"
-    mqtt_client.connect()
-    mqtt_client.subscribe(mqtt_topic)
-    mqtt_client.publish(mqtt_topic, message)
-    mqtt_client.unsubscribe(mqtt_topic)
-    mqtt_client.disconnect()
