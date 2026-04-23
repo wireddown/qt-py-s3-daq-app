@@ -244,4 +244,24 @@ def get_notice_info() -> NoticeInformation:
     return NoticeInformation.from_dict(notice_info)
 
 
+def format_wifi_information(wifi_radio: wifi.Radio) -> list[str]:
+    """Print details about the WiFi connection."""
+    if not wifi_radio.ap_info:
+        return []
+
+    lines = [
+        "Connected to WiFi",
+        "",
+        "     Network information",
+        f"Hostname: {wifi_radio.hostname}",
+        f"Tx Power: {wifi_radio.tx_power} dBm",
+        f"IP:       {wifi_radio.ipv4_address}",
+        f"DNS:      {wifi_radio.ipv4_dns}",
+        f"SSID:     {wifi_radio.ap_info.ssid}",
+        f"RSSI:     {wifi_radio.ap_info.rssi} dBm",
+        "",
+    ]
+    return lines
+
+
 settings = Settings()
