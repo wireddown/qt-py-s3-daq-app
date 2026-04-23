@@ -24,7 +24,10 @@ def can_handle_message(message: str) -> None | ActionPayload:
         action_payload_information = loads(message)
     except ValueError:
         return None
-    action_payload = ActionPayload.from_dict(action_payload_information)
+    try:
+        action_payload = ActionPayload.from_dict(action_payload_information)
+    except (KeyError, TypeError):
+        return None
     return action_payload
 
 
