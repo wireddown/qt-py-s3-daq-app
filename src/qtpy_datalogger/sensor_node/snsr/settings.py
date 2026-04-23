@@ -5,6 +5,8 @@ import board
 import busio
 import digitalio
 import neopixel
+import wifi
+from adafruit_connection_manager import connection_manager_close_all
 
 
 class Settings:
@@ -25,8 +27,6 @@ class Settings:
             return
         self._initialize_from_env()
         self._initialize_dynamic_settings()
-        self._board_io_pins: dict[str, digitalio.DigitalInOut | analogio.AnalogIn | neopixel.NeoPixel] = {}
-        self._stemma_bus = None
         self._initialized = True
 
     def _initialize_from_env(self) -> None:
@@ -42,16 +42,9 @@ class Settings:
     def _initialize_dynamic_settings(self) -> None:
         """Initialize the read-write settings."""
         self._boot_time = -1.0
-
-    @property
-    def wifi_ssid(self) -> str:
-        """Return the WiFi SSID from the settings.toml file."""
-        return self._wifi_ssid
-
-    @property
-    def wifi_password(self) -> str:
-        """Return the WiFi password from the settings.toml file."""
-        return self._wifi_password
+        self._wifi_radio = None
+        self._board_io_pins: dict[str, digitalio.DigitalInOut | analogio.AnalogIn | neopixel.NeoPixel] = {}
+        self._stemma_bus = None
 
     @property
     def mqtt_broker(self) -> str:
@@ -77,6 +70,31 @@ class Settings:
     def boot_time(self, new_boot_time: float) -> None:
         """Set a new value for the node's boot time."""
         self._boot_time = new_boot_time
+
+    def connect_to_wifi(self) -> None:
+        """Connect to the SSID from settings.toml and return the radio instance."""
+        wifi.radio.enabled = True
+        wifi.radio.connect(settings._wifi_ssid, settings._wifi_password)
+        self._wifi_radio = wifi.radio
+
+    @property
+    def wifi_radio(self) -> wifi.Radio:
+        """Return the WiFi radio instance."""
+        the_radio = self._wifi_radio
+        if not the_radio:
+            raise ConnectionError()
+        return the_radio
+
+    @property
+    def ip_address(self) -> str:
+        """Return the IP address of the sensor_node."""
+        return str(self.wifi_radio.ipv4_address)
+
+    def disconnect_from_wifi(self) -> None:
+        """Disconnect and disable the WiFi radio."""
+        self._wifi_radio = None
+        connection_manager_close_all()
+        wifi.radio.enabled = False
 
     def get_neopixel(self) -> neopixel.NeoPixel:
         """Return the NeoPixel on the board."""
