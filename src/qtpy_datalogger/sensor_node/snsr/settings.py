@@ -13,6 +13,8 @@ from adafruit_connection_manager import connection_manager_close_all
 from microcontroller import cpu
 from supervisor import runtime
 
+from snsr.node.classes import NoticeInformation
+
 
 class Settings:
     """A singleton that holds the global settings used by the sensor_node runtime."""
@@ -30,9 +32,24 @@ class Settings:
         """Initialize the instance."""
         if self._initialized:
             return
+        self._initialize_constants()
         self._initialize_from_env()
         self._initialize_dynamic_settings()
         self._initialized = True
+
+    def _initialize_constants(self) -> None:
+        """Initialize the readonly settings from the device."""
+        from os import uname
+        from sys import implementation, version_info
+
+        from snsr.node.mqtt import format_mqtt_client_id
+
+        self._board_id = board.board_id
+        self._serial_number = cpu.uid.hex().lower()
+        self._micropython_base = ".".join([str(version_segment) for version_segment in version_info])
+        self._python_implementation = f"{implementation.name}-{uname().release}"
+        self._notice_info = None  # Lazily loaded on first access
+        self._mqtt_client_id = format_mqtt_client_id(role="node", mac_address=self._serial_number, pid=0)
 
     def _initialize_from_env(self) -> None:
         """Initialize the readonly settings from the environment variables."""
@@ -50,6 +67,38 @@ class Settings:
         self._wifi_radio = None
         self._board_io_pins: dict[str, digitalio.DigitalInOut | analogio.AnalogIn | neopixel.NeoPixel] = {}
         self._stemma_bus = None
+
+    @property
+    def board_id(self) -> str:
+        """Return the board identifier for the sensor_node."""
+        return self._board_id
+
+    @property
+    def serial_number(self) -> str:
+        """Return the unique identifier for the sensor_node."""
+        return self._serial_number
+
+    @property
+    def micropython_base(self) -> str:
+        """Return the Python version on the sensor_node."""
+        return self._micropython_base
+
+    @property
+    def python_implementation(self) -> str:
+        """Return the Python implementation on the sensor_node."""
+        return self._python_implementation
+
+    @property
+    def notice_info(self) -> NoticeInformation:
+        """Return the NoticeInformation for this sensor_node."""
+        if not self._notice_info:
+            self._notice_info = get_notice_info()
+        return self._notice_info
+
+    @property
+    def mqtt_client_id(self) -> str:
+        """Return the unique MQTT client ID for the sensor_node."""
+        return self._mqtt_client_id
 
     @property
     def cpu_temperature(self) -> float:
@@ -179,6 +228,20 @@ class Settings:
         if not self._stemma_bus:
             self._stemma_bus = board.STEMMA_I2C()
         return self._stemma_bus
+
+
+def get_notice_info() -> NoticeInformation:
+    """Return a serializable representation of the notice.toml file."""
+    notice_contents = []
+    with open("/snsr/notice.toml") as notice_toml:  # noqa: PTH123 -- Path.open() is not available on CircuitPython
+        notice_contents = notice_toml.read().splitlines()
+    notice_info = {}
+    for line in notice_contents:
+        key_and_value = line.split("=")
+        key = key_and_value[0].strip()
+        value = key_and_value[1].strip().replace('"', "")
+        notice_info[key] = value
+    return NoticeInformation.from_dict(notice_info)
 
 
 settings = Settings()
