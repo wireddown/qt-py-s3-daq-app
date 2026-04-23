@@ -1,5 +1,8 @@
 """Global settings used by the sensor_node runtime."""
 
+import gc
+from time import monotonic
+
 import analogio
 import board
 import busio
@@ -7,6 +10,8 @@ import digitalio
 import neopixel
 import wifi
 from adafruit_connection_manager import connection_manager_close_all
+from microcontroller import cpu
+from supervisor import runtime
 
 
 class Settings:
@@ -45,6 +50,38 @@ class Settings:
         self._wifi_radio = None
         self._board_io_pins: dict[str, digitalio.DigitalInOut | analogio.AnalogIn | neopixel.NeoPixel] = {}
         self._stemma_bus = None
+
+    @property
+    def cpu_temperature(self) -> float:
+        """Return the temperature of the CPU in degrees C."""
+        if not cpu.temperature:
+            return 0.0
+        return cpu.temperature
+
+    @property
+    def used_kb(self) -> float:
+        """Return the used memory in kB."""
+        return gc.mem_alloc() / 1024.0
+
+    @property
+    def free_kb(self) -> float:
+        """Return the free memory in kB."""
+        return gc.mem_free() / 1024.0
+
+    @property
+    def uptime(self) -> float:
+        """Return the time since the last code.py start in seconds."""
+        return monotonic() - settings.boot_time
+
+    @property
+    def uart_connected(self) -> bool:
+        """Return true if the sensor_node has an open UART connection."""
+        return runtime.usb_connected and runtime.serial_connected
+
+    @property
+    def uart_bytes_waiting(self) -> bool:
+        """Return true if the UART has bytes waiting to be read."""
+        return runtime.serial_bytes_available > 0
 
     @property
     def mqtt_broker(self) -> str:

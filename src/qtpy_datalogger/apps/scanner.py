@@ -461,12 +461,12 @@ class ScannerApp(guikit.AsyncWindow):
                     )
                     response_complete = response_parameters["complete"]
                     response = response_parameters["output"]
-                    used_bytes = sender_information.status.used_memory
-                    free_bytes = sender_information.status.free_memory
+                    used_kb = sender_information.status.used_memory
+                    free_kb = sender_information.status.free_memory
                     cpu_degc = sender_information.status.cpu_temperature
                     self.append_text_to_log(f"{received_emoji} {response}\n")
                     self.append_text_to_log(
-                        f"{status_emoji} with {used_bytes} bytes used, {free_bytes} bytes remaining, at temperature {cpu_degc} degC\n"
+                        f"{status_emoji} with {used_kb} kB used, {free_kb} kB remaining, at temperature {cpu_degc} degC\n"
                     )
                 except TimeoutError:
                     new_status_message = (
