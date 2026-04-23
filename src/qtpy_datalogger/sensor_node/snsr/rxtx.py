@@ -53,10 +53,6 @@ def create_mqtt_client(node_group: str, node_identifier: str) -> minimqtt.MQTT:
     mqtt_client = minimqtt.MQTT(
         broker=settings.mqtt_broker,
         socket_pool=pool,
-        user_data={
-            "node_group": node_group,
-            "node_identifier": node_identifier,
-        },
     )
 
     # Connect callback handlers to mqtt_client

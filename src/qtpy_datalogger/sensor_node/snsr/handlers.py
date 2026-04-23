@@ -12,7 +12,7 @@ from snsr.node.classes import (
     SenderInformation,
     StatusInformation,
 )
-from snsr.node.mqtt import get_descriptor_topic
+from snsr.node.mqtt import get_descriptor_topic, get_result_topic
 from snsr.settings import settings
 
 
@@ -41,8 +41,7 @@ def handle_broadcast_message(client: minimqtt.MQTT, action_payload: ActionPayloa
 
 def handle_identify(client: minimqtt.MQTT) -> None:
     """Respond to the the identify command."""
-    context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
-    descriptor_topic = get_descriptor_topic(context["node_group"], context["node_identifier"])
+    descriptor_topic = get_descriptor_topic(settings.node_group, settings.mqtt_client_id)
     descriptor_payload = get_descriptor_payload(descriptor_topic)
     client.publish(descriptor_topic, dumps(descriptor_payload.as_dict()))
 
@@ -51,13 +50,8 @@ def handle_command_message(client: minimqtt.MQTT, action_payload: ActionPayload)
     """Respond to a message sent to the command topic for the node."""
     from time import sleep
 
-    from snsr.node.mqtt import get_result_topic
-
-    node_context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
-    node_group = node_context["node_group"]
-    node_identifier = node_context["node_identifier"]
-    result_topic = get_result_topic(node_group, node_identifier)
-    descriptor_topic = get_descriptor_topic(node_group, node_identifier)
+    result_topic = get_result_topic(settings.node_group, settings.mqtt_client_id)
+    descriptor_topic = get_descriptor_topic(settings.node_group, settings.mqtt_client_id)
     action_information = action_payload.action
 
     app = apps.get_app(action_information)
