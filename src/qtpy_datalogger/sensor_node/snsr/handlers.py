@@ -3,13 +3,14 @@
 from json import dumps, loads
 
 import adafruit_minimqtt.adafruit_minimqtt as minimqtt
-from microcontroller import cpu
 
 from snsr import apps
 from snsr.node.classes import (
     ActionPayload,
     DescriptorInformation,
+    DescriptorPayload,
     SenderInformation,
+    StatusInformation,
 )
 from snsr.node.mqtt import get_descriptor_topic
 from snsr.settings import settings
@@ -40,12 +41,10 @@ def handle_broadcast_message(client: minimqtt.MQTT, action_payload: ActionPayloa
 
 def handle_identify(client: minimqtt.MQTT) -> None:
     """Respond to the the identify command."""
-    from wifi import radio
-
     context: dict = client.user_data  # pyright: ignore reportAssignmentType -- the type for context is client-defined
     descriptor_topic = get_descriptor_topic(context["node_group"], context["node_identifier"])
-    descriptor_message = get_descriptor_payload("node", cpu.uid.hex().lower(), str(radio.ipv4_address))
-    client.publish(descriptor_topic, descriptor_message)
+    descriptor_payload = get_descriptor_payload(descriptor_topic)
+    client.publish(descriptor_topic, dumps(descriptor_payload.as_dict()))
 
 
 def handle_command_message(client: minimqtt.MQTT, action_payload: ActionPayload) -> None:
@@ -64,7 +63,7 @@ def handle_command_message(client: minimqtt.MQTT, action_payload: ActionPayload)
     app = apps.get_app(action_information)
     result_information = app.handle_message()
 
-    sender = build_sender_information(descriptor_topic)
+    sender = get_sender_information(descriptor_topic)
     result_payload = ActionPayload(result_information, sender)
     client.publish(result_topic, dumps(result_payload.as_dict()))
     sleep(0.2)  # Allow the backend to send the message before invoking the completion which may sleep
@@ -72,62 +71,32 @@ def handle_command_message(client: minimqtt.MQTT, action_payload: ActionPayload)
     app.did_handle_message()
 
 
-def get_descriptor_payload(role: str, serial_number: str, ip_address: str) -> str:
+def get_descriptor_payload(descriptor_topic: str) -> DescriptorPayload:
     """Return a serialized string representation of the DescriptorPayload."""
-    from snsr.node.classes import DescriptorPayload
-    from snsr.node.mqtt import format_mqtt_client_id
-
-    pid = 0
-    descriptor = build_descriptor_information(role, serial_number, ip_address)
-    client_id = format_mqtt_client_id(role, serial_number, pid)
-    descriptor_topic = get_descriptor_topic(settings.node_group, client_id)
-    sender = build_sender_information(descriptor_topic)
-    response = DescriptorPayload(descriptor=descriptor, sender=sender)
-    return dumps(response.as_dict())
-
-
-def build_descriptor_information(role: str, serial_number: str, ip_address: str) -> DescriptorInformation:
-    """Return a DescriptorInformation instance describing and identifying the client."""
-    from os import uname
-    from sys import implementation, version_info
-
-    from board import board_id
-
-    from snsr.core import get_new_descriptor, get_notice_info
-    from snsr.node.classes import NoticeInformation
-
-    pid = 0
-    system_info = uname()
-    micropython_base = ".".join([f"{version_number}" for version_number in version_info])
-    python_implementation = f"{implementation.name}-{system_info.release}"
-    notice_info = get_notice_info()
-    notice = NoticeInformation(**notice_info)
-
-    descriptor = get_new_descriptor(
-        role=role,
-        serial_number=serial_number,
-        pid=pid,
-        hardware_name=board_id,
-        micropython_base=micropython_base,
-        python_implementation=python_implementation,
-        ip_address=ip_address,
-        notice=notice,
+    descriptor = DescriptorInformation(
+        node_id=settings.mqtt_client_id,
+        serial_number=settings.serial_number,
+        hardware_name=settings.board_id,
+        system_name=f"python-{settings.micropython_base}",
+        python_implementation=settings.python_implementation,
+        ip_address=settings.ip_address,
+        notice=settings.notice_info,
     )
-    return descriptor
+    sender = get_sender_information(descriptor_topic)
+    payload = DescriptorPayload(descriptor=descriptor, sender=sender)
+    return payload
 
 
-def build_sender_information(descriptor_topic: str) -> SenderInformation:
+def get_sender_information(descriptor_topic: str) -> SenderInformation:
     """Return a SenderInformation instance describing the client's current state."""
     from time import monotonic
 
-    from snsr.node.classes import StatusInformation
-
     used_kb = settings.used_kb
     free_kb = settings.free_kb
-    cpu_celsius = cpu.temperature
-    monotonic_time = monotonic()
+    cpu_celsius = settings.cpu_temperature
+    now = monotonic()
     status = StatusInformation(
-        used_memory=str(used_kb), free_memory=str(free_kb), cpu_temperature=str(cpu_celsius)
+        used_memory=f"{used_kb:.3f}", free_memory=f"{free_kb:.3f}", cpu_temperature=str(cpu_celsius)
     )
-    sender = SenderInformation(descriptor_topic=descriptor_topic, sent_at=str(monotonic_time), status=status)
+    sender = SenderInformation(descriptor_topic=descriptor_topic, sent_at=str(now), status=status)
     return sender
