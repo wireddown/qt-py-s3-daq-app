@@ -64,6 +64,7 @@ class Settings:
     def _initialize_dynamic_settings(self) -> None:
         """Initialize the read-write settings."""
         self._boot_time = -1.0
+        self._app_catalog = None  # Lazily loaded on first access
         self._wifi_radio = None
         self._board_io_pins: dict[str, digitalio.DigitalInOut | analogio.AnalogIn | neopixel.NeoPixel] = {}
         self._stemma_bus = None
@@ -99,6 +100,13 @@ class Settings:
     def mqtt_client_id(self) -> str:
         """Return the unique MQTT client ID for the sensor_node."""
         return self._mqtt_client_id
+
+    @property
+    def app_catalog(self) -> list[str]:
+        """Return the apps on the sensor_node."""
+        if not self._app_catalog:
+            self._app_catalog = discover_apps()
+        return self._app_catalog
 
     @property
     def cpu_temperature(self) -> float:
@@ -242,6 +250,23 @@ def get_notice_info() -> NoticeInformation:
         value = key_and_value[1].strip().replace('"', "")
         notice_info[key] = value
     return NoticeInformation.from_dict(notice_info)
+
+
+def discover_apps() -> list[str]:
+    """Autodetect apps on the sensor_node and return a list of names."""
+    from os import listdir, stat
+
+    plain_file_stat = 0x8000
+    files = listdir("/snsr/apps")  # noqa: PTH208 -- pathlib not available on CircuitPython
+    apps = []
+    for file in files:
+        if file.startswith("__init__"):
+            continue
+        if stat(f"/snsr/apps/{file}")[0] != plain_file_stat:  # noqa: PTH116 -- pathlib not available on CircuitPython
+            continue
+        app_basename = file.split(".")[0]
+        apps.append(app_basename)
+    return apps
 
 
 def format_wifi_information(wifi_radio: wifi.Radio) -> list[str]:
