@@ -67,6 +67,7 @@ class Settings:
         self._app_catalog = None  # Lazily loaded on first access
         self._wifi_radio = None
         self._board_io_pins: dict[str, digitalio.DigitalInOut | analogio.AnalogIn | neopixel.NeoPixel] = {}
+        self._settings_for_app_name: dict[str, dict] = {}
         self._stemma_bus = None
 
     @property
@@ -236,6 +237,16 @@ class Settings:
         if not self._stemma_bus:
             self._stemma_bus = board.STEMMA_I2C()
         return self._stemma_bus
+
+    def get_app_settings(self, app_name: str) -> dict:
+        """Get the settings for app_name."""
+        return self._settings_for_app_name.get(app_name, {})
+
+    def update_app_settings(self, app_name: str, settings: dict) -> None:
+        """Add or update the specified settings for app_name."""
+        app_settings = self._settings_for_app_name.get(app_name, {})
+        app_settings.update(settings)
+        self._settings_for_app_name.update({app_name: app_settings})
 
 
 def get_notice_info() -> NoticeInformation:
