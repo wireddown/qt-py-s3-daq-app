@@ -4,7 +4,7 @@ from json import dumps, loads
 
 import adafruit_minimqtt.adafruit_minimqtt as minimqtt
 
-from snsr import apps
+from snsr.core import get_app
 from snsr.node.classes import (
     ActionPayload,
     DescriptorInformation,
@@ -57,7 +57,7 @@ def handle_command_message(client: minimqtt.MQTT, action_payload: ActionPayload)
     descriptor_topic = get_descriptor_topic(settings.node_group, settings.mqtt_client_id)
     action_information = action_payload.action
 
-    app = apps.get_app(action_information)
+    app = get_app(action_information)
     result_information = app.handle_message()
 
     sender = get_sender_information(descriptor_topic)

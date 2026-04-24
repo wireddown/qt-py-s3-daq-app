@@ -1,6 +1,6 @@
 """App that queries and demonstrates board resources like IO pins."""
 
-from snsr.apps import SnsrApp
+from snsr.apps import SnsrApp, use_echo
 from snsr.node.classes import ActionInformation
 from snsr.settings import settings
 
@@ -31,12 +31,9 @@ class QtpyCmdApp(SnsrApp):
         """Update the node after handling a message."""
 
 
-def use_echo(received_action: ActionInformation) -> ActionInformation:
-    """Use echo to handle the action."""
-    from snsr.apps.echo import EchoApp
-
-    echo = EchoApp(received_action)
-    return echo.handle_message()
+def create_app(received_action: ActionInformation) -> SnsrApp:
+    """Return a new QtpyCmdApp."""
+    return QtpyCmdApp(received_action)
 
 
 def build_response(received_action: ActionInformation, message: object) -> ActionInformation:

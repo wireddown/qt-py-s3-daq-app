@@ -22,3 +22,8 @@ class EchoApp(SnsrApp):
 
     def did_handle_message(self) -> None:
         """Update the node after handling a message."""
+
+
+def create_app(received_action: ActionInformation) -> SnsrApp:
+    """Return a new EchoApp."""
+    return EchoApp(received_action)
