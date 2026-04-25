@@ -138,7 +138,7 @@ def test_host_build_descriptor() -> None:
     assert descriptor
 
 
-@pytest.mark.xfail(reason="The Settings singleton needs a fake or mock. See #XXX", strict=True)
+@pytest.mark.xfail(reason="The Settings singleton needs a fake or mock -- see #199", strict=True)
 def test_node_build_descriptor(monkeypatch: pytest.MonkeyPatch) -> None:
     """Does the node-side usage match the shared classes' definitions?"""
     # Support looking up sensor_node modules from the node's perspective (where 'snsr' is a package)
