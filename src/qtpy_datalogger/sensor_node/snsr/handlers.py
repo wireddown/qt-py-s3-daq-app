@@ -118,17 +118,16 @@ def build_descriptor_information(role: str, serial_number: str, ip_address: str)
 
 def build_sender_information(descriptor_topic: str) -> SenderInformation:
     """Return a SenderInformation instance describing the client's current state."""
-    from gc import mem_alloc, mem_free
     from time import monotonic
 
     from snsr.node.classes import StatusInformation
 
-    used_bytes = mem_alloc()
-    free_bytes = mem_free()
+    used_kb = settings.used_kb
+    free_kb = settings.free_kb
     cpu_celsius = cpu.temperature
     monotonic_time = monotonic()
     status = StatusInformation(
-        used_memory=str(used_bytes), free_memory=str(free_bytes), cpu_temperature=str(cpu_celsius)
+        used_memory=str(used_kb), free_memory=str(free_kb), cpu_temperature=str(cpu_celsius)
     )
     sender = SenderInformation(descriptor_topic=descriptor_topic, sent_at=str(monotonic_time), status=status)
     return sender
