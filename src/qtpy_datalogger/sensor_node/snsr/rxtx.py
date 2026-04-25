@@ -13,14 +13,13 @@ from snsr.settings import settings
 
 def connect_to_wifi() -> wifi.Radio:
     """Connect to the SSID from settings.toml and return the radio instance."""
-    wifi.radio.enabled = True
-    wifi.radio.connect(settings.wifi_ssid, settings.wifi_password)
+    settings.connect_to_wifi()
     return wifi.radio
 
 
 def disconnect_from_wifi(wifi: wifi.Radio) -> None:
     """Disconnect and disable the WiFi radio."""
-    wifi.enabled = False
+    settings.disconnect_from_wifi()
 
 
 def format_wifi_information(wifi: wifi.Radio) -> list[str]:
