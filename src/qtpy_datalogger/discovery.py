@@ -25,7 +25,7 @@ from serial.tools import miniterm as mt
 
 from qtpy_datalogger import network
 
-from .datatypes import CaptionCorrections, ConnectionTransport, DetailKey, ExitCode, SnsrNotice, SnsrPath
+from .datatypes import CaptionCorrections, ConnectionTransport, Default, DetailKey, ExitCode, SnsrNotice, SnsrPath
 
 logger = logging.getLogger(__name__)
 
@@ -120,8 +120,9 @@ def handle_connect(behavior: Behavior, group_id: str, node: str, port: str) -> N
         open_session_on_port(port)
     elif communication_transport == ConnectionTransport.MQTT_WiFi:
         network.open_session_on_node(group_id, node)
+        group_option = "" if group_id == Default.MqttGroup else f"--group {group_id}"
         logger.info("")
-        logger.info(f"Reconnect with 'qtpy-datalogger connect --node {node}'")
+        logger.info(f"Reconnect with 'qtpy-datalogger connect {group_option} --node {node}'")
 
 
 async def discover_qtpy_devices_async(group_id: str) -> dict[str, QTPyDevice]:
