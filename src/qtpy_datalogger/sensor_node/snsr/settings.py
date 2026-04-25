@@ -128,7 +128,7 @@ class Settings:
 
     @property
     def uptime(self) -> float:
-        """Return the time since the last code.py start in seconds."""
+        """Return the time in seconds since the last code.py launch."""
         return monotonic() - settings.boot_time
 
     @property
@@ -158,7 +158,7 @@ class Settings:
 
     @property
     def boot_time(self) -> float:
-        """Return the node's time since boot in milliseconds."""
+        """Return the time in seconds since the node booted."""
         return self._boot_time
 
     @boot_time.setter
@@ -167,14 +167,14 @@ class Settings:
         self._boot_time = new_boot_time
 
     def connect_to_wifi(self) -> None:
-        """Connect to the SSID from settings.toml and return the radio instance."""
+        """Connect to the SSID from settings.toml."""
         wifi.radio.enabled = True
         wifi.radio.connect(settings._wifi_ssid, settings._wifi_password)
         self._wifi_radio = wifi.radio
 
     @property
     def wifi_radio(self) -> wifi.Radio:
-        """Return the WiFi radio instance."""
+        """Return the WiFi radio instance. Raises ConnectionError when disconnected."""
         the_radio = self._wifi_radio
         if not the_radio:
             raise ConnectionError()
@@ -182,7 +182,7 @@ class Settings:
 
     @property
     def ip_address(self) -> str:
-        """Return the IP address of the sensor_node."""
+        """Return the IP address of the sensor_node. Raises ConnectionError when disconnected."""
         return str(self.wifi_radio.ipv4_address)
 
     def disconnect_from_wifi(self) -> None:
@@ -217,7 +217,7 @@ class Settings:
         return analog_input
 
     def get_dio_pin(self, pin_name: str) -> digitalio.DigitalInOut:
-        """Initialize the digital io pin instance that matches the board's pin_name."""
+        """Initialize the digital IO pin instance that matches the board's pin_name."""
         if pin_name not in self._board_io_pins:
             self._board_io_pins[pin_name] = digitalio.DigitalInOut(getattr(board, pin_name))
         digital_io = self._board_io_pins[pin_name]
@@ -239,7 +239,7 @@ class Settings:
         return self._stemma_bus
 
     def get_app_settings(self, app_name: str) -> dict:
-        """Get the settings for app_name."""
+        """Get the settings for app_name. Use update_app_settings() to make changes."""
         return self._settings_for_app_name.get(app_name, {})
 
     def update_app_settings(self, app_name: str, settings: dict) -> None:
@@ -250,7 +250,7 @@ class Settings:
 
 
 def get_notice_info() -> NoticeInformation:
-    """Return a serializable representation of the notice.toml file."""
+    """Return a NoticeInformation representation of the notice.toml file."""
     notice_contents = []
     with open("/snsr/notice.toml") as notice_toml:
         notice_contents = notice_toml.read().splitlines()
