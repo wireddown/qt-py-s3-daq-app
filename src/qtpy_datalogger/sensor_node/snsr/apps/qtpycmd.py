@@ -2,6 +2,7 @@
 
 from snsr.apps import SnsrApp
 from snsr.node.classes import ActionInformation
+from snsr.settings import settings
 
 
 class QtpyCmdApp(SnsrApp):
@@ -27,12 +28,11 @@ class QtpyCmdApp(SnsrApp):
 
 def handle_get_apps(received_action: ActionInformation) -> ActionInformation:
     """Handle the 'qtpycmd get_apps' action."""
-    from snsr.apps import get_catalog
-
+    apps = settings.app_catalog
     response_action = ActionInformation(
         command=received_action.parameters["input"],
         parameters={
-            "output": get_catalog(),
+            "output": sorted(apps),
             "complete": True,
         },
         message_id=received_action.message_id,

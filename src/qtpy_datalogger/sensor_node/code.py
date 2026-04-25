@@ -4,49 +4,45 @@ from gc import collect
 from time import monotonic, sleep
 from traceback import print_exception
 
-from microcontroller import cpu
-from snsr.core import get_memory_info, paint_uart_line, read_one_uart_line
-from snsr.rxtx import connect_and_subscribe, connect_to_wifi, create_mqtt_client, unsubscribe_and_disconnect
+from snsr.core import paint_uart_line, read_one_uart_line
+from snsr.node.mqtt import get_broadcast_topic, get_command_topic
+from snsr.rxtx import connect_and_subscribe, create_mqtt_client, unsubscribe_and_disconnect
 from snsr.settings import settings
-from supervisor import runtime
 
 settings.boot_time = monotonic()
 print(f"Booted at {settings.boot_time:.3f}")
 
-node_identifier = f"node-{cpu.uid.hex().lower()}-0"  # Lower case matches boot_out.txt
 mqtt_topics = [
-    f"qtpy/v1/{settings.node_group}/broadcast",
-    f"qtpy/v1/{settings.node_group}/{node_identifier}/command",
+    get_broadcast_topic(settings.node_group),
+    get_command_topic(settings.node_group, settings.mqtt_client_id),
 ]
 
 
 def main_loop() -> str:
     """Run the main node loop."""
-    radio = connect_to_wifi()
-    mqtt_client = create_mqtt_client(radio, settings.node_group, node_identifier)
+    settings.connect_to_wifi()
+    mqtt_client = create_mqtt_client(settings.node_group, settings.mqtt_client_id)
     connect_and_subscribe(mqtt_client, mqtt_topics)
 
     response = ""
     while response.lower() not in ["exit", "quit"]:
-        if runtime.usb_connected and runtime.serial_connected:
-            uptime = monotonic() - settings.boot_time
-            paint_uart_line(f"  {uptime:>12.3f}    Poll UART     [ Poll MQTT ]     ")
+        uart_connected = settings.uart_connected
+        if uart_connected:
+            paint_uart_line(f"  {settings.uptime:>12.3f}    Poll UART     [ Poll MQTT ]     ")
         did_receive = mqtt_client.loop(timeout=1.0)  # Smallest supported timeout
-        if not (did_receive or runtime.serial_connected):
+        if not (did_receive or uart_connected):
             sleep(4)  # Conserve battery by not constantly polling the network
 
-        if runtime.usb_connected and runtime.serial_connected:
-            uptime = monotonic() - settings.boot_time
-            paint_uart_line(f"  {uptime:>12.3f}  [ Poll UART ]     Poll MQTT       ")
+        if uart_connected:
+            paint_uart_line(f"  {settings.uptime:>12.3f}  [ Poll UART ]     Poll MQTT       ")
             sleep(0.2)
-            if not runtime.serial_bytes_available:
+            if not settings.uart_bytes_waiting:
                 continue
             print()
             response = read_one_uart_line()
             if not response:
                 response = read_one_uart_line()
-            used_kb, free_kb = get_memory_info()
-            print(f"Received '{response}' with {used_kb} / {free_kb}  (used/free)")
+            print(f"Received '{response}' with {settings.used_kb:.3f} kB / {settings.free_kb:.3f} kB  (used/free)")
 
     unsubscribe_and_disconnect(mqtt_client, mqtt_topics)
     return response

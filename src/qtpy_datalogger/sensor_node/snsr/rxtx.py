@@ -1,7 +1,6 @@
 """Classes and functions for control and communication over MQTT."""
 
 import adafruit_minimqtt.adafruit_minimqtt as minimqtt
-import wifi
 
 from snsr.handlers import (
     can_handle_message,
@@ -9,37 +8,6 @@ from snsr.handlers import (
     handle_command_message,
 )
 from snsr.settings import settings
-
-
-def connect_to_wifi() -> wifi.Radio:
-    """Connect to the SSID from settings.toml and return the radio instance."""
-    settings.connect_to_wifi()
-    return wifi.radio
-
-
-def disconnect_from_wifi(wifi: wifi.Radio) -> None:
-    """Disconnect and disable the WiFi radio."""
-    settings.disconnect_from_wifi()
-
-
-def format_wifi_information(wifi: wifi.Radio) -> list[str]:
-    """Print details about the WiFi connection."""
-    if not wifi.ap_info:
-        return []
-
-    lines = [
-        "Connected to WiFi",
-        "",
-        "     Network information",
-        f"Hostname: {wifi.hostname}",
-        f"Tx Power: {wifi.tx_power} dBm",
-        f"IP:       {wifi.ipv4_address}",
-        f"DNS:      {wifi.ipv4_dns}",
-        f"SSID:     {wifi.ap_info.ssid}",
-        f"RSSI:     {wifi.ap_info.rssi} dBm",
-        "",
-    ]
-    return lines
 
 
 def on_connect(client: minimqtt.MQTT, userdata: object, flags: int, rc: int) -> None:
@@ -76,19 +44,15 @@ def on_message(client: minimqtt.MQTT, topic: str, message: str) -> None:
         handle_command_message(client, action_payload)
 
 
-def create_mqtt_client(radio: wifi.Radio, node_group: str, node_identifier: str) -> minimqtt.MQTT:
+def create_mqtt_client(node_group: str, node_identifier: str) -> minimqtt.MQTT:
     """Create an MQTT client and set its callback functions."""
     from adafruit_connection_manager import get_radio_socketpool
 
     # Set up a MiniMQTT Client
-    pool = get_radio_socketpool(radio)
+    pool = get_radio_socketpool(settings.wifi_radio)
     mqtt_client = minimqtt.MQTT(
         broker=settings.mqtt_broker,
         socket_pool=pool,
-        user_data={
-            "node_group": node_group,
-            "node_identifier": node_identifier,
-        },
     )
 
     # Connect callback handlers to mqtt_client
@@ -112,14 +76,4 @@ def unsubscribe_and_disconnect(mqtt_client: minimqtt.MQTT, topics: list[str]) ->
     """Unsubscribe from the specified topics and disconnect from the MQTT broker."""
     for topic in topics:
         mqtt_client.unsubscribe(topic)
-    mqtt_client.disconnect()
-
-
-def do_full_client_publish(mqtt_client: minimqtt.MQTT, message: str) -> None:
-    """Connect, publish, and disconnect."""
-    mqtt_topic = "qtpy/v1/__group_id__/__node_id__/__example__"
-    mqtt_client.connect()
-    mqtt_client.subscribe(mqtt_topic)
-    mqtt_client.publish(mqtt_topic, message)
-    mqtt_client.unsubscribe(mqtt_topic)
     mqtt_client.disconnect()

@@ -19,15 +19,6 @@ class SnsrApp:
         raise NotImplementedError()
 
 
-def get_catalog() -> list[str]:
-    """Return a list of the selectable apps."""
-    from os import listdir
-
-    files = listdir(str(__path__))
-    apps = [file.split(".")[0] for file in files if not file.startswith("__init__")]
-    return apps
-
-
 def get_app(received_action: ActionInformation) -> SnsrApp:
     """Return the sensor_node app that matches received_action."""
     snsr_app_name = received_action.command.split(" ")[0]
