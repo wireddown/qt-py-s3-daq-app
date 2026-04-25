@@ -23,7 +23,7 @@ def get_catalog() -> list[str]:
     """Return a list of the selectable apps."""
     from os import listdir
 
-    files = listdir(str(__path__))  # noqa: PTH208 -- pathlib not available on CircuitPython
+    files = listdir(str(__path__))
     apps = [file.split(".")[0] for file in files if not file.startswith("__init__")]
     return apps
 

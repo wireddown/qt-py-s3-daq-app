@@ -134,7 +134,7 @@ class TracedSession:
         """Prompt the user for input with the given message."""
         response = self._session.prompt(message)
         if self._autoecho and self._tracer.traced_io_log:
-            _ = [print(entry) for entry in self._tracer.traced_io_log]  # noqa: T201 -- use builtin to bypass self-tracing
+            _ = [print(entry) for entry in self._tracer.traced_io_log]
             self._tracer.clear_log()
         return response.encode("UTF-8")
 
@@ -147,7 +147,7 @@ class TracedSession:
 def is_printable(char_ord: int) -> bool:
     """Return true if the specified ordinal is printable in a terminal."""
     # https://ss64.com/ascii.html
-    return char_ord > 31 and char_ord < 127  # noqa: PLR2004 -- ordinals /are/ magic numbers
+    return char_ord > 31 and char_ord < 127
 
 
 def debug_str(in_ordinal: int) -> str:

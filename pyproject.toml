@@ -143,8 +143,18 @@ ignore = [
 "src/qtpy_datalogger/apps/empty.py" = [
     "F401",
 ]
+# Disable rules
+# - Some Python libraries are not available on CircuitPython
+# - Some design pattern deviations are expected
 "src/qtpy_datalogger/sensor_node/**.py" = [
-    "PLC0415",
+    "INP001",       # No __init__.py because code.py is the entry point
+    "PLC0415",      # Allow non-toplevel imports to conserve memory
+    "PLR2004",      # Allow "magic number" literals to conserve memory
+    "PTH116",       # Path.stat() is not available
+    "PTH123",       # Path.open() is not available
+    "PTH208",       # Path.iterdir() is not available
+    "SIM105",       # contextlib is not available
+    "T201",         # Use direct IO for user REPL
 ]
 
 [build-system]

@@ -60,7 +60,7 @@ def get_result_topic(group_id: str, node_id: str) -> str:
 def node_from_topic(topic: str) -> str:
     """Return the node_id from the specified topic. Return an empty string if the topic is a group topic."""
     parts = topic.split("/")
-    if len(parts) < 5:  # noqa: PLR2004 -- do not name this constant until it needs to be shared
+    if len(parts) < 5:
         # Group-level topic like 'qtpy/v1/{group_id}/broadcast'
         return ""
     return parts[3]

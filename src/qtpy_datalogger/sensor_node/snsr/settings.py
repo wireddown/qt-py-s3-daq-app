@@ -252,7 +252,7 @@ class Settings:
 def get_notice_info() -> NoticeInformation:
     """Return a serializable representation of the notice.toml file."""
     notice_contents = []
-    with open("/snsr/notice.toml") as notice_toml:  # noqa: PTH123 -- Path.open() is not available on CircuitPython
+    with open("/snsr/notice.toml") as notice_toml:
         notice_contents = notice_toml.read().splitlines()
     notice_info = {}
     for line in notice_contents:
@@ -268,12 +268,12 @@ def discover_apps() -> list[str]:
     from os import listdir, stat
 
     plain_file_stat = 0x8000
-    files = listdir("/snsr/apps")  # noqa: PTH208 -- pathlib not available on CircuitPython
+    files = listdir("/snsr/apps")
     apps = []
     for file in files:
         if file.startswith("__init__"):
             continue
-        if stat(f"/snsr/apps/{file}")[0] != plain_file_stat:  # noqa: PTH116 -- pathlib not available on CircuitPython
+        if stat(f"/snsr/apps/{file}")[0] != plain_file_stat:
             continue
         app_basename = file.split(".")[0]
         apps.append(app_basename)
