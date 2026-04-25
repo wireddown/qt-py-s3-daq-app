@@ -50,7 +50,7 @@ def get_memory_info() -> tuple[str, str]:
 def get_notice_info() -> dict:
     """Return a serializable representation of the notice.toml file."""
     notice_contents = []
-    with open("/snsr/notice.toml") as notice_toml:  # noqa: PTH123 -- Path.open() is not available on CircuitPython
+    with open("/snsr/notice.toml") as notice_toml:
         notice_contents = notice_toml.read().splitlines()
     notice_info = {}
     for line in notice_contents:

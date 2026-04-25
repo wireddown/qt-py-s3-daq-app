@@ -1,4 +1,4 @@
-"""code.py file is the main loop from qtpy_datalogger.sensor_node."""  # noqa: INP001 -- this is the entry point for CircuitPython devices
+"""code.py file is the main loop from qtpy_datalogger.sensor_node."""
 
 from gc import collect
 from time import monotonic, sleep
@@ -11,9 +11,9 @@ from snsr.settings import settings
 from supervisor import runtime
 
 settings.boot_time = monotonic()
-print(f"Booted at {settings.boot_time:.3f}")  # noqa: T201 -- use direct IO for user REPL
+print(f"Booted at {settings.boot_time:.3f}")
 
-node_identifier = f"node-{cpu.uid.hex().lower()}-0"  # Matches boot_out.txt
+node_identifier = f"node-{cpu.uid.hex().lower()}-0"  # Lower case matches boot_out.txt
 mqtt_topics = [
     f"qtpy/v1/{settings.node_group}/broadcast",
     f"qtpy/v1/{settings.node_group}/{node_identifier}/command",
@@ -41,12 +41,12 @@ def main_loop() -> str:
             sleep(0.2)
             if not runtime.serial_bytes_available:
                 continue
-            print()  # noqa: T201 -- use direct IO for user REPL
+            print()
             response = read_one_uart_line()
             if not response:
                 response = read_one_uart_line()
             used_kb, free_kb = get_memory_info()
-            print(f"Received '{response}' with {used_kb} / {free_kb}  (used/free)")  # noqa: T201 -- use direct IO for user REPL
+            print(f"Received '{response}' with {used_kb} / {free_kb}  (used/free)")
 
     unsubscribe_and_disconnect(mqtt_client, mqtt_topics)
     return response
@@ -56,15 +56,15 @@ most_recent_error = type(None)
 error_count = 0
 error_limit = 3
 while True:
-    print("Entering root loop")  # noqa: T201 -- use direct IO for user REPL
+    print("Entering root loop")
     try:
         result = main_loop()
         if result.lower() in ["exit", "quit"]:
-            print("Exiting to REPL...")  # noqa: T201 -- use direct IO for user REPL
+            print("Exiting to REPL...")
             break
     except Exception as e:
-        print()  # noqa: T201 -- use direct IO for user REPL
-        print(f"Encountered {type(e)} {e.args}")  # noqa: T201 -- use direct IO for user REPL
+        print()
+        print(f"Encountered {type(e)} {e.args}")
         print_exception(e)
         collect()
         if type(e) is most_recent_error:
@@ -74,5 +74,5 @@ while True:
         else:
             most_recent_error = type(e)
             error_count = 0
-        print("Trying again...")  # noqa: T201 -- use direct IO for user REPL
+        print("Trying again...")
         continue

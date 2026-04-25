@@ -4,7 +4,7 @@
 
 from .linebuffer import LineBuffer
 
-try:  # noqa: SIM105 -- contextlib is not available for CircuitPython
+try:
     from typing import BinaryIO
 except ImportError:
     pass
@@ -239,7 +239,7 @@ def _process_control_sequence(  # noqa: PLR0912 PLR0915 -- we need many lines an
     """Track and handle the control codes as they are read."""
     control_codes.append(in_ord)
     control_command_length = len(control_codes)
-    if control_command_length == 2:  # noqa: PLR2004 -- this magic number is used as a length, has no separate meaning
+    if control_command_length == 2:
         if control_codes[0] == _ORD_ESC and in_ord == _ORD_OPEN_BRACKET:
             # Begin escape control sequence, assume cursor move until further reads show otherwise
             control_pattern = _CONTROL_PATTERN_MOVE_CURSOR_KEY
@@ -249,7 +249,7 @@ def _process_control_sequence(  # noqa: PLR0912 PLR0915 -- we need many lines an
         else:
             # No handlers for other command sequences
             control_codes.clear()
-    elif control_command_length == 3:  # noqa: PLR2004 -- this magic number is used as a length, has no separate meaning
+    elif control_command_length == 3:
         if control_pattern == _CONTROL_PATTERN_MOVE_CURSOR_KEY:
             if ord("0") <= in_ord <= ord("9"):
                 # We read more and learned we're reading an editor command
@@ -280,7 +280,7 @@ def _process_control_sequence(  # noqa: PLR0912 PLR0915 -- we need many lines an
             else:
                 # No handlers for lower F-key codes
                 pass
-    elif control_command_length == 4:  # noqa: PLR2004 -- this magic number is used as a length, has no separate meaning
+    elif control_command_length == 4:
         if control_pattern == _CONTROL_PATTERN_EDITOR_KEY:
             if in_ord == _ORD_TILDE:
                 if control_codes[2:-1] == [ord("3")]:
