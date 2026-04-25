@@ -25,13 +25,13 @@ class QtpyCmdApp(SnsrApp):
             return handle_do_analog_read(self.action, parts)
 
         # Fallback to echo app
-        return use_echo(self.action, parts)
+        return use_echo(self.action)
 
     def did_handle_message(self) -> None:
         """Update the node after handling a message."""
 
 
-def use_echo(received_action: ActionInformation, command_args: list[str]) -> ActionInformation:
+def use_echo(received_action: ActionInformation) -> ActionInformation:
     """Use echo to handle the action."""
     from snsr.apps.echo import EchoApp
 
@@ -71,18 +71,35 @@ def handle_get_stats(received_action: ActionInformation, command_args: list[str]
 
 def handle_do_config(received_action: ActionInformation, command_args: list[str]) -> ActionInformation:
     """Handle the 'qtpycmd config' action."""
-    return use_echo(received_action, command_args)
+    arg_count = len(command_args)
+    if arg_count <= 3:
+        return use_echo(received_action)
+
+    config_verb = command_args[2]
+    if config_verb not in ["get", "set"]:
+        return use_echo(received_action)
+
+    config_key = command_args[3]
+    if config_verb == "get":
+        config_setting = settings.get_app_settings("qtpycmd").get(config_key, "")
+        return build_response(received_action, message=f"{config_key}: {config_setting}")
+
+    if command_args == 5:
+        return use_echo(received_action)
+    config_setting = " ".join(command_args[4:])
+    settings.update_app_settings("qtpycmd", {config_key: config_setting})
+    return build_response(received_action, message=f"{config_key}: {config_setting}")
 
 
 def handle_do_pixel(received_action: ActionInformation, command_args: list[str]) -> ActionInformation:
     """Handle the 'qtpycmd pixel' action."""
     arg_count = len(command_args)
     if arg_count <= 2:
-        return use_echo(received_action, command_args)
+        return use_echo(received_action)
 
     pixel_verb = command_args[2]
     if pixel_verb != "blink":
-        return use_echo(received_action, command_args)
+        return use_echo(received_action)
 
     pixel_color = 0x2200AA
     if arg_count >= 4:
@@ -101,11 +118,11 @@ def handle_do_analog_read(received_action: ActionInformation, command_args: list
     """Handle the 'qtpycmd read' action."""
     arg_count = len(command_args)
     if arg_count <= 2:
-        return use_echo(received_action, command_args)
+        return use_echo(received_action)
 
     channels = [pin_name for pin_name in command_args[2:] if pin_name.startswith("A")]
     if not channels:
-        return use_echo(received_action, command_args)
+        return use_echo(received_action)
 
     from snsr.core import do_analog_scan
 
