@@ -1,4 +1,8 @@
-"""Core classes and functions."""
+"""Core functions for the sensor_node runtime."""
+
+import analogio
+
+from snsr.settings import settings
 
 
 def read_one_uart_line() -> str:
@@ -34,3 +38,39 @@ def paint_uart_line(line: str) -> None:
         serial = usb_cdc.data
 
     redraw_line(line, out_stream=serial)  # type: ignore -- CircuitPython Serial objects have no parents
+
+
+def blink_neopixel(color: int) -> None:
+    """Blink the NeoPixel three times with the specified RGB color."""
+    from time import sleep
+
+    pixel = settings.get_neopixel()
+    for _ in range(3):
+        pixel.fill(color)
+        pixel.show()
+        sleep(0.2)
+        pixel.fill(0)
+        pixel.show()
+        sleep(0.2)
+    settings.release_neopixel()
+
+
+def do_analog_scan(channels: list[str], count: int) -> list[float]:
+    """Read the specified AI channels 'count' times each and return a list of averaged codes."""
+    results = []
+    analog_input_channels = [settings.get_ai_pin(pin_name) for pin_name in channels]
+    for analog_input in analog_input_channels:
+        average_channel_code = adc_take_n(analog_input, count)
+        results.append(average_channel_code)
+    for pin_name in channels:
+        settings.release_pin(pin_name)
+    return results
+
+
+def adc_take_n(ai_pin: analogio.AnalogIn, count: int) -> float:
+    """Read ai_pin 'count' times and return the average code."""
+    total = 0.0
+    for _ in range(count):
+        total = total + ai_pin.value
+    average = total / count
+    return average

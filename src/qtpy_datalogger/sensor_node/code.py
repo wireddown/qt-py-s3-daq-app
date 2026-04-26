@@ -59,6 +59,10 @@ while True:
             print("Exiting to REPL...")
             break
     except Exception as e:
+        try:
+            settings.disconnect_from_wifi()
+        except AttributeError:
+            pass
         print()
         print(f"Encountered {type(e)} {e.args}")
         print_exception(e)
