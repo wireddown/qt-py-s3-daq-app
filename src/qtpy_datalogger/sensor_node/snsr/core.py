@@ -2,6 +2,8 @@
 
 import analogio
 
+from snsr.apps import SnsrApp
+from snsr.node.classes import ActionInformation
 from snsr.settings import settings
 
 
@@ -38,6 +40,19 @@ def paint_uart_line(line: str) -> None:
         serial = usb_cdc.data
 
     redraw_line(line, out_stream=serial)  # type: ignore -- CircuitPython Serial objects have no parents
+
+
+def get_app(received_action: ActionInformation) -> SnsrApp:
+    """Return the sensor_node app that matches received_action."""
+    snsr_app_name = received_action.command.split(" ")[0]
+    if snsr_app_name == "custom" and received_action.parameters["input"].startswith("qtpycmd "):
+        snsr_app_name = "qtpycmd"
+    if snsr_app_name not in settings.app_catalog:
+        snsr_app_name = "echo"
+
+    snsr_app_module = __import__(f"snsr/apps/{snsr_app_name}")
+    app = snsr_app_module.create_app(received_action)
+    return app
 
 
 def blink_neopixel(color: int) -> None:

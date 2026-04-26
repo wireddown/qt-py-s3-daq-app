@@ -19,15 +19,9 @@ class SnsrApp:
         raise NotImplementedError()
 
 
-def get_app(received_action: ActionInformation) -> SnsrApp:
-    """Return the sensor_node app that matches received_action."""
-    snsr_app_name = received_action.command.split(" ")[0]
-    if snsr_app_name == "custom" and received_action.parameters["input"].startswith("qtpycmd "):
-        from snsr.apps.qtpycmd import QtpyCmdApp
+def use_echo(received_action: ActionInformation) -> ActionInformation:
+    """Use echo to handle the action."""
+    from snsr.apps.echo import create_app
 
-        return QtpyCmdApp(received_action)
-
-    # Fallback to echo app handler
-    from snsr.apps.echo import EchoApp
-
-    return EchoApp(received_action)
+    echo_app = create_app(received_action)
+    return echo_app.handle_message()
