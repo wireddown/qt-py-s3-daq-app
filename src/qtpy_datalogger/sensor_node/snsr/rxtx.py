@@ -1,4 +1,4 @@
-"""Classes and functions for control and communication over MQTT."""
+"""Functions for communication over MQTT."""
 
 import adafruit_minimqtt.adafruit_minimqtt as minimqtt
 
